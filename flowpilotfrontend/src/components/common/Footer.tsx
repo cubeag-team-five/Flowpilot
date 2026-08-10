@@ -6,7 +6,7 @@ export const Footer: React.FC = () => {
     <footer className="bg-[#070a12] text-slate-400 py-16 px-6 border-t border-slate-900">
       <div className="max-w-[1240px] mx-auto">
         
-        {/* Main Footer Links Columns Grid matching Figma Screenshot 4 */}
+        {/* Main Footer Links Columns Grid */}
         <div className="grid grid-cols-2 md:grid-cols-6 gap-8 mb-16">
           
           {/* Col 1 & 2: Brand Info */}
@@ -87,7 +87,7 @@ export const Footer: React.FC = () => {
 
         </div>
 
-        {/* Bottom Bar with Newsletter Subscription matching Figma Screenshot 4 */}
+        {/* Bottom Bar with Newsletter Subscription */}
         <div className="pt-8 border-t border-slate-900 flex flex-col sm:flex-row items-center justify-between gap-6">
           <div className="flex items-center gap-2 max-w-[360px] w-full">
             <input 

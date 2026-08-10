@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Header } from './components/Header';
+import { Header } from './components/common/Header';
 import { HeroSection } from './components/HeroSection';
 import { ProblemSection } from './components/ProblemSection';
 import { HowItWorksSection } from './components/HowItWorksSection';
@@ -14,10 +14,10 @@ import { RoadmapSection } from './components/RoadmapSection';
 import { SecuritySection } from './components/SecuritySection';
 import { PricingSection } from './components/PricingSection';
 import { BottomCTASection } from './components/BottomCTASection';
-import { Footer } from './components/Footer';
+import { Footer } from './components/common/Footer';
 import { DemoModal } from './components/DemoModal';
-import { LoginPage } from './components/LoginPage';
-import { DashboardLayout } from './components/DashboardLayout';
+import { LoginPage } from './components/common/LoginPage';
+import { DashboardLayout } from './components/common/DashboardLayout';
 
 export function App() {
   const [currentView, setCurrentView] = useState<'landing' | 'login' | 'dashboard'>('landing');

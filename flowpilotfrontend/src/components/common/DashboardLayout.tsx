@@ -17,13 +17,13 @@ import {
   Layers,
   CheckSquare
 } from 'lucide-react';
-import { SuperAdminDashboard } from './dashboards/SuperAdminDashboard';
-import { AdminDashboardView } from './dashboards/AdminDashboardView';
-import { PMDashboardView } from './dashboards/PMDashboardView';
-import { ScrumMasterDashboardView } from './dashboards/ScrumMasterDashboardView';
-import { DeveloperDashboardView } from './dashboards/DeveloperDashboardView';
-import { QADashboardView } from './dashboards/QADashboardView';
-import { ViewerDashboardView } from './dashboards/ViewerDashboardView';
+import { SuperAdminDashboard } from '../superadmin/SuperAdminDashboard';
+import { AdminDashboardView } from '../admin/AdminDashboardView';
+import { PMDashboardView } from '../pm/PMDashboardView';
+import { ScrumMasterDashboardView } from '../scrummaster/ScrumMasterDashboardView';
+import { DeveloperDashboardView } from '../developer/DeveloperDashboardView';
+import { QADashboardView } from '../qa/QADashboardView';
+import { ViewerDashboardView } from '../viewer/ViewerDashboardView';
 
 interface DashboardLayoutProps {
   userRole?: string;

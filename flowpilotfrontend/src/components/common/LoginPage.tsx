@@ -126,7 +126,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onBackToHome, onLoginSucce
         )}
       </div>
 
-      {/* Main Grid Section matching exact Figma image split */}
+      {/* Main Grid Section */}
       <div className="max-w-[1240px] w-full mx-auto px-6 py-8 grid grid-cols-1 lg:grid-cols-[1fr_1.35fr] gap-12 items-start relative z-10 flex-1">
         
         {/* Left Column: Brand Showcase */}
