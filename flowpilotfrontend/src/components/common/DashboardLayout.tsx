@@ -21,6 +21,10 @@ import { SuperAdminDashboard } from '../superadmin/SuperAdminDashboard';
 import { AdminDashboardView } from '../admin/AdminDashboardView';
 import { PMDashboardView } from '../pm/PMDashboardView';
 import { ScrumMasterDashboardView } from '../scrummaster/ScrumMasterDashboardView';
+import { ScrumBoard } from '../scrummaster/ScrumBoard';
+import { ScrumBurndown } from '../scrummaster/ScrumBurndown';
+import { ScrumStandups } from '../scrummaster/ScrumStandups';
+import { ScrumRetrospective } from '../scrummaster/ScrumRetrospective';
 import { DeveloperDashboardView } from '../developer/DeveloperDashboardView';
 import { QADashboardView } from '../qa/QADashboardView';
 import { ViewerDashboardView } from '../viewer/ViewerDashboardView';
@@ -31,7 +35,7 @@ interface DashboardLayoutProps {
 }
 
 export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ userRole = 'Super Admin', onLogout }) => {
-  const [activeTab, setActiveTab] = useState('Overview');
+  const [activeTab, setActiveTab] = useState('');
   const currentDate = 'Friday, 7 August 2026';
 
   const getRoleConfig = (role: string) => {
@@ -121,6 +125,8 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ userRole = 'Su
   };
 
   const navItems = getNavItems(userRole);
+  // Falls back to the role's first nav item until the user picks a different one.
+  const currentTab = activeTab || navItems[0].name;
 
   return (
     <div className="min-h-screen bg-[#f8fafc] flex text-slate-800 font-sans">
@@ -144,8 +150,8 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ userRole = 'Su
           </div>
 
           <nav className="flex flex-col gap-1">
-            {navItems.map((item, idx) => {
-              const isActive = activeTab === item.name || idx === 0;
+            {navItems.map((item) => {
+              const isActive = currentTab === item.name;
               return (
                 <button
                   key={item.name}
@@ -192,7 +198,7 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ userRole = 'Su
               {userRole === 'Super Admin' && 'System Overview'}
               {userRole === 'Admin' && 'Admin Dashboard'}
               {userRole === 'Project Manager' && 'PM Dashboard'}
-              {userRole === 'Scrum Master' && 'Sprint Overview'}
+              {userRole === 'Scrum Master' && currentTab}
               {userRole === 'QA Engineer' && 'QA Dashboard'}
               {userRole === 'Viewer' && 'Projects Overview'}
               {userRole === 'Developer' && 'My Dashboard'}
@@ -228,7 +234,15 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ userRole = 'Su
           {userRole === 'Super Admin' && <SuperAdminDashboard />}
           {userRole === 'Admin' && <AdminDashboardView />}
           {userRole === 'Project Manager' && <PMDashboardView />}
-          {userRole === 'Scrum Master' && <ScrumMasterDashboardView />}
+          {userRole === 'Scrum Master' && (
+            <>
+              {currentTab === 'Sprint Overview' && <ScrumMasterDashboardView />}
+              {currentTab === 'Scrum Board' && <ScrumBoard />}
+              {currentTab === 'Burndown & Velocity' && <ScrumBurndown />}
+              {currentTab === 'Team & Standups' && <ScrumStandups />}
+              {currentTab === 'Retrospective' && <ScrumRetrospective />}
+            </>
+          )}
           {userRole === 'Developer' && <DeveloperDashboardView />}
           {userRole === 'QA Engineer' && <QADashboardView />}
           {userRole === 'Viewer' && <ViewerDashboardView />}
