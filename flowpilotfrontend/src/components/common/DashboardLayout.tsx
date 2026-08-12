@@ -29,6 +29,13 @@ import * as SuperAdminRolesModule from '../superadmin/SuperAdminRoles';
 import * as SuperAdminProjectsModule from '../superadmin/SuperAdminProjects';
 
 import { AdminDashboardView } from '../admin/AdminDashboardView';
+//import { AdminUsers } from '../admin/AdminUsers';
+//import { AdminDepartments } from '../admin/AdminDepartments';
+//import { AdminProjects } from '../admin/AdminProjects';
+//import { AdminReports } from '../admin/AdminReports';
+//import { AdminNotifications } from '../admin/AdminNotifications';
+//import { AdminSettings } from '../admin/AdminSettings';
+
 import { PMDashboardView } from '../pm/PMDashboardView';
 import { ScrumMasterDashboardView } from '../scrummaster/ScrumMasterDashboardView';
 import { DeveloperDashboardView } from '../developer/DeveloperDashboardView';
