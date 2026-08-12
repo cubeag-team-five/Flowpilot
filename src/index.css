@@ -1,0 +1,96 @@
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap');
+@import "tailwindcss";
+
+@layer base {
+  body {
+    font-family: 'Outfit', 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+    background-color: #f6f8fb;
+    color: #0f172a;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+}
+
+/* Custom Keyframe Animations for Title & Ticker */
+@keyframes moveGradient {
+  0% { background-position: 0% 50%; }
+  100% { background-position: 300% 50%; }
+}
+
+@keyframes tickerScroll {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+@keyframes pulseGlow {
+  0% { transform: scale(1) translate(0, 0); opacity: 0.8; }
+  100% { transform: scale(1.15) translate(30px, 20px); opacity: 1; }
+}
+
+@keyframes floatGlow {
+  0% { transform: translate(0, 0); opacity: 0.7; }
+  100% { transform: translate(-40px, 30px); opacity: 0.95; }
+}
+
+@keyframes floatCube1 {
+  0% { transform: translateY(0px) rotate(15deg); }
+  100% { transform: translateY(-25px) rotate(25deg); }
+}
+
+@keyframes floatCube2 {
+  0% { transform: translateY(0px) rotate(-12deg); }
+  100% { transform: translateY(20px) rotate(-4deg); }
+}
+
+@keyframes blinkCursor {
+  0% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+.animate-move-gradient {
+  background: linear-gradient(90deg, #34d399 0%, #38bdf8 30%, #a855f7 60%, #34d399 100%);
+  background-size: 300% 100%;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: moveGradient 4s linear infinite;
+}
+
+.animate-ticker {
+  animation: tickerScroll 25s linear infinite;
+}
+
+.animate-glow-pulse {
+  animation: pulseGlow 8s ease-in-out infinite alternate;
+}
+
+.animate-glow-float {
+  animation: floatGlow 10s ease-in-out infinite alternate;
+}
+
+.animate-cube-1 {
+  animation: floatCube1 7s ease-in-out infinite alternate;
+}
+
+.animate-cube-2 {
+  animation: floatCube2 9s ease-in-out infinite alternate;
+}
+
+.animate-blink-cursor {
+  animation: blinkCursor 0.8s infinite alternate;
+}
+
+.drowning-effect {
+  position: relative;
+  display: inline-block;
+  color: #fb7185;
+}
+
+.drowning-effect::after {
+  content: 'drowning';
+  position: absolute;
+  left: 3px;
+  top: 3px;
+  color: rgba(244, 63, 94, 0.35);
+  z-index: -1;
+  pointer-events: none;
+}
