@@ -29,12 +29,12 @@ import * as SuperAdminRolesModule from '../superadmin/SuperAdminRoles';
 import * as SuperAdminProjectsModule from '../superadmin/SuperAdminProjects';
 
 import { AdminDashboardView } from '../admin/AdminDashboardView';
-//import { AdminUsers } from '../admin/AdminUsers';
-//import { AdminDepartments } from '../admin/AdminDepartments';
-//import { AdminProjects } from '../admin/AdminProjects';
-//import { AdminReports } from '../admin/AdminReports';
-//import { AdminNotifications } from '../admin/AdminNotifications';
-//import { AdminSettings } from '../admin/AdminSettings';
+import { AdminUsers } from '../admin/AdminUsers';
+import { AdminDepartments } from '../admin/AdminDepartments';
+import { AdminProjects } from '../admin/AdminProjects';
+import { AdminReports } from '../admin/AdminReports';
+import { AdminNotifications } from '../admin/AdminNotifications';
+import { AdminSettings } from '../admin/AdminSettings';
 
 import { PMDashboardView } from '../pm/PMDashboardView';
 import { ScrumMasterDashboardView } from '../scrummaster/ScrumMasterDashboardView';
@@ -237,6 +237,10 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
             name: 'Notifications',
             icon: <Bell size={18} />,
           },
+          {
+            name: 'Settings',
+            icon: <Settings size={18} />,
+          },
         ];
 
       case 'Project Manager':
@@ -367,8 +371,17 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
   const getPageTitle = () => {
     if (userRole !== 'Super Admin') {
       switch (userRole) {
-        case 'Admin':
-          return 'Admin Dashboard';
+        case 'Admin': {
+          switch (activeTab) {
+            case 'Users': return 'Users';
+            case 'Departments': return 'Departments';
+            case 'Projects': return 'Projects';
+            case 'Reports': return 'Reports';
+            case 'Notifications': return 'Notifications';
+            case 'Settings': return 'Settings';
+            default: return 'Admin Dashboard';
+          }
+        }
 
         case 'Project Manager':
           return 'PM Dashboard';
@@ -444,6 +457,30 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
       case 'Overview':
       default:
         return <SuperAdminDashboard />;
+    }
+  };
+
+  /* =========================================================
+     ADMIN CONTENT
+  ========================================================= */
+
+  const renderAdminContent = () => {
+    switch (activeTab) {
+      case 'Users':
+        return <AdminUsers />;
+      case 'Departments':
+        return <AdminDepartments />;
+      case 'Projects':
+        return <AdminProjects />;
+      case 'Reports':
+        return <AdminReports />;
+      case 'Notifications':
+        return <AdminNotifications />;
+      case 'Settings':
+        return <AdminSettings />;
+      case 'Dashboard':
+      default:
+        return <AdminDashboardView />;
     }
   };
 
@@ -940,7 +977,7 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
           )}
 
           {userRole === 'Admin' && (
-            <AdminDashboardView />
+            <>{renderAdminContent()}</>
           )}
 
           {userRole === 'Project Manager' && (
