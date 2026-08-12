@@ -38,6 +38,10 @@ import { AdminSettings } from '../admin/AdminSettings';
 
 import { PMDashboardView } from '../pm/PMDashboardView';
 import { ScrumMasterDashboardView } from '../scrummaster/ScrumMasterDashboardView';
+import { ScrumBoard } from '../scrummaster/ScrumBoard';
+import { ScrumBurndown } from '../scrummaster/ScrumBurndown';
+import { ScrumStandups } from '../scrummaster/ScrumStandups';
+import { ScrumRetrospective } from '../scrummaster/ScrumRetrospective';
 import { DeveloperDashboardView } from '../developer/DeveloperDashboardView';
 import { QADashboardView } from '../qa/QADashboardView';
 
@@ -249,6 +253,8 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
   };
 
   const navItems = getNavItems(userRole);
+  // Falls back to the role's first nav item until the user picks a different one.
+  const currentTab = activeTab || navItems[0].name;
 
   const getPageTitle = () => {
     switch (userRole) {
@@ -512,7 +518,15 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
           {userRole === 'Super Admin' && renderSuperAdminContent()}
           {userRole === 'Admin' && renderAdminContent()}
           {userRole === 'Project Manager' && <PMDashboardView />}
-          {userRole === 'Scrum Master' && <ScrumMasterDashboardView />}
+          {userRole === 'Scrum Master' && (
+            <>
+              {currentTab === 'Sprint Overview' && <ScrumMasterDashboardView />}
+              {currentTab === 'Scrum Board' && <ScrumBoard />}
+              {currentTab === 'Burndown & Velocity' && <ScrumBurndown />}
+              {currentTab === 'Team & Standups' && <ScrumStandups />}
+              {currentTab === 'Retrospective' && <ScrumRetrospective />}
+            </>
+          )}
           {userRole === 'Developer' && <DeveloperDashboardView />}
           {userRole === 'QA Engineer' && <QADashboardView />}
           {userRole === 'Viewer' && renderViewerContent()}
