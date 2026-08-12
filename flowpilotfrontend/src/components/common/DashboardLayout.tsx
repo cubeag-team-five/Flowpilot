@@ -18,7 +18,15 @@ import {
   CheckSquare
 } from 'lucide-react';
 import { SuperAdminDashboard } from '../superadmin/SuperAdminDashboard';
+
 import { AdminDashboardView } from '../admin/AdminDashboardView';
+import { AdminUsers } from '../admin/AdminUsers';
+import { AdminDepartments } from '../admin/AdminDepartments';
+import { AdminProjects } from '../admin/AdminProjects';
+import { AdminReports } from '../admin/AdminReports';
+import { AdminNotifications } from '../admin/AdminNotifications';
+import { AdminSettings } from '../admin/AdminSettings';
+
 import { PMDashboardView } from '../pm/PMDashboardView';
 import { ScrumMasterDashboardView } from '../scrummaster/ScrumMasterDashboardView';
 import { DeveloperDashboardView } from '../developer/DeveloperDashboardView';
@@ -31,7 +39,9 @@ interface DashboardLayoutProps {
 }
 
 export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ userRole = 'Super Admin', onLogout }) => {
-  const [activeTab, setActiveTab] = useState('Overview');
+  const [activeTab, setActiveTab] = useState(
+    userRole === 'Admin' ? 'Dashboard' : 'Overview'
+  );
   const currentDate = 'Friday, 7 August 2026';
 
   const getRoleConfig = (role: string) => {
@@ -123,9 +133,9 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ userRole = 'Su
   const navItems = getNavItems(userRole);
 
   return (
-    <div className="min-h-screen bg-[#f8fafc] flex text-slate-800 font-sans">
+    <div className="h-screen overflow-hidden bg-[#f8fafc] flex text-slate-800 font-sans">
       {/* Shared Dark Sidebar */}
-      <aside className="w-64 bg-[#090d16] text-white flex flex-col justify-between shrink-0 p-5 border-r border-slate-800/60">
+      <aside className="w-64 h-screen bg-[#090d16] text-white flex flex-col justify-between shrink-0 p-5 border-r border-slate-800/60">
         <div>
           <div className="flex items-center gap-2.5 mb-6 px-2">
             <div className="w-8 h-8 rounded-xl bg-emerald-500 flex items-center justify-center text-white font-bold shadow-md shadow-emerald-500/20">
@@ -145,7 +155,7 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ userRole = 'Su
 
           <nav className="flex flex-col gap-1">
             {navItems.map((item, idx) => {
-              const isActive = activeTab === item.name || idx === 0;
+              const isActive = activeTab === item.name;
               return (
                 <button
                   key={item.name}
@@ -185,7 +195,7 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ userRole = 'Su
       </aside>
 
       {/* Main Content Area */}
-      <main className="flex-1 flex flex-col min-w-0 overflow-y-auto">
+      <main className="flex-1 flex flex-col min-w-0 h-screen overflow-y-auto">
         <header className="bg-white border-b border-slate-200/80 px-8 py-4 flex items-center justify-between sticky top-0 z-20 shadow-2xs">
           <div>
             <h1 className="text-xl font-extrabold text-slate-900 tracking-tight">
@@ -223,15 +233,65 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ userRole = 'Su
           </div>
         </header>
 
-        {/* Dynamic Role Dashboard Content rendered from modular components */}
-        <div className="p-8 max-w-[1400px] w-full mx-auto flex-1 space-y-8">
-          {userRole === 'Super Admin' && <SuperAdminDashboard />}
-          {userRole === 'Admin' && <AdminDashboardView />}
-          {userRole === 'Project Manager' && <PMDashboardView />}
-          {userRole === 'Scrum Master' && <ScrumMasterDashboardView />}
-          {userRole === 'Developer' && <DeveloperDashboardView />}
-          {userRole === 'QA Engineer' && <QADashboardView />}
-          {userRole === 'Viewer' && <ViewerDashboardView />}
+         {/* Dynamic Role Dashboard Content */}
+         <div className="p-8 max-w-[1400px] w-full mx-auto flex-1 space-y-8">
+
+        {userRole === 'Super Admin' && (
+         <SuperAdminDashboard />
+        )}
+
+        {userRole === 'Admin' && (
+          <>
+          {activeTab === 'Dashboard' && (
+            <AdminDashboardView />
+          )}
+
+          {activeTab === 'Users' && (
+            <AdminUsers />
+          )}
+
+          {activeTab === 'Departments' && (
+            <AdminDepartments />
+          )}
+
+          {activeTab === 'Projects' && (
+            <AdminProjects />
+          )}
+
+          {activeTab === 'Reports' && (
+            <AdminReports />
+          )}
+
+          {activeTab === 'Notifications' && (
+            <AdminNotifications />
+          )}
+
+          {activeTab === 'Settings' && (
+            <AdminSettings />
+          )}
+          </>
+       )}
+
+        {userRole === 'Project Manager' && (
+          <PMDashboardView />
+        )}
+
+        {userRole === 'Scrum Master' && (
+          <ScrumMasterDashboardView />
+        )}
+
+        {userRole === 'Developer' && (
+          <DeveloperDashboardView />
+        )}
+
+        {userRole === 'QA Engineer' && (
+          <QADashboardView />
+        )}
+
+        {userRole === 'Viewer' && (
+          <ViewerDashboardView />
+        )}
+
         </div>
       </main>
     </div>
