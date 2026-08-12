@@ -35,7 +35,7 @@ export const SuperAdminDashboard: React.FC = () => {
           <h3 className="text-sm font-extrabold text-slate-900 mb-5">Recent User Registrations</h3>
           <div className="flex flex-col gap-4">
             {[
-              { name: 'Rajeev Kumar', role: 'Super Admin', dept: 'Leadership', time: '2 min ago', avatar: 'RK', bg: 'bg-emerald-500' },
+              { name: 'Aditya Kate', role: 'Super Admin', dept: 'Leadership', time: '2 min ago', avatar: 'AK', bg: 'bg-emerald-500' },
               { name: 'Nisha Agarwal', role: 'Admin', dept: 'Operations', time: '12 min ago', avatar: 'NA', bg: 'bg-teal-500' },
               { name: 'Arjun Shah', role: 'Project Manager', dept: 'Product', time: '1 h ago', avatar: 'AS', bg: 'bg-emerald-500' },
               { name: 'Aryan Kapoor', role: 'Scrum Master', dept: 'Engineering', time: '30 min ago', avatar: 'AK', bg: 'bg-teal-500' },
