@@ -44,7 +44,14 @@ import { ScrumStandups } from '../scrummaster/ScrumStandups';
 import { ScrumRetrospective } from '../scrummaster/ScrumRetrospective';
 import { DeveloperDashboardView } from '../developer/DeveloperDashboardView';
 import { QADashboardView } from '../qa/QADashboardView';
+<<<<<<< HEAD
+import { QATestCases } from '../qa/QATestCases';
+import { QABugReports } from '../qa/QABugReports';
+import { QATestCoverage } from '../qa/QATestCoverage';
+import { QAReports } from '../qa/QAReports';
+=======
 
+>>>>>>> 479e21ce8781eb83aed9165329637e08e0b6b95f
 import { ViewerDashboardView } from '../viewer/ViewerDashboardView';
 import { ViewerReports } from '../viewer/ViewerReports';
 import { ViewerSprintStatus } from '../viewer/ViewerSprintStatus';
@@ -66,6 +73,11 @@ interface DashboardLayoutProps {
   onLogout?: () => void;
 }
 
+<<<<<<< HEAD
+export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ userRole = 'Super Admin', onLogout }) => {
+  const [activeTab, setActiveTab] = useState('QA Dashboard');
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+=======
 export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
   userRole = 'Super Admin',
   onLogout,
@@ -102,6 +114,7 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
     },
   ]);
 
+>>>>>>> 479e21ce8781eb83aed9165329637e08e0b6b95f
   const currentDate = 'Friday, 7 August 2026';
 
   const getRoleConfig = (role: string) => {
@@ -328,6 +341,27 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
   };
 
   return (
+<<<<<<< HEAD
+    <div className="min-h-screen bg-[#f8fafc] flex text-slate-800 font-sans">
+      {/* Shared Dark Sidebar */}
+      <aside
+  className={`
+    fixed left-0 top-0 z-50
+    h-screen w-64
+    bg-[#070d18]
+    border-r border-slate-800
+    text-white
+    flex flex-col
+    p-5
+    transition-transform duration-300
+    overflow-y-auto
+    ${mobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}
+    lg:translate-x-0
+  `}
+>
+        <div>
+          <div className="flex items-center gap-2.5 mb-6 px-2">
+=======
     <div className="h-screen w-full overflow-hidden bg-[#f8fafc] text-slate-800 font-sans flex">
 
       <aside
@@ -343,6 +377,7 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
 
           {/* LOGO */}
           <div className="flex items-center gap-2.5 mb-6 px-2 shrink-0">
+>>>>>>> 479e21ce8781eb83aed9165329637e08e0b6b95f
             <div className="w-8 h-8 rounded-xl bg-emerald-500 flex items-center justify-center text-white font-bold shadow-md shadow-emerald-500/20">
               <LayoutGrid size={18} />
             </div>
@@ -363,6 +398,20 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
             </span>
           </div>
 
+<<<<<<< HEAD
+          <nav className="flex flex-col gap-1">
+            {navItems.map((item, idx) => {
+            const isActive = activeTab === item.name;
+              return (
+                <button
+                  key={item.name}
+                 onClick={() => {
+  setActiveTab(item.name);
+  setMobileMenuOpen(false);
+}}
+                  className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                    isActive
+=======
           {/* NAVIGATION */}
           <nav className="flex flex-col gap-1 overflow-y-auto pr-1">
             {navItems.map((item) => {
@@ -377,6 +426,7 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
                     rounded-xl text-xs font-bold
                     transition-all cursor-pointer text-left shrink-0
                     ${isActive
+>>>>>>> 479e21ce8781eb83aed9165329637e08e0b6b95f
                       ? 'bg-white/10 text-white shadow-xs border border-white/10'
                       : 'text-slate-400 hover:text-slate-200 hover:bg-white/5'
                     }
@@ -420,6 +470,30 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
 
       </aside>
 
+<<<<<<< HEAD
+      {/* Main Content Area */}
+      <main className="flex-1 lg:ml-64 flex flex-col min-w-0 overflow-y-auto">
+        <header className="bg-white border-b border-slate-200/80 px-4 lg:px-8 py-4 flex items-center justify-between sticky top-0 z-20 shadow-2xs">
+
+  {/* Mobile Menu Button */}
+  <button
+    onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+    className="lg:hidden mr-3 w-10 h-10 rounded-lg border border-slate-200 flex items-center justify-center text-slate-700 hover:bg-slate-100"
+    aria-label="Open menu"
+  >
+    ☰
+  </button>
+
+  <div className="flex-1">
+    <h1 className="text-xl font-extrabold text-slate-900 tracking-tight">
+              {userRole === 'Super Admin' && 'System Overview'}
+              {userRole === 'Admin' && 'Admin Dashboard'}
+              {userRole === 'Project Manager' && 'PM Dashboard'}
+              {userRole === 'Scrum Master' && 'Sprint Overview'}
+               {userRole === 'QA Engineer' &&  'QA Dashboard'}
+              {userRole === 'Viewer' && 'Projects Overview'}
+              {userRole === 'Developer' && 'My Dashboard'}
+=======
       <main className="flex-1 min-w-0 min-h-0 h-screen overflow-y-auto overflow-x-hidden bg-[#f8fafc]">
 
         {/* HEADER */}
@@ -428,6 +502,7 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
           <div>
             <h1 className="text-xl font-extrabold text-slate-900 tracking-tight">
               {getPageTitle()}
+>>>>>>> 479e21ce8781eb83aed9165329637e08e0b6b95f
             </h1>
             <div className="text-xs text-slate-400 font-medium">{currentDate}</div>
           </div>
@@ -528,9 +603,26 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
             </>
           )}
           {userRole === 'Developer' && <DeveloperDashboardView />}
+<<<<<<< HEAD
+          {userRole === 'QA Engineer' && (
+  <>
+    {activeTab === 'QA Dashboard' && <QADashboardView />}
+
+    {activeTab === 'My Test Tasks' && <QATestCases />}
+
+    {activeTab === 'Bug Reports' && <QABugReports />}
+
+    {activeTab === 'Test Coverage' && <QATestCoverage />}
+
+    {activeTab === 'Quality Reports' && <QAReports />}
+  </>
+)}
+          {userRole === 'Viewer' && <ViewerDashboardView />}
+=======
           {userRole === 'QA Engineer' && <QADashboardView />}
           {userRole === 'Viewer' && renderViewerContent()}
 
+>>>>>>> 479e21ce8781eb83aed9165329637e08e0b6b95f
         </div>
 
       </main>
