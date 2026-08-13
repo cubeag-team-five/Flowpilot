@@ -2,6 +2,10 @@ import React, { useState } from 'react';
 import { LayoutGrid, CheckSquare, Layers, Clock, Bell } from 'lucide-react';
 import { DashboardLayout } from '../common/DashboardLayout';
 import { DeveloperDashboardView } from './DeveloperDashboardView';
+import { DeveloperTasks } from './DeveloperTasks';
+import { DeveloperSprintBoard } from './DeveloperSprintBoard';
+import { DeveloperTimeLog } from './DeveloperTimeLog';
+import { DeveloperMentions } from './DeveloperMentions';
 
 const roleConfig = {
   label: 'SENIOR FRONTEND DEVELOPER',
@@ -44,7 +48,11 @@ export const DeveloperLayout: React.FC<Props> = ({ onLogout }) => {
       pageTitle={pageTitles[activeTab] ?? 'My Dashboard'}
       onLogout={onLogout}
     >
-      <DeveloperDashboardView />
+      {activeTab === 'My Dashboard' && <DeveloperDashboardView />}
+      {activeTab === 'My Tasks' && <DeveloperTasks />}
+      {activeTab === 'Sprint Board' && <DeveloperSprintBoard />}
+      {activeTab === 'Time Log' && <DeveloperTimeLog />}
+      {activeTab === 'Mentions' && <DeveloperMentions />}
     </DashboardLayout>
   );
 };

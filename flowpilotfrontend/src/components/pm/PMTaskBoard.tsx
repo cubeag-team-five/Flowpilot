@@ -234,30 +234,17 @@ function BoardColumn({ title, tasks }) {
   );
 }
 
-export default function TaskBoardPage() {
+export function PMTaskBoard() {
   const [activeFilter, setActiveFilter] = useState("All");
-
   return (
-    <div className="flex min-h-screen w-full flex-col bg-slate-50 lg:flex-row">
-      <div className="lg:sticky lg:top-0 lg:h-screen">
-        <Sidebar />
+    <div>
+      <div className="mb-6">
+        <FilterTabs active={activeFilter} onChange={setActiveFilter} />
       </div>
-
-      <div className="flex-1">
-        <Topbar />
-
-        <main className="p-4 sm:p-6 lg:p-8">
-          <div className="mb-6">
-            <FilterTabs active={activeFilter} onChange={setActiveFilter} />
-          </div>
-
-          {/* Horizontal scroll on small/medium screens, 4-col grid on large */}
-          <div className="-mx-4 flex gap-4 overflow-x-auto px-4 pb-2 sm:-mx-6 sm:px-6 lg:mx-0 lg:grid lg:grid-cols-4 lg:gap-6 lg:overflow-visible lg:px-0 lg:pb-0">
-            {columns.map((column) => (
-              <BoardColumn key={column.title} {...column} />
-            ))}
-          </div>
-        </main>
+      <div className="-mx-4 flex gap-4 overflow-x-auto px-4 pb-2 sm:-mx-6 sm:px-6 lg:mx-0 lg:grid lg:grid-cols-4 lg:gap-6 lg:overflow-visible lg:px-0 lg:pb-0">
+        {columns.map((column) => (
+          <BoardColumn key={column.title} {...column} />
+        ))}
       </div>
     </div>
   );

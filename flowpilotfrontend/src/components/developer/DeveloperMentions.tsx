@@ -206,4 +206,5 @@ const DeveloperMentions: React.FC = () => {
   );
 };
 
+export { DeveloperMentions };
 export default DeveloperMentions;

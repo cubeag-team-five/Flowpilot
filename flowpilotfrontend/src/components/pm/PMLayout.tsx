@@ -2,6 +2,11 @@ import React, { useState } from 'react';
 import { LayoutGrid, Layers, Flame, CheckSquare, Users, Activity } from 'lucide-react';
 import { DashboardLayout } from '../common/DashboardLayout';
 import { PMDashboardView } from './PMDashboardView';
+import { PMProjects } from './PMProjects';
+import { PMSprintPlanning } from './PMSprintPlanning';
+import { PMTaskBoard } from './PMTaskBoard';
+import { PMWorkload } from './PMWorkload';
+import { PMAnalytics } from './PMAnalytics';
 
 const roleConfig = {
   label: 'SENIOR PROJECT MANAGER',
@@ -46,7 +51,12 @@ export const PMLayout: React.FC<Props> = ({ onLogout }) => {
       pageTitle={pageTitles[activeTab] ?? 'PM Dashboard'}
       onLogout={onLogout}
     >
-      <PMDashboardView />
+      {activeTab === 'Dashboard' && <PMDashboardView />}
+      {activeTab === 'My Projects' && <PMProjects />}
+      {activeTab === 'Sprint Planning' && <PMSprintPlanning />}
+      {activeTab === 'Task Board' && <PMTaskBoard />}
+      {activeTab === 'Team Workload' && <PMWorkload />}
+      {activeTab === 'Analytics & Reports' && <PMAnalytics />}
     </DashboardLayout>
   );
 };
