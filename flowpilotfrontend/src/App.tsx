@@ -17,6 +17,16 @@ import { BottomCTASection } from './components/BottomCTASection';
 import { Footer } from './components/common/Footer';
 import { DemoModal } from './components/DemoModal';
 import { LoginPage } from './components/common/LoginPage';
+<<<<<<< HEAD
+=======
+import { SuperAdminLayout } from './components/superadmin/SuperAdminLayout';
+import { AdminLayout } from './components/admin/AdminLayout';
+import { PMLayout } from './components/pm/PMLayout';
+import { ScrumMasterLayout } from './components/scrummaster/ScrumMasterLayout';
+import { DeveloperLayout } from './components/developer/DeveloperLayout';
+import { QALayout } from './components/qa/QALayout';
+import { ViewerLayout } from './components/viewer/ViewerLayout';
+>>>>>>> 24fa3f3147f2685909f99e541f6cc2001ddd767f
 
 export function App() {
   const [currentView, setCurrentView] = useState<'landing' | 'login' | 'dashboard'>('landing');
@@ -35,7 +45,23 @@ export function App() {
     );
   }
 
+<<<<<<< HEAD
  
+=======
+  if (currentView === 'dashboard') {
+    const logout = () => setCurrentView('landing');
+    switch (activeRole) {
+      case 'Super Admin': return <SuperAdminLayout onLogout={logout} />;
+      case 'Admin': return <AdminLayout onLogout={logout} />;
+      case 'Project Manager': return <PMLayout onLogout={logout} />;
+      case 'Scrum Master': return <ScrumMasterLayout onLogout={logout} />;
+      case 'Developer': return <DeveloperLayout onLogout={logout} />;
+      case 'QA Engineer': return <QALayout onLogout={logout} />;
+      case 'Viewer': return <ViewerLayout onLogout={logout} />;
+      default: return <SuperAdminLayout onLogout={logout} />;
+    }
+  }
+>>>>>>> 24fa3f3147f2685909f99e541f6cc2001ddd767f
 
   return (
     <div className="min-h-screen relative text-slate-900">
