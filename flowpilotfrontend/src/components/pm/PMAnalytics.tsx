@@ -206,26 +206,15 @@ function VelocityChart() {
   );
 }
 
-export default function AnalyticsReportsPage() {
+export function PMAnalytics() {
   return (
-    <div className="flex min-h-screen w-full flex-col bg-slate-50 lg:flex-row">
-      <div className="lg:sticky lg:top-0 lg:h-screen">
-        <Sidebar />
+    <div className="space-y-5 sm:space-y-6">
+      <div className="grid grid-cols-1 gap-5 sm:grid-cols-3 sm:gap-6">
+        {statCards.map((card) => (
+          <StatCard key={card.label} {...card} />
+        ))}
       </div>
-
-      <div className="flex-1">
-        <Topbar />
-
-        <main className="space-y-5 p-4 sm:space-y-6 sm:p-6 lg:p-8">
-          <div className="grid grid-cols-1 gap-5 sm:grid-cols-3 sm:gap-6">
-            {statCards.map((card) => (
-              <StatCard key={card.label} {...card} />
-            ))}
-          </div>
-
-          <VelocityChart />
-        </main>
-      </div>
+      <VelocityChart />
     </div>
   );
 }

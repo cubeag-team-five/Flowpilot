@@ -167,4 +167,5 @@ const DeveloperTasks: React.FC = () => {
   );
 };
 
+export { DeveloperTasks };
 export default DeveloperTasks;

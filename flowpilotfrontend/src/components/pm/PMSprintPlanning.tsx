@@ -234,21 +234,11 @@ function ProductBacklogCard() {
   );
 }
 
-export default function SprintPlanningDashboard() {
+export function PMSprintPlanning() {
   return (
-    <div className="flex min-h-screen w-full flex-col bg-slate-50 lg:flex-row">
-      <div className="lg:h-screen lg:sticky lg:top-0">
-        <Sidebar />
-      </div>
-
-      <div className="flex-1">
-        <Topbar />
-
-        <main className="grid grid-cols-1 gap-5 p-4 sm:p-6 lg:grid-cols-2 lg:gap-6 lg:p-8">
-          <ActiveSprintCard />
-          <ProductBacklogCard />
-        </main>
-      </div>
+    <div className="grid grid-cols-1 gap-5 lg:grid-cols-2 lg:gap-6">
+      <ActiveSprintCard />
+      <ProductBacklogCard />
     </div>
   );
 }

@@ -224,4 +224,5 @@ const DeveloperSprintBoard: React.FC = () => {
   );
 };
 
+export { DeveloperSprintBoard };
 export default DeveloperSprintBoard;

@@ -249,4 +249,5 @@ const DeveloperTimeLog: React.FC = () => {
   );
 };
 
+export { DeveloperTimeLog };
 export default DeveloperTimeLog;

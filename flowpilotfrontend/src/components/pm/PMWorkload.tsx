@@ -265,19 +265,16 @@ function TeamWorkloadCard() {
   );
 }
 
-export default function TeamWorkloadPage() {
+export function PMWorkload() {
   return (
-    <div className="flex min-h-screen w-full flex-col bg-slate-50 lg:flex-row">
-      <div className="lg:sticky lg:top-0 lg:h-screen">
-        <Sidebar />
-      </div>
-
-      <div className="flex-1">
-        <Topbar />
-
-        <main className="p-4 sm:p-6 lg:p-8">
-          <TeamWorkloadCard />
-        </main>
+    <div className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-8">
+      <h2 className="mb-2 text-base font-bold text-slate-900 sm:text-lg">
+        Team Workload — Sprint 12
+      </h2>
+      <div>
+        {team.map((member) => (
+          <WorkloadRow key={member.name} {...member} />
+        ))}
       </div>
     </div>
   );
