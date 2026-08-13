@@ -89,8 +89,8 @@ export const ScrumBoard: React.FC = () => {
         swipes sideways. From lg the whole board is visible as a 6-up grid.
       */}
       <div
-        className="flex gap-3 overflow-x-auto snap-x snap-mandatory pb-3 -mx-1 px-1
-          lg:grid lg:grid-cols-6 lg:overflow-x-visible lg:mx-0 lg:px-0 lg:pb-0"
+        className="flex items-start gap-3 overflow-x-auto snap-x snap-mandatory pb-3 -mx-1 px-1
+          lg:grid lg:grid-cols-6 lg:items-stretch lg:overflow-x-visible lg:mx-0 lg:px-0 lg:pb-0"
       >
         {columns.map((col) => {
           const points = col.tasks.reduce((n, t) => n + t.points, 0);
