@@ -17,7 +17,6 @@ import { BottomCTASection } from './components/BottomCTASection';
 import { Footer } from './components/common/Footer';
 import { DemoModal } from './components/DemoModal';
 import { LoginPage } from './components/common/LoginPage';
-import { DashboardLayout } from './components/common/DashboardLayout';
 
 export function App() {
   const [currentView, setCurrentView] = useState<'landing' | 'login' | 'dashboard'>('landing');
@@ -36,14 +35,7 @@ export function App() {
     );
   }
 
-  if (currentView === 'dashboard') {
-    return (
-      <DashboardLayout 
-        userRole={activeRole}
-        onLogout={() => setCurrentView('landing')}
-      />
-    );
-  }
+ 
 
   return (
     <div className="min-h-screen relative text-slate-900">
