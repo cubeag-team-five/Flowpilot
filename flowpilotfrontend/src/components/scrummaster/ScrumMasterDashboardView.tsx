@@ -1,79 +1,117 @@
 import React from 'react';
-import { AlertTriangle } from 'lucide-react';
+import { FiAlertTriangle, FiArrowUpRight, FiCheck } from 'react-icons/fi';
+import { TYPE, SURFACE, STATUS, type StatusKey } from './scrumUI';
 
 export const ScrumMasterDashboardView: React.FC = () => {
+  const kpis: { label: string; value: string; note: string; tone: StatusKey }[] = [
+    { label: 'Sprint', value: 'Sprint 12', note: 'IPMT Platform v2', tone: 'done' },
+    { label: 'Days remaining', value: '14', note: 'of 21 total', tone: 'active' },
+    { label: 'Tasks done', value: '7 / 18', note: '38% complete', tone: 'done' },
+    { label: 'Blockers', value: '1', note: 'Needs resolution', tone: 'blocked' }
+  ];
+
+  const ceremonies: { name: string; when: string; tone: StatusKey }[] = [
+    { name: 'Daily standup', when: '9:30 AM — daily', tone: 'done' },
+    { name: 'Sprint review / demo', when: 'Aug 8 · 3:00 PM', tone: 'plan' },
+    { name: 'Sprint retrospective', when: 'Aug 9 · 10:00 AM', tone: 'done' },
+    { name: 'Sprint 13 planning', when: 'Aug 18 · 9:00 AM', tone: 'active' }
+  ];
+
   return (
     <>
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-        <div className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-2xs">
-          <div className="text-[11px] font-extrabold tracking-wider text-slate-400 uppercase mb-2">SPRINT NAME</div>
-          <div className="text-2xl font-black text-slate-900 leading-none mb-2">Sprint 12</div>
-          <div className="text-xs font-bold text-emerald-500">IPMT Platform v2</div>
-        </div>
-
-        <div className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-2xs">
-          <div className="text-[11px] font-extrabold tracking-wider text-slate-400 uppercase mb-2">DAYS REMAINING</div>
-          <div className="text-3xl font-black text-slate-900 leading-none mb-2">14</div>
-          <div className="text-xs font-bold text-slate-400">of 21 total</div>
-        </div>
-
-        <div className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-2xs">
-          <div className="text-[11px] font-extrabold tracking-wider text-slate-400 uppercase mb-2">TASKS DONE</div>
-          <div className="text-3xl font-black text-slate-900 leading-none mb-2">7 / 18</div>
-          <div className="text-xs font-bold text-emerald-500">38% complete</div>
-        </div>
-
-        <div className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-2xs">
-          <div className="text-[11px] font-extrabold tracking-wider text-slate-400 uppercase mb-2">BLOCKERS</div>
-          <div className="text-3xl font-black text-slate-900 leading-none mb-2">1</div>
-          <div className="text-xs font-bold text-rose-500">Needs resolution</div>
-        </div>
+      {/* Sprint health at a glance */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+        {kpis.map((kpi) => (
+          <div key={kpi.label} className={`${SURFACE.card} ${SURFACE.pad} relative overflow-hidden`}>
+            <span className={`absolute inset-y-0 left-0 w-[3px] ${STATUS[kpi.tone].rail}`} aria-hidden="true" />
+            <div className={`${TYPE.eyebrow} text-slate-400`}>{kpi.label}</div>
+            <div className={`${TYPE.metric} text-slate-900 mt-2`}>{kpi.value}</div>
+            <div className={`${TYPE.meta} font-medium mt-1 ${STATUS[kpi.tone].text}`}>{kpi.note}</div>
+          </div>
+        ))}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-[1.3fr_1fr] gap-6">
-        <div className="bg-white border border-slate-200/80 rounded-2xl p-6 shadow-2xs">
-          <span className="text-[10px] font-extrabold tracking-wider text-emerald-500 uppercase">SPRINT GOAL</span>
-          <p className="text-lg font-extrabold text-slate-900 mt-3 leading-relaxed">
-            "Deliver the core design system, task board enhancements, and mobile responsiveness for the IPMT Platform."
+      <div className="grid grid-cols-1 lg:grid-cols-[1.2fr_1fr] gap-4">
+        {/* Sprint goal + progress */}
+        <div className={`${SURFACE.card} ${SURFACE.pad} flex flex-col`}>
+          <div className={`${TYPE.eyebrow} text-emerald-600`}>Sprint goal</div>
+          <p className={`${TYPE.title} text-slate-900 mt-3 leading-relaxed`}>
+            Deliver the core design system, task board enhancements, and mobile responsiveness for the IPMT Platform.
           </p>
-        </div>
 
-        <div className="bg-white border border-slate-200/80 rounded-2xl p-6 shadow-2xs">
-          <h3 className="text-sm font-extrabold text-slate-900 mb-4">Ceremony Schedule</h3>
-          <div className="space-y-3">
+          <div className="mt-auto pt-5 space-y-3">
             {[
-              { name: 'Daily Standup', time: '9:30 AM — Daily', status: 'Scheduled', color: 'text-emerald-500' },
-              { name: 'Sprint Review / Demo', time: 'Aug 8 · 3:00 PM', status: 'Scheduled', color: 'text-purple-400' },
-              { name: 'Sprint Retrospective', time: 'Aug 9 · 10:00 AM', status: 'Scheduled', color: 'text-cyan-500' },
-              { name: 'Sprint 13 Planning', time: 'Aug 18 · 9:00 AM', status: 'Scheduled', color: 'text-amber-500' }
-            ].map((c, i) => (
-              <div key={i} className="flex items-center justify-between py-1.5 border-b border-slate-100 last:border-0">
-                <div className="flex items-center gap-2.5">
-                  <span className={`w-2 h-2 rounded-full ${c.color.replace('text-', 'bg-')}`}></span>
-                  <div>
-                    <div className="text-xs font-bold text-slate-900">{c.name}</div>
-                    <div className="text-[10px] text-slate-400">{c.time}</div>
-                  </div>
+              { label: 'Tasks completed', value: '7 of 18', pct: '38%', tone: 'done' as StatusKey },
+              { label: 'Sprint elapsed', value: 'Day 7 of 21', pct: '33%', tone: 'active' as StatusKey }
+            ].map((bar) => (
+              <div key={bar.label}>
+                <div className="flex items-baseline justify-between mb-1.5">
+                  <span className={`${TYPE.meta} font-medium text-slate-500`}>{bar.label}</span>
+                  <span className={`${TYPE.meta} font-semibold text-slate-900 tabular-nums`}>{bar.value}</span>
                 </div>
-                <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full">{c.status}</span>
+                <div className="h-1.5 w-full rounded-full bg-slate-100 overflow-hidden">
+                  <div className={`h-full rounded-full ${STATUS[bar.tone].rail}`} style={{ width: bar.pct }} />
+                </div>
               </div>
             ))}
           </div>
         </div>
+
+        {/* Ceremony schedule */}
+        <div className={`${SURFACE.card} ${SURFACE.pad}`}>
+          <h3 className={`${TYPE.title} text-slate-900`}>Ceremony schedule</h3>
+          <ul className="mt-4 space-y-1">
+            {ceremonies.map((c) => (
+              <li
+                key={c.name}
+                className="flex items-center gap-3 py-2.5 border-b border-slate-100 last:border-0"
+              >
+                <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${STATUS[c.tone].rail}`} aria-hidden="true" />
+                <div className="min-w-0 flex-1">
+                  <div className={`${TYPE.body} font-medium text-slate-900 truncate`}>{c.name}</div>
+                  <div className={`${TYPE.meta} text-slate-400`}>{c.when}</div>
+                </div>
+                <span className={`${TYPE.meta} font-medium text-slate-400 shrink-0`}>Scheduled</span>
+              </li>
+            ))}
+          </ul>
+        </div>
       </div>
 
-      <div className="bg-rose-50/70 border border-rose-200 rounded-2xl p-6 shadow-2xs">
-        <div className="text-xs font-extrabold text-rose-600 uppercase tracking-wider mb-3 flex items-center gap-2">
-          <AlertTriangle size={16} /> Active Blockers
+      {/* Blockers — the one thing a scrum master must act on today */}
+      <div className={`${SURFACE.card} border-rose-500/20 overflow-hidden`}>
+        <div className={`flex items-center gap-2 px-4 sm:px-5 py-3 border-b border-rose-500/15 bg-rose-500/5`}>
+          <FiAlertTriangle className="text-rose-600 shrink-0" size={14} aria-hidden="true" />
+          <h3 className={`${TYPE.eyebrow} text-rose-600`}>Active blockers · 1</h3>
         </div>
-        <div className="bg-white border border-rose-100 rounded-xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-          <div>
-            <div className="text-xs font-extrabold text-slate-900">Divya Mehta — Waiting for brand color tokens</div>
-            <div className="text-[11px] text-slate-400 mt-0.5">Blocks: T-044 Mobile responsive layout · T-047 Dark mode theming · Raised 2 days ago</div>
+
+        <div className={`${SURFACE.pad} flex flex-col sm:flex-row sm:items-center gap-4`}>
+          <div className="min-w-0 flex-1">
+            <div className={`${TYPE.body} font-semibold text-slate-900`}>
+              Divya Mehta — waiting for brand colour tokens
+            </div>
+            <div className={`${TYPE.meta} text-slate-500 mt-1`}>
+              Blocks T-044 mobile responsive layout and T-047 dark mode theming · raised 2 days ago
+            </div>
           </div>
-          <div className="flex gap-2">
-            <button className="px-3 py-1.5 bg-rose-50 text-rose-600 border border-rose-200 rounded-lg text-xs font-bold hover:bg-rose-100 cursor-pointer">Escalate</button>
-            <button className="px-3 py-1.5 bg-emerald-50 text-emerald-600 border border-emerald-200 rounded-lg text-xs font-bold hover:bg-emerald-100 cursor-pointer">Mark Resolved</button>
+
+          <div className="flex gap-2 shrink-0">
+            <button
+              type="button"
+              className={`${TYPE.meta} font-semibold inline-flex items-center gap-1.5 px-3 py-2 rounded-lg cursor-pointer
+                bg-rose-500/10 text-rose-700 border border-rose-500/20 hover:bg-rose-500/15
+                focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-rose-500 transition-colors`}
+            >
+              <FiArrowUpRight size={13} aria-hidden="true" /> Escalate
+            </button>
+            <button
+              type="button"
+              className={`${TYPE.meta} font-semibold inline-flex items-center gap-1.5 px-3 py-2 rounded-lg cursor-pointer
+                bg-emerald-500/10 text-emerald-700 border border-emerald-500/20 hover:bg-emerald-500/15
+                focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-500 transition-colors`}
+            >
+              <FiCheck size={13} aria-hidden="true" /> Mark resolved
+            </button>
           </div>
         </div>
       </div>
