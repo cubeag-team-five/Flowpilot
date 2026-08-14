@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 
 import {
   LayoutDashboard,
@@ -10,6 +10,10 @@ import {
   X,
   Bell,
   LogOut,
+  User,
+  Settings,
+  HelpCircle,
+  Power,
 } from 'lucide-react';
 
 import { QADashboardView } from './QADashboardView';
@@ -53,9 +57,30 @@ const pageTitles: Record<string, string> = {
   'Quality Reports': 'Quality Reports',
 };
 
+const qaNotifications = [
+  { id: 1, title: 'Bug BUG-089 filed', message: 'New critical bug on login flow.', time: '15 min ago', unread: true, color: 'bg-rose-500' },
+  { id: 2, title: 'Test case T-041 passed', message: 'REST API docs test passed.', time: '1 hour ago', unread: true, color: 'bg-emerald-500' },
+  { id: 3, title: 'Coverage dropped', message: 'Module coverage fell below 80%.', time: '2 hours ago', unread: false, color: 'bg-slate-300' },
+  { id: 4, title: 'Sprint 12 QA sign-off', message: 'Sign-off required by Aug 10.', time: '3 hours ago', unread: true, color: 'bg-cyan-500' },
+];
+
 export const QALayout: React.FC<Props> = ({ onLogout }) => {
   const [activeTab, setActiveTab] = useState('QA Dashboard');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [showNotifications, setShowNotifications] = useState(false);
+  const [showProfile, setShowProfile] = useState(false);
+  const [notifications, setNotifications] = useState(qaNotifications);
+  const notifRef = useRef<HTMLDivElement>(null);
+  const profileRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (notifRef.current && !notifRef.current.contains(e.target as Node)) setShowNotifications(false);
+      if (profileRef.current && !profileRef.current.contains(e.target as Node)) setShowProfile(false);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
 
   const handleNavigation = (tab: string) => {
     setActiveTab(tab);
@@ -308,45 +333,74 @@ export const QALayout: React.FC<Props> = ({ onLogout }) => {
           <div className="flex items-center gap-2 sm:gap-4">
 
             {/* Notification */}
-            <button
-              className="
-                relative
-                w-10 h-10
-                rounded-full
-                border border-slate-200
-                flex items-center justify-center
-                text-slate-500
-                hover:bg-slate-50
-                transition
-              "
-              title="Notifications"
-            >
-              <Bell size={18} />
-
-              <span className="
-                absolute
-                top-1
-                right-1
-                w-2
-                h-2
-                rounded-full
-                bg-rose-500
-              " />
-            </button>
+            <div className="relative" ref={notifRef}>
+              <button
+                onClick={() => { setShowNotifications(p => !p); setShowProfile(false); }}
+                className="relative w-10 h-10 rounded-full border border-slate-200 flex items-center justify-center text-slate-500 hover:bg-slate-50 transition"
+                title="Notifications"
+              >
+                <Bell size={18} />
+                {notifications.some(n => n.unread) && (
+                  <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-rose-500" />
+                )}
+              </button>
+              {showNotifications && (
+                <div className="absolute right-0 top-12 w-80 bg-white border border-slate-200 rounded-2xl shadow-xl z-50 overflow-hidden">
+                  <div className="px-4 py-3 border-b border-slate-100 flex items-center justify-between">
+                    <div>
+                      <h3 className="text-sm font-bold text-slate-900">Notifications</h3>
+                      <p className="text-[10px] text-slate-400 mt-0.5">{notifications.filter(n => n.unread).length} unread</p>
+                    </div>
+                    <button type="button" onClick={() => setNotifications(prev => prev.map(n => ({ ...n, unread: false })))} className="text-[10px] font-semibold text-emerald-600 cursor-pointer">Mark all as read</button>
+                  </div>
+                  <div className="max-h-80 overflow-y-auto">
+                    {notifications.map(n => (
+                      <button key={n.id} type="button" onClick={() => setNotifications(prev => prev.map(item => item.id === n.id ? { ...item, unread: false } : item))} className={`w-full text-left px-4 py-3 border-b border-slate-100 hover:bg-slate-50 cursor-pointer ${n.unread ? 'bg-emerald-50/40' : 'bg-white'}`}>
+                        <div className="flex items-start gap-3">
+                          <div className={`mt-1 w-2 h-2 rounded-full shrink-0 ${n.color}`} />
+                          <div className="min-w-0">
+                            <div className="text-xs font-bold text-slate-900">{n.title}</div>
+                            <div className="text-[11px] text-slate-500 mt-0.5">{n.message}</div>
+                            <div className="text-[10px] text-slate-400 mt-1">{n.time}</div>
+                          </div>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
 
             {/* Profile */}
-            <div
-              className="
-                w-10 h-10
-                rounded-full
-                bg-teal-500
-                flex items-center justify-center
-                text-white
-                font-bold
-                text-sm
-              "
-            >
-              PR
+            <div className="relative" ref={profileRef}>
+              <button
+                type="button"
+                onClick={() => { setShowProfile(p => !p); setShowNotifications(false); }}
+                className="w-10 h-10 rounded-full bg-teal-500 flex items-center justify-center text-white font-bold text-sm cursor-pointer hover:opacity-90 transition"
+              >
+                PR
+              </button>
+              {showProfile && (
+                <div className="absolute right-0 top-12 w-72 bg-white border border-slate-200 rounded-2xl shadow-xl z-50 overflow-hidden">
+                  <div className="px-5 py-4 border-b border-slate-100">
+                    <div className="font-bold text-slate-900 text-sm">Priya Rajan</div>
+                    <div className="text-xs text-slate-400 mt-0.5">p.rajan@ipmt.com</div>
+                    <span className="inline-block mt-2 text-[10px] font-bold px-2.5 py-1 rounded-full bg-cyan-100 text-cyan-600">QA Engineer</span>
+                  </div>
+                  <div className="py-2">
+                    {[{ icon: <User size={15} />, label: 'My Profile' }, { icon: <Settings size={15} />, label: 'Settings' }, { icon: <HelpCircle size={15} />, label: 'Help & Support' }].map(item => (
+                      <button key={item.label} type="button" className="w-full flex items-center gap-3 px-5 py-2.5 text-sm text-slate-700 hover:bg-slate-50 cursor-pointer">
+                        <span className="text-slate-400">{item.icon}</span>{item.label}
+                      </button>
+                    ))}
+                  </div>
+                  <div className="border-t border-slate-100 py-2">
+                    <button type="button" onClick={onLogout} className="w-full flex items-center gap-3 px-5 py-2.5 text-sm text-rose-500 hover:bg-rose-50 cursor-pointer">
+                      <Power size={15} />Sign Out
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
 
           </div>

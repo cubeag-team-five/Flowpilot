@@ -1,9 +1,25 @@
-import React, { useState } from 'react';
-import { LayoutGrid, Bell, Search, LogOut } from 'lucide-react';
+import React, { useState, useRef, useEffect } from 'react';
+import { LayoutGrid, Bell, Search, LogOut, User, Settings, HelpCircle, Power } from 'lucide-react';
 
 export interface NavItem {
   name: string;
   icon: React.ReactNode;
+}
+
+export interface NotificationItem {
+  id: number;
+  title: string;
+  message: string;
+  time: string;
+  unread: boolean;
+  color?: string;
+}
+
+export interface ProfileConfig {
+  name: string;
+  email: string;
+  roleLabel: string;
+  roleBadgeColor: string;
 }
 
 interface RoleConfig {
@@ -22,10 +38,12 @@ interface DashboardLayoutProps {
   onTabChange: (tab: string) => void;
   pageTitle: string;
   onLogout?: () => void;
+  notifications: NotificationItem[];
+  profileConfig: ProfileConfig;
   children: React.ReactNode;
 }
 
-const currentDate = 'Friday, 7 August 2026';
+const currentDate = 'Thursday, 13 August 2026';
 
 export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
   navItems,
@@ -34,14 +52,26 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
   onTabChange,
   pageTitle,
   onLogout,
+  notifications: initialNotifications,
+  profileConfig,
   children,
 }) => {
   const [showNotifications, setShowNotifications] = useState(false);
-  const [notifications, setNotifications] = useState([
-    { id: 1, title: 'New user registered', message: 'A new user has been added to the system.', time: '2 min ago', unread: true },
-    { id: 2, title: 'Project status updated', message: 'A project status has been updated.', time: '15 min ago', unread: true },
-    { id: 3, title: 'System health check', message: 'All major system services are running normally.', time: '1 hour ago', unread: false },
-  ]);
+  const [showProfile, setShowProfile] = useState(false);
+  const [notifications, setNotifications] = useState(initialNotifications);
+
+  const notifRef = useRef<HTMLDivElement>(null);
+  const profileRef = useRef<HTMLDivElement>(null);
+
+  // Close dropdowns on outside click
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (notifRef.current && !notifRef.current.contains(e.target as Node)) setShowNotifications(false);
+      if (profileRef.current && !profileRef.current.contains(e.target as Node)) setShowProfile(false);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
 
   return (
     <div className="h-screen w-full overflow-hidden bg-[#f8fafc] text-slate-800 font-sans flex">
@@ -116,14 +146,15 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
       <main className="flex-1 min-w-0 min-h-0 h-screen overflow-y-auto overflow-x-hidden bg-[#f8fafc]">
 
         {/* HEADER */}
-        <header className="h-[76px] bg-white border-b border-slate-200/80 px-8 flex items-center justify-between sticky top-0 z-30 shadow-2xs">
+        <header className="h-[76px] bg-white border-b border-slate-200/80 px-8 flex items-center justify-between sticky top-0 z-30 shadow-sm">
           <div>
             <h1 className="text-xl font-extrabold text-slate-900 tracking-tight">{pageTitle}</h1>
             <div className="text-xs text-slate-400 font-medium">{currentDate}</div>
           </div>
 
-          <div className="flex items-center gap-4">
-            <div className="relative w-64 hidden sm:block">
+          <div className="flex items-center gap-3">
+            {/* SEARCH */}
+            <div className="relative w-56 hidden sm:block">
               <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
               <input
                 type="text"
@@ -132,12 +163,12 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
               />
             </div>
 
-            <div className="relative">
+            {/* NOTIFICATIONS */}
+            <div className="relative" ref={notifRef}>
               <button
                 type="button"
-                onClick={() => setShowNotifications((prev) => !prev)}
+                onClick={() => { setShowNotifications((p) => !p); setShowProfile(false); }}
                 aria-label="Notifications"
-                aria-expanded={showNotifications}
                 className="relative w-9 h-9 rounded-full bg-slate-50 border border-slate-200/80 flex items-center justify-center text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors cursor-pointer"
               >
                 <Bell size={16} />
@@ -151,7 +182,7 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
                   <div className="px-4 py-3 border-b border-slate-100 flex items-center justify-between">
                     <div>
                       <h3 className="text-sm font-bold text-slate-900">Notifications</h3>
-                      <p className="text-[10px] text-slate-400 mt-0.5">Recent system activity</p>
+                      <p className="text-[10px] text-slate-400 mt-0.5">{notifications.filter(n => n.unread).length} unread</p>
                     </div>
                     <button
                       type="button"
@@ -162,23 +193,19 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
                     </button>
                   </div>
                   <div className="max-h-80 overflow-y-auto">
-                    {notifications.map((notification) => (
+                    {notifications.map((n) => (
                       <button
-                        key={notification.id}
+                        key={n.id}
                         type="button"
-                        onClick={() =>
-                          setNotifications((prev) =>
-                            prev.map((item) => item.id === notification.id ? { ...item, unread: false } : item)
-                          )
-                        }
-                        className={`w-full text-left px-4 py-3 border-b border-slate-100 hover:bg-slate-50 transition-colors cursor-pointer ${notification.unread ? 'bg-emerald-50/40' : 'bg-white'}`}
+                        onClick={() => setNotifications((prev) => prev.map((item) => item.id === n.id ? { ...item, unread: false } : item))}
+                        className={`w-full text-left px-4 py-3 border-b border-slate-100 hover:bg-slate-50 transition-colors cursor-pointer ${n.unread ? 'bg-emerald-50/40' : 'bg-white'}`}
                       >
                         <div className="flex items-start gap-3">
-                          <div className={`mt-1 w-2 h-2 rounded-full shrink-0 ${notification.unread ? 'bg-emerald-500' : 'bg-slate-300'}`} />
+                          <div className={`mt-1 w-2 h-2 rounded-full shrink-0 ${n.color ?? (n.unread ? 'bg-emerald-500' : 'bg-slate-300')}`} />
                           <div className="min-w-0">
-                            <div className="text-xs font-bold text-slate-900">{notification.title}</div>
-                            <div className="text-[11px] text-slate-500 mt-0.5">{notification.message}</div>
-                            <div className="text-[10px] text-slate-400 mt-1">{notification.time}</div>
+                            <div className="text-xs font-bold text-slate-900">{n.title}</div>
+                            <div className="text-[11px] text-slate-500 mt-0.5">{n.message}</div>
+                            <div className="text-[10px] text-slate-400 mt-1">{n.time}</div>
                           </div>
                         </div>
                       </button>
@@ -188,8 +215,55 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
               )}
             </div>
 
-            <div className={`w-9 h-9 rounded-full ${roleConfig.avatarBg} text-white flex items-center justify-center font-extrabold text-xs shadow-sm cursor-pointer`}>
-              {roleConfig.avatar}
+            {/* PROFILE AVATAR */}
+            <div className="relative" ref={profileRef}>
+              <button
+                type="button"
+                onClick={() => { setShowProfile((p) => !p); setShowNotifications(false); }}
+                className={`w-9 h-9 rounded-full ${roleConfig.avatarBg} text-white flex items-center justify-center font-extrabold text-xs cursor-pointer hover:opacity-90 transition-opacity`}
+              >
+                {roleConfig.avatar}
+              </button>
+
+              {showProfile && (
+                <div className="absolute right-0 top-12 w-72 bg-white border border-slate-200 rounded-2xl shadow-xl z-50 overflow-hidden">
+                  {/* Profile Header */}
+                  <div className="px-5 py-4 border-b border-slate-100">
+                    <div className="font-bold text-slate-900 text-sm">{profileConfig.name}</div>
+                    <div className="text-xs text-slate-400 mt-0.5">{profileConfig.email}</div>
+                    <span className={`inline-block mt-2 text-[10px] font-bold px-2.5 py-1 rounded-full ${profileConfig.roleBadgeColor}`}>
+                      {profileConfig.roleLabel}
+                    </span>
+                  </div>
+                  {/* Menu Items */}
+                  <div className="py-2">
+                    {[
+                      { icon: <User size={15} />, label: 'My Profile' },
+                      { icon: <Settings size={15} />, label: 'Settings' },
+                      { icon: <HelpCircle size={15} />, label: 'Help & Support' },
+                    ].map((item) => (
+                      <button
+                        key={item.label}
+                        type="button"
+                        className="w-full flex items-center gap-3 px-5 py-2.5 text-sm text-slate-700 hover:bg-slate-50 transition-colors cursor-pointer"
+                      >
+                        <span className="text-slate-400">{item.icon}</span>
+                        {item.label}
+                      </button>
+                    ))}
+                  </div>
+                  <div className="border-t border-slate-100 py-2">
+                    <button
+                      type="button"
+                      onClick={onLogout}
+                      className="w-full flex items-center gap-3 px-5 py-2.5 text-sm text-rose-500 hover:bg-rose-50 transition-colors cursor-pointer"
+                    >
+                      <Power size={15} />
+                      Sign Out
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </header>
