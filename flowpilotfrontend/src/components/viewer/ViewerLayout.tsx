@@ -30,6 +30,19 @@ interface Props {
   onLogout?: () => void;
 }
 
+const notifications = [
+  { id: 1, title: 'Project report ready', message: 'Q3 project summary is available.', time: '1 hour ago', unread: true, color: 'bg-slate-500' },
+  { id: 2, title: 'Sprint 12 completed', message: 'IPMT Platform v2 sprint closed.', time: '3 hours ago', unread: false, color: 'bg-slate-300' },
+  { id: 3, title: 'New milestone added', message: 'Product launch set for Sep 1.', time: 'Yesterday', unread: true, color: 'bg-blue-400' },
+];
+
+const profileConfig = {
+  name: 'Vikram Jain',
+  email: 'v.jain@ipmt.com',
+  roleLabel: 'Executive Viewer',
+  roleBadgeColor: 'bg-slate-100 text-slate-600',
+};
+
 export const ViewerLayout: React.FC<Props> = ({ onLogout }) => {
   const [activeTab, setActiveTab] = useState('Projects');
 
@@ -49,6 +62,8 @@ export const ViewerLayout: React.FC<Props> = ({ onLogout }) => {
       onTabChange={setActiveTab}
       pageTitle={pageTitles[activeTab] ?? 'Projects Overview'}
       onLogout={onLogout}
+      notifications={notifications}
+      profileConfig={profileConfig}
     >
       {renderContent()}
     </DashboardLayout>

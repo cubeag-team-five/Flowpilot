@@ -49,6 +49,20 @@ interface Props {
   onLogout?: () => void;
 }
 
+const notifications = [
+  { id: 1, title: 'New user registered', message: 'Rohit Varma added to Leadership.', time: '2 min ago', unread: true, color: 'bg-emerald-500' },
+  { id: 2, title: 'Role assigned', message: 'Business Analyst role assigned to Rohit Varma.', time: '18 min ago', unread: true, color: 'bg-purple-400' },
+  { id: 3, title: 'System health check', message: 'All services running normally.', time: '1 hour ago', unread: false, color: 'bg-slate-300' },
+  { id: 4, title: 'Audit log alert', message: 'Unusual login attempt detected.', time: '2 hours ago', unread: true, color: 'bg-rose-500' },
+];
+
+const profileConfig = {
+  name: 'Rajeev Kumar',
+  email: 'ra.kumar@ipmt.com',
+  roleLabel: 'Super Administrator',
+  roleBadgeColor: 'bg-rose-100 text-rose-600',
+};
+
 export const SuperAdminLayout: React.FC<Props> = ({ onLogout }) => {
   const [activeTab, setActiveTab] = useState('Overview');
 
@@ -72,6 +86,8 @@ export const SuperAdminLayout: React.FC<Props> = ({ onLogout }) => {
       onTabChange={setActiveTab}
       pageTitle={pageTitles[activeTab] ?? 'System Overview'}
       onLogout={onLogout}
+      notifications={notifications}
+      profileConfig={profileConfig}
     >
       {renderContent()}
     </DashboardLayout>
