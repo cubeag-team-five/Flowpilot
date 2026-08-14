@@ -42,6 +42,20 @@ interface Props {
   onLogout?: () => void;
 }
 
+const notifications = [
+  { id: 1, title: 'User account created', message: '3 new users added this month.', time: '5 min ago', unread: true, color: 'bg-amber-500' },
+  { id: 2, title: 'Department updated', message: 'Engineering dept headcount changed.', time: '30 min ago', unread: true, color: 'bg-blue-400' },
+  { id: 3, title: 'System backup complete', message: 'Daily backup completed successfully.', time: '2 hours ago', unread: false, color: 'bg-slate-300' },
+  { id: 4, title: 'Open ticket escalated', message: 'Ticket #089 marked urgent.', time: '3 hours ago', unread: true, color: 'bg-rose-500' },
+];
+
+const profileConfig = {
+  name: 'Nisha Agarwal',
+  email: 'n.agarwal@ipmt.com',
+  roleLabel: 'System Administrator',
+  roleBadgeColor: 'bg-amber-100 text-amber-600',
+};
+
 export const AdminLayout: React.FC<Props> = ({ onLogout }) => {
   const [activeTab, setActiveTab] = useState('Dashboard');
 
@@ -65,6 +79,8 @@ export const AdminLayout: React.FC<Props> = ({ onLogout }) => {
       onTabChange={setActiveTab}
       pageTitle={pageTitles[activeTab] ?? 'Admin Dashboard'}
       onLogout={onLogout}
+      notifications={notifications}
+      profileConfig={profileConfig}
     >
       {renderContent()}
     </DashboardLayout>

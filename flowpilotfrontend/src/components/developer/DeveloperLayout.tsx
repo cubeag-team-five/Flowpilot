@@ -36,6 +36,20 @@ interface Props {
   onLogout?: () => void;
 }
 
+const notifications = [
+  { id: 1, title: 'My task T-040 updated', message: 'Design system component library — 3/7 done.', time: '10 min ago', unread: true, color: 'bg-teal-500' },
+  { id: 2, title: 'Mentioned by Aryan', message: '@sneha Button + Input needed before Aug 8 demo.', time: '2 hours ago', unread: true, color: 'bg-cyan-400' },
+  { id: 3, title: 'PR review requested', message: 'Mihir requested review on T-041 PR.', time: '3 hours ago', unread: false, color: 'bg-slate-300' },
+  { id: 4, title: 'Sprint 12 standup', message: 'Daily standup in 15 mins.', time: '4 hours ago', unread: true, color: 'bg-orange-400' },
+];
+
+const profileConfig = {
+  name: 'Sneha Rao',
+  email: 's.rao@ipmt.com',
+  roleLabel: 'Senior Frontend Developer',
+  roleBadgeColor: 'bg-teal-100 text-teal-600',
+};
+
 export const DeveloperLayout: React.FC<Props> = ({ onLogout }) => {
   const [activeTab, setActiveTab] = useState('My Dashboard');
 
@@ -47,6 +61,8 @@ export const DeveloperLayout: React.FC<Props> = ({ onLogout }) => {
       onTabChange={setActiveTab}
       pageTitle={pageTitles[activeTab] ?? 'My Dashboard'}
       onLogout={onLogout}
+      notifications={notifications}
+      profileConfig={profileConfig}
     >
       {activeTab === 'My Dashboard' && <DeveloperDashboardView />}
       {activeTab === 'My Tasks' && <DeveloperTasks />}
