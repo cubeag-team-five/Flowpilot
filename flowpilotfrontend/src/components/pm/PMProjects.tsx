@@ -1,5 +1,3 @@
-import { useState } from 'react';
-
 interface Project {
   id: string;
   name: string;
@@ -29,7 +27,7 @@ const projects: Project[] = [
     statusColor: "yellow",
     sprint: "Sprint 8",
     team: "8 members",
-    budget: "₹32L / ₹50L",
+    budget: "₹18L / ₹35L",
     progress: 45,
   },
   {
@@ -54,62 +52,18 @@ const projects: Project[] = [
   },
 ];
 
-const notifications = [
-  {
-    text: "Sprint 12 planning meeting in 30 mins",
-    time: "5m ago",
-    color: "bg-green-500",
-  },
-  {
-    text: "Priya Rajan marked task #T-042 as Done",
-    time: "18m ago",
-    color: "bg-purple-400",
-  },
-  {
-    text: "New bug report filed: BUG-089",
-    time: "1h ago",
-    color: "bg-red-500",
-  },
-  {
-    text: "Daily standup reminder",
-    time: "2h ago",
-    color: "bg-orange-500",
-  },
-];
-
 export function PMProjects() {
-  const [search, setSearch] = useState("");
-
-  const filteredProjects = projects.filter((project) =>
-    project.name.toLowerCase().includes(search.toLowerCase())
-  );
-
   return (
-    <div className="space-y-5">
-      <div className="relative">
-        <input
-          type="text"
-          placeholder="Search projects..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="h-10 w-64 rounded-xl border border-slate-200 bg-white pl-4 pr-3 text-sm outline-none focus:border-purple-400 focus:ring-2 focus:ring-purple-100"
-        />
-      </div>
-      <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
-        {filteredProjects.map((project) => (
+    <div className="space-y-5 sm:space-y-6">
+      {/* Project grid: 1 col on mobile, 2 on tablet+, still 2 on wide screens */}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-5 lg:gap-6">
+        {projects.map((project) => (
           <ProjectCard key={project.id} project={project} />
         ))}
       </div>
-      {filteredProjects.length === 0 && (
-        <div className="rounded-2xl border border-dashed border-slate-300 bg-white py-20 text-center">
-          <p className="font-semibold text-slate-700">No projects found</p>
-          <p className="mt-1 text-sm text-slate-400">Try another search term.</p>
-        </div>
-      )}
     </div>
   );
 }
-
 
 /* NAV ITEM */
 
@@ -125,8 +79,8 @@ function NavItem({
   return (
     <button
       className={`
-        group flex w-full items-center gap-4 rounded-xl
-        px-4 py-3.5 text-left text-sm font-semibold
+        group flex w-full items-center gap-2 rounded-xl
+        px-4 py-3.5 text-left text-sm font-bold
         transition
         ${
           active
@@ -135,50 +89,36 @@ function NavItem({
         }
       `}
     >
-      <span className="w-5 text-center text-lg">
-        {icon}
-      </span>
-
-      <span>{text}</span>
+      <span className="w-3 shrink-0 text-center text-lg">{icon}</span>
+      <span className="truncate">{text}</span>
     </button>
   );
 }
 
-
 /* PROJECT CARD */
 
-function ProjectCard({
-  project,
-}: {
-  project: Project;
-}) {
+const statusStyles = {
+  green: {
+    badge: "border-green-200 bg-green-50 text-green-500",
+    bar: "bg-green-400",
+    percentage: "text-green-500",
+    border: "border-green-100",
+  },
+  yellow: {
+    badge: "border-orange-200 bg-orange-50 text-orange-500",
+    bar: "bg-orange-400",
+    percentage: "text-orange-500",
+    border: "border-orange-100",
+  },
+  red: {
+    badge: "border-red-200 bg-red-50 text-red-500",
+    bar: "bg-red-400",
+    percentage: "text-red-500",
+    border: "border-red-100",
+  },
+} as const;
 
-  const statusStyles = {
-    green: {
-      badge:
-        "border-green-200 bg-green-50 text-green-600",
-      bar: "bg-green-500",
-      percentage: "text-green-500",
-      border: "border-green-100",
-    },
-
-    yellow: {
-      badge:
-        "border-orange-200 bg-orange-50 text-orange-500",
-      bar: "bg-orange-500",
-      percentage: "text-orange-500",
-      border: "border-orange-100",
-    },
-
-    red: {
-      badge:
-        "border-red-200 bg-red-50 text-red-500",
-      bar: "bg-red-500",
-      percentage: "text-red-500",
-      border: "border-red-100",
-    },
-  };
-
+function ProjectCard({ project }: { project: Project }) {
   const style = statusStyles[project.statusColor];
 
   return (
@@ -191,16 +131,13 @@ function ProjectCard({
         sm:p-6
       `}
     >
-
       {/* Top */}
-      <div className="flex items-start justify-between gap-4">
-
-        <div className="min-w-0">
+      <div className="flex flex-wrap items-start justify-between gap-0">
+        <div className="min-w-0 flex-1">
           <p className="text-xs font-medium tracking-wide text-slate-400">
             {project.id}
           </p>
-
-          <h3 className="mt-2 truncate text-lg font-extrabold sm:text-xl">
+          <h3 className="mt-1 truncate text-slate-800 text-lg font-bold sm:text-xl">
             {project.name}
           </h3>
         </div>
@@ -214,84 +151,42 @@ function ProjectCard({
         >
           {project.status}
         </span>
-
       </div>
 
       {/* Details */}
-      <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-3">
-
-        <InfoBox
-          label="Sprint"
-          value={project.sprint}
-        />
-
-        <InfoBox
-          label="Team"
-          value={project.team}
-        />
-
-        <InfoBox
-          label="Budget"
-          value={project.budget}
-        />
-
+      <div className="mt-1 grid grid-cols-2 gap-x-2 gap-y-1 sm:grid-cols-3">
+        <InfoBox label="Sprint" value={project.sprint} />
+        <InfoBox label="Team" value={project.team} />
+        <InfoBox label="Budget" value={project.budget} />
       </div>
 
       {/* Progress */}
-      <div className="mt-6">
-
-        <div className="mb-2 flex items-center justify-between">
-
-          <span className="text-sm text-slate-500">
-            Overall Progress
-          </span>
-
-          <span
-            className={`text-sm font-extrabold ${style.percentage}`}
-          >
+      <div className="mt-4">
+        <div className="mb-1 flex items-center justify-between">
+          <span className="text-sm text-slate-400">Overall Progress</span>
+          <span className={`text-sm font-bold ${style.percentage}`}>
             {project.progress}%
           </span>
-
         </div>
 
-        <div className="h-2 overflow-hidden rounded-full bg-slate-100">
-
+        <div className="h-2 w-full overflow-hidden rounded-full bg-slate-200">
           <div
             className={`h-full rounded-full ${style.bar} transition-all duration-500`}
-            style={{
-              width: `${project.progress}%`,
-            }}
+            style={{ width: `${project.progress}%` }}
           />
-
         </div>
-
       </div>
-
     </article>
   );
 }
 
-
 /* INFO BOX */
 
-function InfoBox({
-  label,
-  value,
-}: {
-  label: string;
-  value: string;
-}) {
+function InfoBox({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-xl bg-slate-50 px-4 py-3">
-
-      <p className="text-xs text-slate-400">
-        {label}
-      </p>
-
-      <p className="mt-1 text-sm font-bold text-slate-800">
-        {value}
-      </p>
-
+    <div className="min-w-0 rounded-xl px-2 py-2 sm:px-3.5">
+      <p className="mt-2  text-xs font-sm text-slate-400">{label}</p>
+      <p className="mt-1 truncate text-sm font-bold text-slate-700">{value}</p>
     </div>
   );
 }
