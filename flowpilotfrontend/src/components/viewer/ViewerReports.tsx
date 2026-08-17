@@ -1,390 +1,437 @@
-import React from 'react';
-import {
-  FileText,
-  FolderKanban,
-  CheckCircle2,
-  Users,
-  TrendingUp,
-  ArrowUpRight,
-} from 'lucide-react';
+import React, { useState } from 'react';
+import { Eye, X, FileText } from 'lucide-react';
+
+interface Report {
+  icon: string;
+  title: string;
+  description: string;
+  details: string;
+  points: string[];
+}
 
 export const ViewerReports: React.FC = () => {
-  const projects = [
+  const [selectedReport, setSelectedReport] = useState<Report | null>(null);
+
+  const reports: Report[] = [
     {
-      id: 'PRJ-001',
-      name: 'Flowpilot Platform v2',
-      team: 'Product Team',
-      progress: '72%',
-      status: 'On Track',
-      barColor: 'bg-emerald-500',
-      badgeColor:
-        'bg-emerald-50 text-emerald-600 border-emerald-200',
+      icon: '📁',
+      title: 'Project Status Overview',
+      description:
+        'High-level view of all active projects and their health',
+      details:
+        'Overview of current project progress, health, and delivery status across all active projects.',
+      points: [
+        'Total projects being monitored: 24',
+        'Active / In Progress projects: 16',
+        'Teams involved: 6',
+        'Overall project progress: 76%',
+      ],
     },
     {
-      id: 'PRJ-002',
-      name: 'E-Commerce Relaunch',
-      team: 'Operations Team',
-      progress: '45%',
-      status: 'At Risk',
-      barColor: 'bg-amber-500',
-      badgeColor:
-        'bg-amber-50 text-amber-600 border-amber-200',
+      icon: '🏃',
+      title: 'Sprint Progress Summary',
+      description:
+        'Task completion by sprint across all projects',
+      details:
+        'Summary of sprint activity showing completed, in-progress, and pending work across projects.',
+      points: [
+        'Sprint 12 – IPMT Platform v2',
+        'Sprint 8 – E-Commerce Relaunch',
+        'Sprint 2 – Mobile App Development',
+        'Sprint 5 – API Gateway Migration',
+      ],
     },
     {
-      id: 'PRJ-003',
-      name: 'Mobile App Development',
-      team: 'Mobile Team',
-      progress: '22%',
-      status: 'On Track',
-      barColor: 'bg-emerald-500',
-      badgeColor:
-        'bg-emerald-50 text-emerald-600 border-emerald-200',
+      icon: '📈',
+      title: 'Team Productivity',
+      description:
+        'Story points completed and velocity trend',
+      details:
+        'A summary of team productivity and development velocity across active projects.',
+      points: [
+        'Tracks completed work',
+        'Monitors team velocity',
+        'Compares productivity trends',
+        'Helps identify delivery patterns',
+      ],
     },
     {
-      id: 'PRJ-004',
-      name: 'API Gateway Migration',
-      team: 'Engineering Team',
-      progress: '58%',
-      status: 'Delayed',
-      barColor: 'bg-rose-500',
-      badgeColor:
-        'bg-rose-50 text-rose-600 border-rose-200',
+      icon: '🐛',
+      title: 'Bug Trend Report',
+      description:
+        'Open vs. resolved bugs over time',
+      details:
+        'Provides an overview of reported bugs and their resolution progress.',
+      points: [
+        'Open bugs',
+        'Resolved bugs',
+        'Bug resolution trend',
+        'Project-wise bug monitoring',
+      ],
+    },
+    {
+      icon: '👥',
+      title: 'Resource Allocation',
+      description:
+        'Team workload distribution across projects',
+      details:
+        'Overview of how team members and resources are distributed across active projects.',
+      points: [
+        'Team allocation',
+        'Project workload',
+        'Resource distribution',
+        'Current team involvement',
+      ],
+    },
+    {
+      icon: '🚀',
+      title: 'Release Readiness',
+      description:
+        'Go-live checklist status for upcoming releases',
+      details:
+        'Summary of release preparation and readiness for upcoming project deliveries.',
+      points: [
+        'Release checklist',
+        'Pending release activities',
+        'Project readiness',
+        'Go-live preparation status',
+      ],
     },
   ];
 
   return (
     <>
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <div className="text-[11px] font-extrabold tracking-wider text-slate-400 uppercase mb-1">
-            VIEWER REPORTS
-          </div>
+      <div className="w-full min-w-0">
 
-          <div className="text-2xl font-black text-slate-900">
-            Reports & Analytics
-          </div>
+        {/* =====================================================
+            READ-ONLY ACCESS
+            ===================================================== */}
+        <div className="mb-4 w-full rounded-xl border border-slate-200 bg-slate-100/70 px-4 py-3 sm:px-5">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
 
-          <div className="text-sm text-slate-400 mt-1">
-            Overview of project performance and delivery progress.
+            <div className="flex min-w-0 items-start gap-3 text-xs font-semibold leading-5 text-slate-600 sm:items-center">
+              <Eye
+                size={15}
+                strokeWidth={2}
+                className="mt-0.5 shrink-0 text-slate-500 sm:mt-0"
+              />
+
+              <span>
+                You have read-only access. To request additional permissions,
+                contact your Admin.
+              </span>
+            </div>
+
+            <button
+              type="button"
+              className="
+                w-full
+                shrink-0
+                rounded-lg
+                border border-slate-200
+                bg-slate-200/70
+                px-4
+                py-2
+                text-xs
+                font-bold
+                text-slate-700
+                transition-colors
+                duration-200
+                hover:bg-slate-300
+                sm:w-auto
+              "
+            >
+              Request Access
+            </button>
+
           </div>
         </div>
 
-        <button className="flex items-center gap-2 px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold rounded-xl transition-colors cursor-pointer">
-          <FileText size={15} />
-          Export Report
-        </button>
-      </div>
 
-      {/* Summary Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-5">
-        <div className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-2xs">
-          <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-500 flex items-center justify-center mb-4">
-            <FolderKanban size={18} />
+        {/* =====================================================
+            EXPORT INFORMATION
+            ===================================================== */}
+        <div className="mb-4 w-full rounded-xl border border-slate-200 bg-slate-100/70 px-4 py-3 sm:px-5">
+
+          <div className="flex items-start gap-3 text-xs font-medium leading-5 text-slate-500">
+
+            <span className="shrink-0 text-sm">
+              📄
+            </span>
+
+            <span>
+              As a Viewer, you can view but not download or export reports.
+              Request Admin access to enable exports.
+            </span>
+
           </div>
 
-          <div className="text-[11px] font-extrabold tracking-wider text-slate-400 uppercase mb-2">
-            TOTAL PROJECTS
-          </div>
-
-          <div className="text-3xl font-black text-slate-900 leading-none">
-            24
-          </div>
-
-          <div className="text-xs text-slate-400 mt-2">
-            Projects being monitored
-          </div>
         </div>
 
-        <div className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-2xs">
-          <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-500 flex items-center justify-center mb-4">
-            <CheckCircle2 size={18} />
-          </div>
 
-          <div className="text-[11px] font-extrabold tracking-wider text-slate-400 uppercase mb-2">
-            COMPLETED
-          </div>
+        {/* =====================================================
+            REPORT CARDS
+            ===================================================== */}
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
 
-          <div className="text-3xl font-black text-emerald-500 leading-none">
-            16
-          </div>
+          {reports.map((report) => (
+            <div
+              key={report.title}
+              className="
+                flex
+                min-h-[180px]
+                w-full
+                min-w-0
+                flex-col
+                rounded-2xl
+                border
+                border-slate-200/80
+                bg-white
+                p-5
+                shadow-sm
+                transition-all
+                duration-200
+                hover:-translate-y-0.5
+                hover:shadow-md
+              "
+            >
 
-          <div className="text-xs text-slate-400 mt-2">
-            Projects completed
-          </div>
-        </div>
-
-        <div className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-2xs">
-          <div className="w-9 h-9 rounded-xl bg-slate-100 text-slate-500 flex items-center justify-center mb-4">
-            <Users size={18} />
-          </div>
-
-          <div className="text-[11px] font-extrabold tracking-wider text-slate-400 uppercase mb-2">
-            ACTIVE TEAMS
-          </div>
-
-          <div className="text-3xl font-black text-slate-900 leading-none">
-            6
-          </div>
-
-          <div className="text-xs text-slate-400 mt-2">
-            Teams currently involved
-          </div>
-        </div>
-
-        <div className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-2xs">
-          <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-500 flex items-center justify-center mb-4">
-            <TrendingUp size={18} />
-          </div>
-
-          <div className="text-[11px] font-extrabold tracking-wider text-slate-400 uppercase mb-2">
-            OVERALL PROGRESS
-          </div>
-
-          <div className="text-3xl font-black text-slate-900 leading-none">
-            76%
-          </div>
-
-          <div className="text-xs text-emerald-500 font-bold mt-2">
-            +8.4% this sprint
-          </div>
-        </div>
-      </div>
-
-      {/* Performance */}
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-5">
-
-        {/* Project Health */}
-        <div className="bg-white border border-slate-200/80 rounded-2xl p-6 shadow-2xs">
-          <div className="flex items-center justify-between mb-6">
-            <div>
-              <div className="text-[11px] font-extrabold tracking-wider text-slate-400 uppercase">
-                PROJECT HEALTH
-              </div>
-
-              <div className="text-lg font-extrabold text-slate-900 mt-1">
-                Overall Project Status
-              </div>
-            </div>
-
-            <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-500 flex items-center justify-center">
-              <TrendingUp size={18} />
-            </div>
-          </div>
-
-          <div className="flex items-center justify-center py-6">
-            <div className="w-40 h-40 rounded-full border-[14px] border-emerald-100 flex items-center justify-center relative">
-              <div className="text-center">
-                <div className="text-3xl font-black text-slate-900">
-                  76%
-                </div>
-
-                <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mt-1">
-                  HEALTH
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="space-y-4 mt-3">
-            <div>
-              <div className="flex justify-between text-xs font-bold mb-1">
-                <span className="text-slate-500">
-                  On Track
-                </span>
-
-                <span className="text-slate-900">
-                  75%
-                </span>
-              </div>
-
-              <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
-                <div
-                  className="h-full bg-emerald-500"
-                  style={{ width: '75%' }}
-                />
-              </div>
-            </div>
-
-            <div>
-              <div className="flex justify-between text-xs font-bold mb-1">
-                <span className="text-slate-500">
-                  At Risk
-                </span>
-
-                <span className="text-slate-900">
-                  17%
-                </span>
-              </div>
-
-              <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
-                <div
-                  className="h-full bg-amber-500"
-                  style={{ width: '17%' }}
-                />
-              </div>
-            </div>
-
-            <div>
-              <div className="flex justify-between text-xs font-bold mb-1">
-                <span className="text-slate-500">
-                  Delayed
-                </span>
-
-                <span className="text-slate-900">
-                  8%
-                </span>
-              </div>
-
-              <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
-                <div
-                  className="h-full bg-rose-500"
-                  style={{ width: '8%' }}
-                />
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Weekly Progress */}
-        <div className="bg-white border border-slate-200/80 rounded-2xl p-6 shadow-2xs">
-          <div className="flex items-center justify-between mb-6">
-            <div>
-              <div className="text-[11px] font-extrabold tracking-wider text-slate-400 uppercase">
-                PERFORMANCE
-              </div>
-
-              <div className="text-lg font-extrabold text-slate-900 mt-1">
-                Weekly Progress
-              </div>
-            </div>
-
-            <div className="flex items-center gap-1 text-emerald-500 text-xs font-bold">
-              <TrendingUp size={14} />
-              +14.8%
-            </div>
-          </div>
-
-          <div className="h-64 flex items-end gap-3">
-            {[
-              { day: 'MON', value: 55 },
-              { day: 'TUE', value: 70 },
-              { day: 'WED', value: 60 },
-              { day: 'THU', value: 82 },
-              { day: 'FRI', value: 72 },
-              { day: 'SAT', value: 48 },
-              { day: 'SUN', value: 66 },
-            ].map((item) => (
-              <div
-                key={item.day}
-                className="flex-1 h-full flex flex-col items-center justify-end gap-2"
-              >
-                <div className="w-full flex items-end h-full">
-                  <div
-                    className="w-full bg-emerald-500 rounded-t-lg"
-                    style={{ height: `${item.value}%` }}
-                  />
-                </div>
-
-                <span className="text-[9px] font-bold text-slate-400">
-                  {item.day}
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      {/* Project Report Table */}
-      <div className="bg-white border border-slate-200/80 rounded-2xl shadow-2xs overflow-hidden">
-
-        <div className="p-5 border-b border-slate-100 flex items-center justify-between">
-          <div>
-            <div className="text-[11px] font-extrabold tracking-wider text-slate-400 uppercase">
-              PROJECT REPORT
-            </div>
-
-            <div className="text-lg font-extrabold text-slate-900 mt-1">
-              Project Performance
-            </div>
-          </div>
-
-          <button className="flex items-center gap-1 text-xs font-bold text-emerald-500 hover:text-emerald-600">
-            View Details
-            <ArrowUpRight size={14} />
-          </button>
-        </div>
-
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[700px]">
-            <thead>
-              <tr className="bg-slate-50 border-b border-slate-200">
-                <th className="text-left px-5 py-3 text-[10px] font-extrabold text-slate-400 uppercase tracking-wider">
-                  Project
-                </th>
-
-                <th className="text-left px-5 py-3 text-[10px] font-extrabold text-slate-400 uppercase tracking-wider">
-                  Team
-                </th>
-
-                <th className="text-left px-5 py-3 text-[10px] font-extrabold text-slate-400 uppercase tracking-wider">
-                  Progress
-                </th>
-
-                <th className="text-left px-5 py-3 text-[10px] font-extrabold text-slate-400 uppercase tracking-wider">
-                  Status
-                </th>
-              </tr>
-            </thead>
-
-            <tbody>
-              {projects.map((prj) => (
-                <tr
-                  key={prj.id}
-                  className="border-b border-slate-100 last:border-0 hover:bg-slate-50/70"
+              {/* ICON */}
+              <div className="mb-4 flex h-8 w-8 items-center justify-start">
+                <span
+                  className="text-[24px] leading-none"
+                  role="img"
+                  aria-label={`${report.title} icon`}
                 >
-                  <td className="px-5 py-4">
-                    <div className="text-[10px] font-extrabold text-slate-400 uppercase">
-                      {prj.id}
-                    </div>
+                  {report.icon}
+                </span>
+              </div>
 
-                    <div className="text-sm font-extrabold text-slate-900 mt-0.5">
-                      {prj.name}
-                    </div>
-                  </td>
 
-                  <td className="px-5 py-4 text-xs text-slate-500 font-medium">
-                    {prj.team}
-                  </td>
+              {/* TITLE */}
+              <h2 className="text-[14px] font-extrabold leading-5 text-slate-900 sm:text-[15px]">
+                {report.title}
+              </h2>
 
-                  <td className="px-5 py-4">
-                    <div className="flex items-center gap-3">
-                      <div className="w-32 h-2 bg-slate-100 rounded-full overflow-hidden">
-                        <div
-                          className={`h-full ${prj.barColor}`}
-                          style={{ width: prj.progress }}
-                        />
-                      </div>
 
-                      <span className="text-xs font-bold text-slate-900">
-                        {prj.progress}
-                      </span>
-                    </div>
-                  </td>
+              {/* DESCRIPTION */}
+              <p className="mt-1.5 min-h-[38px] text-xs leading-5 text-slate-500">
+                {report.description}
+              </p>
 
-                  <td className="px-5 py-4">
-                    <span
-                      className={`text-[10px] font-bold border px-3 py-1 rounded-full ${prj.badgeColor}`}
-                    >
-                      {prj.status}
-                    </span>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+
+              {/* BUTTONS */}
+              <div className="mt-auto flex flex-wrap items-center gap-2 pt-4">
+
+                {/* VIEW BUTTON */}
+                <button
+                  type="button"
+                  onClick={() => setSelectedReport(report)}
+                  className="
+                    rounded-lg
+                    border border-slate-200
+                    bg-slate-50
+                    px-4
+                    py-2
+                    text-xs
+                    font-bold
+                    text-slate-600
+                    transition-colors
+                    duration-200
+                    hover:bg-slate-100
+                    hover:text-slate-900
+                    active:scale-95
+                  "
+                >
+                  View
+                </button>
+
+
+                {/* EXPORT BUTTON */}
+                <button
+                  type="button"
+                  disabled
+                  title="Export requires Admin permission"
+                  className="
+                    cursor-not-allowed
+                    rounded-lg
+                    border border-slate-200
+                    bg-slate-50
+                    px-4
+                    py-2
+                    text-xs
+                    font-bold
+                    text-slate-300
+                  "
+                >
+                  Export 🔒
+                </button>
+
+              </div>
+
+            </div>
+          ))}
+
         </div>
+
       </div>
+
+
+      {/* =====================================================
+          REPORT DETAILS MODAL
+          ===================================================== */}
+      {selectedReport && (
+        <div
+          className="
+            fixed
+            inset-0
+            z-50
+            flex
+            items-center
+            justify-center
+            bg-slate-950/40
+            p-4
+            backdrop-blur-[2px]
+          "
+          onClick={() => setSelectedReport(null)}
+        >
+
+          <div
+            className="
+              relative
+              max-h-[90vh]
+              w-full
+              max-w-xl
+              overflow-y-auto
+              rounded-2xl
+              border
+              border-slate-200
+              bg-white
+              p-5
+              shadow-2xl
+              sm:p-6
+            "
+            onClick={(event) => event.stopPropagation()}
+          >
+
+            {/* CLOSE BUTTON */}
+            <button
+              type="button"
+              onClick={() => setSelectedReport(null)}
+              aria-label="Close report"
+              className="
+                absolute
+                right-4
+                top-4
+                flex
+                h-8
+                w-8
+                items-center
+                justify-center
+                rounded-lg
+                text-slate-400
+                transition-colors
+                hover:bg-slate-100
+                hover:text-slate-700
+              "
+            >
+              <X size={18} />
+            </button>
+
+
+            {/* MODAL HEADER */}
+            <div className="pr-10">
+
+              <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-50">
+                <span className="text-2xl">
+                  {selectedReport.icon}
+                </span>
+              </div>
+
+              <div className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">
+                VIEWER REPORT
+              </div>
+
+              <h2 className="mt-1 text-xl font-black text-slate-900">
+                {selectedReport.title}
+              </h2>
+
+              <p className="mt-2 text-sm leading-6 text-slate-500">
+                {selectedReport.details}
+              </p>
+
+            </div>
+
+
+            {/* REPORT INFORMATION */}
+            <div className="mt-6 rounded-xl border border-slate-200 bg-slate-50 p-4">
+
+              <div className="mb-3 flex items-center gap-2">
+
+                <FileText
+                  size={16}
+                  className="text-slate-500"
+                />
+
+                <span className="text-xs font-extrabold uppercase tracking-wider text-slate-500">
+                  Report Information
+                </span>
+
+              </div>
+
+
+              <div className="space-y-3">
+
+                {selectedReport.points.map((point, index) => (
+                  <div
+                    key={index}
+                    className="flex items-start gap-3"
+                  >
+
+                    <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-500" />
+
+                    <span className="text-sm leading-5 text-slate-600">
+                      {point}
+                    </span>
+
+                  </div>
+                ))}
+
+              </div>
+
+            </div>
+
+
+            {/* MODAL FOOTER */}
+            <div className="mt-5 flex justify-end">
+
+              <button
+                type="button"
+                onClick={() => setSelectedReport(null)}
+                className="
+                  rounded-lg
+                  border border-slate-200
+                  bg-slate-900
+                  px-5
+                  py-2.5
+                  text-xs
+                  font-bold
+                  text-white
+                  transition-colors
+                  hover:bg-slate-800
+                "
+              >
+                Close
+              </button>
+
+            </div>
+
+          </div>
+
+        </div>
+      )}
     </>
   );
 };
+
+export default ViewerReports;
