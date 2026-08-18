@@ -17,6 +17,8 @@ interface Report {
   iconColor: string;
   buttonBg: string;
   buttonText: string;
+  cardBorder: string;
+  cardShadow: string;
 }
 
 const reports: Report[] = [
@@ -29,6 +31,8 @@ const reports: Report[] = [
     iconColor: 'text-purple-700',
     buttonBg: 'bg-amber-50 border-amber-100',
     buttonText: 'text-amber-500',
+    cardBorder: 'border-amber-100',
+    cardShadow: 'shadow-[0_3px_12px_rgba(245,158,11,0.06)]',
   },
   {
     id: 2,
@@ -39,6 +43,8 @@ const reports: Report[] = [
     iconColor: 'text-purple-500',
     buttonBg: 'bg-purple-50 border-purple-100',
     buttonText: 'text-purple-400',
+    cardBorder: 'border-purple-100',
+    cardShadow: 'shadow-[0_3px_12px_rgba(168,85,247,0.06)]',
   },
   {
     id: 3,
@@ -49,6 +55,8 @@ const reports: Report[] = [
     iconColor: 'text-emerald-500',
     buttonBg: 'bg-emerald-50 border-emerald-100',
     buttonText: 'text-emerald-500',
+    cardBorder: 'border-emerald-100',
+    cardShadow: 'shadow-[0_3px_12px_rgba(16,185,129,0.06)]',
   },
   {
     id: 4,
@@ -59,6 +67,8 @@ const reports: Report[] = [
     iconColor: 'text-slate-700',
     buttonBg: 'bg-cyan-50 border-cyan-100',
     buttonText: 'text-cyan-400',
+    cardBorder: 'border-cyan-100',
+    cardShadow: 'shadow-[0_3px_12px_rgba(6,182,212,0.06)]',
   },
   {
     id: 5,
@@ -69,6 +79,8 @@ const reports: Report[] = [
     iconColor: 'text-orange-400',
     buttonBg: 'bg-rose-50 border-rose-100',
     buttonText: 'text-rose-500',
+    cardBorder: 'border-rose-100',
+    cardShadow: 'shadow-[0_3px_12px_rgba(244,63,94,0.06)]',
   },
   {
     id: 6,
@@ -79,6 +91,8 @@ const reports: Report[] = [
     iconColor: 'text-slate-500',
     buttonBg: 'bg-slate-100 border-slate-200',
     buttonText: 'text-slate-400',
+    cardBorder: 'border-slate-200',
+    cardShadow: 'shadow-[0_3px_12px_rgba(100,116,139,0.05)]',
   },
 ];
 
@@ -90,17 +104,6 @@ export const AdminReports: React.FC = () => {
   return (
     <div className="w-full space-y-5 font-sans">
 
-      {/* ==================== PAGE HEADER ==================== */}
-
-      <div>
-        <h1 className="text-[18px] sm:text-[19px] font-extrabold tracking-tight text-slate-900">
-          Reports
-        </h1>
-
-        <p className="mt-0.5 text-[11px] sm:text-[12px] font-medium text-slate-400">
-          Thursday, 13 August 2026
-        </p>
-      </div>
 
       {/* ==================== REPORT GRID ==================== */}
 
@@ -118,19 +121,22 @@ export const AdminReports: React.FC = () => {
 
           <div
             key={report.id}
-            className="
-              min-h-[166px]
-              rounded-xl
-              border border-slate-200
-              bg-white
-              px-4
-              py-5
-              shadow-sm
-              transition-all
-              duration-200
-              hover:-translate-y-[1px]
-              hover:shadow-md
-            "
+            className={`
+            w-full
+            min-h-[166px]
+            rounded-xl
+            border
+            ${report.cardBorder}
+            bg-white
+            pl-5
+            px-4
+            py-6
+            ${report.cardShadow}
+            transition-all
+            duration-200
+            hover:-translate-y-[1px]
+            hover:shadow-md
+            `}
           >
 
             {/* ==================== ICON ==================== */}
@@ -138,8 +144,8 @@ export const AdminReports: React.FC = () => {
             <div
               className={`
                 flex
-                h-9
-                w-9
+                h-10
+                w-10
                 items-center
                 justify-center
                 rounded-xl
@@ -155,8 +161,7 @@ export const AdminReports: React.FC = () => {
             <h2
               className="
                 mt-3
-                text-[13px]
-                sm:text-[14px]
+                text-[15px]
                 font-extrabold
                 leading-tight
                 text-slate-800
@@ -169,9 +174,8 @@ export const AdminReports: React.FC = () => {
 
             <p
               className="
-                mt-1.5
-                text-[10px]
-                sm:text-[11px]
+                mt-1
+                text-[13px]
                 font-medium
                 leading-relaxed
                 text-slate-400

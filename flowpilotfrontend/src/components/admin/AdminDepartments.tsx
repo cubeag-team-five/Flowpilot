@@ -10,6 +10,7 @@ interface Department {
   bgColor: string;
   textColor: string;
   borderColor: string;
+  shadowColor: string;
 }
 
 const departments: Department[] = [
@@ -19,10 +20,11 @@ const departments: Department[] = [
     head: 'Karan Mehta',
     members: 18,
     progress: 40,
-    color: 'bg-teal-400',
-    bgColor: 'bg-teal-50',
-    textColor: 'text-teal-500',
-    borderColor: 'border-teal-100',
+    color: 'bg-[#69E8D0]',
+    bgColor: 'bg-[#F4FEFC]',
+    textColor: 'text-[#5DD9C3]',
+    borderColor: 'border-[#D8F5EF]',
+    shadowColor: 'shadow-[0_2px_8px_rgba(45,212,191,0.08)]',
   },
   {
     id: 2,
@@ -34,6 +36,7 @@ const departments: Department[] = [
     bgColor: 'bg-purple-50',
     textColor: 'text-purple-500',
     borderColor: 'border-purple-100',
+    shadowColor: 'shadow-[0_2px_8px_rgba(192,132,252,0.08)]',
   },
   {
     id: 3,
@@ -45,6 +48,7 @@ const departments: Department[] = [
     bgColor: 'bg-emerald-50',
     textColor: 'text-emerald-500',
     borderColor: 'border-emerald-100',
+    shadowColor: 'shadow-[0_2px_8px_rgba(52,211,153,0.08)]',
   },
   {
     id: 4,
@@ -56,6 +60,8 @@ const departments: Department[] = [
     bgColor: 'bg-amber-50',
     textColor: 'text-amber-500',
     borderColor: 'border-amber-100',
+    shadowColor: 'shadow-[0_2px_8px_rgba(251,191,36,0.08)]',
+
   },
   {
     id: 5,
@@ -67,6 +73,7 @@ const departments: Department[] = [
     bgColor: 'bg-rose-50',
     textColor: 'text-rose-500',
     borderColor: 'border-rose-100',
+    shadowColor: 'shadow-[0_2px_8px_rgba(251,113,133,0.08)]',
   },
   {
     id: 6,
@@ -77,7 +84,8 @@ const departments: Department[] = [
     color: 'bg-slate-400',
     bgColor: 'bg-slate-50',
     textColor: 'text-slate-500',
-    borderColor: 'border-slate-200',
+    borderColor: 'border-slate-100',
+    shadowColor: 'shadow-[0_2px_8px_rgba(100,116,139,0.06)]',
   },
 ];
 
@@ -94,7 +102,7 @@ export const AdminDepartments: React.FC = () => {
         className="
           grid
           grid-cols-1
-          gap-4
+          gap-3
           sm:grid-cols-2
           lg:grid-cols-3
         "
@@ -102,31 +110,33 @@ export const AdminDepartments: React.FC = () => {
         {departments.map((department) => (
           <div
             key={department.id}
-            className="
+            className={`
               w-full
-              rounded-2xl
+              min-h-[96px]
+              rounded-xl
               border
-              border-slate-200
+              ${department.borderColor}
               bg-white
-              p-5
-              shadow-sm
+              px-5
+              py-5
+              ${department.shadowColor}
               transition-all
               duration-200
               hover:-translate-y-0.5
-              hover:shadow-md
-            "
+        `}
           >
+
             {/* TOP SECTION */}
-            <div className="flex items-start justify-between gap-4">
+            <div className="flex items-start justify-between gap-3">
 
               <div className="min-w-0">
 
                 {/* DEPARTMENT NAME */}
                 <h2
                   className="
-                    text-base
+                    text-[16px]
                     font-extrabold
-                    leading-6
+                    leading-4
                     tracking-tight
                     text-slate-900
                   "
@@ -137,10 +147,10 @@ export const AdminDepartments: React.FC = () => {
                 {/* HEAD */}
                 <p
                   className="
-                    mt-1
-                    text-sm
+                    mt-2
+                    text-[12.5px]
                     font-medium
-                    leading-5
+                    leading-3.5
                     text-slate-500
                   "
                 >
@@ -153,14 +163,14 @@ export const AdminDepartments: React.FC = () => {
               <div
                 className={`
                   flex
-                  h-8
-                  min-w-8
+                  h-9.5
+                  min-w-9.5
                   shrink-0
                   items-center
                   justify-center
-                  rounded-lg
-                  px-2.5
-                  text-xs
+                  rounded-xl
+                  px-1.5
+                  text-[13px]
                   font-extrabold
                   ${department.bgColor}
                   ${department.textColor}
@@ -176,7 +186,7 @@ export const AdminDepartments: React.FC = () => {
 
               <div
                 className="
-                  h-[3px]
+                  h-[4px]
                   w-full
                   overflow-hidden
                   rounded-full
@@ -202,18 +212,18 @@ export const AdminDepartments: React.FC = () => {
               type="button"
               onClick={() => handleViewMembers(department.name)}
               className={`
-                mt-3
+                mt-2
                 flex
-                h-9
+                h-8.5
                 w-full
                 items-center
                 justify-center
-                rounded-lg
+                rounded-md
                 border
                 ${department.borderColor}
                 ${department.bgColor}
                 ${department.textColor}
-                text-xs
+                text-[12px]
                 font-bold
                 transition-all
                 duration-200
