@@ -1,316 +1,424 @@
-import React, { useState } from 'react';
-import {
-  CheckCircle2,
-  Clock3,
-  XCircle,
-  Search,
-  Filter,
-  FileCheck2,
-} from 'lucide-react';
+import React from "react";
 
 interface TestCase {
   id: string;
   title: string;
   type: string;
-  module: string;
+  linkedTask: string;
+  priority: "High" | "Medium";
+  status: "Passed" | "In Testing" | "Pending";
   date: string;
-  status: 'Passed' | 'In Testing' | 'Pending' | 'Failed';
 }
 
-export const QATestCases: React.FC = () => {
-  const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState('All');
-
+const QATestCases: React.FC = () => {
   const testCases: TestCase[] = [
     {
-      id: 'T-042',
-      title: 'Test velocity tracking module',
-      type: 'Functional',
-      module: 'Velocity',
-      date: 'Aug 7',
-      status: 'Passed',
+      id: "T-042-QA",
+      title: "Test velocity tracking module",
+      type: "Functional",
+      linkedTask: "T-042",
+      priority: "High",
+      status: "Passed",
+      date: "Aug 3",
     },
     {
-      id: 'T-043',
-      title: 'Test mobile responsive layout',
-      type: 'UI/UX',
-      module: 'Responsive UI',
-      date: 'Aug 7',
-      status: 'In Testing',
+      id: "T-044-QA",
+      title: "Test mobile responsive layout",
+      type: "UI/UX",
+      linkedTask: "T-044",
+      priority: "Medium",
+      status: "In Testing",
+      date: "Aug 5",
     },
     {
-      id: 'T-044',
-      title: 'Test file upload S3 integration',
-      type: 'Integration',
-      module: 'File Upload',
-      date: 'Aug 6',
-      status: 'In Testing',
+      id: "T-045-QA",
+      title: "Test file upload S3 integration",
+      type: "Integration",
+      linkedTask: "T-045",
+      priority: "High",
+      status: "In Testing",
+      date: "Aug 5",
     },
     {
-      id: 'T-045',
-      title: 'Test JWT token refresh',
-      type: 'Security',
-      module: 'Authentication',
-      date: 'Aug 5',
-      status: 'Passed',
+      id: "T-046-QA",
+      title: "Test JWT token refresh",
+      type: "Security",
+      linkedTask: "T-046",
+      priority: "High",
+      status: "Passed",
+      date: "Aug 2",
     },
     {
-      id: 'T-046',
-      title: 'Validate API error handling',
-      type: 'API',
-      module: 'API Integration',
-      date: 'Aug 4',
-      status: 'Pending',
-    },
-    {
-      id: 'T-047',
-      title: 'Test sprint board drag and drop',
-      type: 'Functional',
-      module: 'Sprint Board',
-      date: 'Aug 3',
-      status: 'Failed',
+      id: "T-041-QA",
+      title: "API endpoint response validation",
+      type: "API",
+      linkedTask: "T-041",
+      priority: "Medium",
+      status: "Pending",
+      date: "Aug 7",
     },
   ];
 
-  const filteredTests = testCases.filter((test) => {
-    const matchesSearch =
-      test.title.toLowerCase().includes(search.toLowerCase()) ||
-      test.id.toLowerCase().includes(search.toLowerCase()) ||
-      test.module.toLowerCase().includes(search.toLowerCase());
-
-    const matchesStatus =
-      statusFilter === 'All' || test.status === statusFilter;
-
-    return matchesSearch && matchesStatus;
-  });
-
-  const getStatusStyle = (status: TestCase['status']) => {
-    switch (status) {
-      case 'Passed':
-        return 'bg-emerald-50 text-emerald-600 border-emerald-200';
-
-      case 'In Testing':
-        return 'bg-amber-50 text-amber-600 border-amber-200';
-
-      case 'Pending':
-        return 'bg-slate-50 text-slate-500 border-slate-200';
-
-      case 'Failed':
-        return 'bg-rose-50 text-rose-600 border-rose-200';
+  const getPriorityClass = (priority: TestCase["priority"]) => {
+    if (priority === "High") {
+      return "bg-[#fff0f0] text-[#ff3b3b]";
     }
+
+    return "bg-[#fff7e8] text-[#e99a00]";
   };
 
-  const getStatusIcon = (status: TestCase['status']) => {
+  const getStatusClass = (status: TestCase["status"]) => {
     switch (status) {
-      case 'Passed':
-        return <CheckCircle2 size={14} />;
+      case "Passed":
+        return "bg-[#eafaf2] text-[#20c978]";
 
-      case 'In Testing':
-        return <Clock3 size={14} />;
+      case "In Testing":
+        return "bg-[#fff6e7] text-[#e99a00]";
 
-      case 'Failed':
-        return <XCircle size={14} />;
+      case "Pending":
+        return "bg-[#f4f6f8] text-[#9aa8bb]";
 
-      case 'Pending':
-        return <Clock3 size={14} />;
+      default:
+        return "bg-[#f4f6f8] text-[#9aa8bb]";
     }
   };
 
   return (
-    <div className="w-full space-y-6">
+    <div className="w-full min-h-[calc(100vh-60px)] bg-[#f5f6f8]">
+      {/* ============================================================
+          TABLE WRAPPER
+      ============================================================ */}
 
-      {/* Page Heading */}
-      <div>
-        <h1 className="text-2xl font-extrabold text-slate-900">
-          My Test Tasks
-        </h1>
+      <div className="w-full overflow-x-auto">
+        <div
+          className="
+            min-w-[1050px]
+            bg-white
+            border-b
+            border-[#e5e7eb]
+            shadow-sm
+            overflow-hidden
+          "
+        >
+          {/* ========================================================
+              TABLE HEADER
+          ======================================================== */}
 
-        <p className="mt-1 text-sm text-slate-400">
-          Manage and track your assigned QA test cases
-        </p>
-      </div>
-
-      {/* Summary Cards */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-
-        <div className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-sm">
-          <p className="text-[11px] font-extrabold uppercase text-slate-400">
-            Total Tests
-          </p>
-
-          <p className="mt-2 text-3xl font-black text-slate-900">
-            6
-          </p>
-
-          <p className="mt-1 text-xs text-slate-400">
-            Assigned tests
-          </p>
-        </div>
-
-        <div className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-sm">
-          <p className="text-[11px] font-extrabold uppercase text-slate-400">
-            Passed
-          </p>
-
-          <p className="mt-2 text-3xl font-black text-slate-900">
-            2
-          </p>
-
-          <p className="mt-1 text-xs font-semibold text-emerald-500">
-            Completed
-          </p>
-        </div>
-
-        <div className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-sm">
-          <p className="text-[11px] font-extrabold uppercase text-slate-400">
-            In Testing
-          </p>
-
-          <p className="mt-2 text-3xl font-black text-slate-900">
-            2
-          </p>
-
-          <p className="mt-1 text-xs font-semibold text-amber-500">
-            In progress
-          </p>
-        </div>
-
-        <div className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-sm">
-          <p className="text-[11px] font-extrabold uppercase text-slate-400">
-            Failed
-          </p>
-
-          <p className="mt-2 text-3xl font-black text-slate-900">
-            1
-          </p>
-
-          <p className="mt-1 text-xs font-semibold text-rose-500">
-            Needs attention
-          </p>
-        </div>
-
-      </div>
-
-      {/* Assigned Test Cases */}
-      <div className="rounded-2xl border border-slate-200/80 bg-white shadow-sm">
-
-        {/* Section Header */}
-        <div className="flex flex-col gap-3 border-b border-slate-100 p-5 md:flex-row md:items-center md:justify-between">
-
-          <div>
-            <h2 className="text-base font-extrabold text-slate-900">
-              Assigned Test Cases
-            </h2>
-
-            <p className="mt-1 text-xs text-slate-400">
-              Test cases assigned to you
-            </p>
-          </div>
-
-          <div className="flex flex-col gap-2 sm:flex-row">
-
-            {/* Search */}
-            <div className="relative">
-              <Search
-                size={15}
-                className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
-              />
-
-              <input
-                type="text"
-                placeholder="Search tests..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="w-full rounded-xl border border-slate-200 bg-slate-50 py-2.5 pl-9 pr-4 text-xs outline-none focus:border-emerald-300 sm:w-52"
-              />
-            </div>
-
-            {/* Status Filter */}
-            <div className="relative">
-              <Filter
-                size={14}
-                className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
-              />
-
-              <select
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
-                className="rounded-xl border border-slate-200 bg-slate-50 py-2.5 pl-9 pr-3 text-xs font-bold text-slate-600 outline-none"
-              >
-                <option value="All">All Status</option>
-                <option value="Passed">Passed</option>
-                <option value="In Testing">In Testing</option>
-                <option value="Pending">Pending</option>
-                <option value="Failed">Failed</option>
-              </select>
-            </div>
-
-          </div>
-        </div>
-
-        {/* Test Cases */}
-        {filteredTests.length > 0 ? (
-          filteredTests.map((test) => (
+          <div
+            className="
+              grid
+              grid-cols-[110px_minmax(300px,1fr)_120px_130px_110px_120px_100px_95px]
+              items-center
+              h-[40px]
+              px-[12px]
+              border-b
+              border-[#e5e7eb]
+              bg-white
+            "
+          >
             <div
-              key={test.id}
-              className="flex flex-col gap-4 border-b border-slate-100 px-5 py-5 transition hover:bg-slate-50 last:border-b-0 lg:flex-row lg:items-center lg:justify-between"
+              className="
+                text-[9px]
+                font-[600]
+                uppercase
+                tracking-[0.06em]
+                text-[#7c8796]
+              "
             >
+              TEST ID
+            </div>
 
-              {/* Test Information */}
-              <div className="flex items-start gap-4">
+            <div
+              className="
+                text-[9px]
+                font-[600]
+                uppercase
+                tracking-[0.06em]
+                text-[#7c8796]
+              "
+            >
+              TEST TITLE
+            </div>
 
-                <div className="mt-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-emerald-50">
-                  <FileCheck2
-                    size={17}
-                    className="text-emerald-500"
-                  />
-                </div>
+            <div
+              className="
+                text-[9px]
+                font-[600]
+                uppercase
+                tracking-[0.06em]
+                text-[#7c8796]
+              "
+            >
+              TYPE
+            </div>
 
-                <div>
-                  <h3 className="text-sm font-extrabold text-slate-900">
-                    {test.title}
-                  </h3>
+            <div
+              className="
+                text-[9px]
+                font-[600]
+                uppercase
+                tracking-[0.06em]
+                text-[#7c8796]
+              "
+            >
+              LINKED TASK
+            </div>
 
-                  <p className="mt-1 text-xs text-slate-400">
-                    {test.id} · {test.type} · {test.module} · {test.date}
-                  </p>
-                </div>
+            <div
+              className="
+                text-[9px]
+                font-[600]
+                uppercase
+                tracking-[0.06em]
+                text-[#7c8796]
+              "
+            >
+              PRIORITY
+            </div>
 
+            <div
+              className="
+                text-[9px]
+                font-[600]
+                uppercase
+                tracking-[0.06em]
+                text-[#7c8796]
+              "
+            >
+              STATUS
+            </div>
+
+            <div
+              className="
+                text-[9px]
+                font-[600]
+                uppercase
+                tracking-[0.06em]
+                text-[#7c8796]
+              "
+            >
+              DATE
+            </div>
+
+            <div
+              className="
+                text-[9px]
+                font-[600]
+                uppercase
+                tracking-[0.06em]
+                text-[#7c8796]
+              "
+            >
+              ACTION
+            </div>
+          </div>
+
+          {/* ========================================================
+              TABLE ROWS
+          ======================================================== */}
+
+          {testCases.map((testCase, index) => (
+            <div
+              key={testCase.id}
+              className={`
+                grid
+                grid-cols-[110px_minmax(300px,1fr)_120px_130px_110px_120px_100px_95px]
+                items-center
+                h-[50px]
+                px-[12px]
+                bg-white
+                ${
+                  index !== testCases.length - 1
+                    ? "border-b border-[#eeeeee]"
+                    : ""
+                }
+              `}
+            >
+              {/* TEST ID */}
+
+              <div
+                className="
+                  text-[9px]
+                  font-[400]
+                  leading-[12px]
+                  text-[#8d98a8]
+                "
+              >
+                {testCase.id}
               </div>
 
-              {/* Status */}
-              <span
-                className={`inline-flex w-fit items-center gap-1.5 rounded-full border px-3 py-1.5 text-[10px] font-bold ${getStatusStyle(
-                  test.status
-                )}`}
+              {/* TEST TITLE */}
+
+              <div
+                className="
+                  min-w-0
+                  pr-[12px]
+                "
               >
-                {getStatusIcon(test.status)}
-                {test.status}
-              </span>
+                <p
+                  className="
+                    text-[11px]
+                    font-[600]
+                    leading-[14px]
+                    text-[#111827]
+                    truncate
+                  "
+                >
+                  {testCase.title}
+                </p>
+              </div>
 
+              {/* TYPE */}
+
+              <div>
+                <span
+                  className="
+                    inline-flex
+                    items-center
+                    justify-center
+                    rounded-[6px]
+                    bg-[#f4f6f8]
+                    px-[8px]
+                    py-[4px]
+                    text-[9px]
+                    font-[500]
+                    leading-[10px]
+                    text-[#657184]
+                  "
+                >
+                  {testCase.type}
+                </span>
+              </div>
+
+              {/* LINKED TASK */}
+
+              <div
+                className="
+                  text-[9px]
+                  font-[400]
+                  leading-[12px]
+                  text-[#8d98a8]
+                "
+              >
+                {testCase.linkedTask}
+              </div>
+
+              {/* PRIORITY */}
+
+              <div>
+                <span
+                  className={`
+                    inline-flex
+                    items-center
+                    justify-center
+                    rounded-[6px]
+                    px-[8px]
+                    py-[4px]
+                    text-[9px]
+                    font-[600]
+                    leading-[10px]
+                    ${getPriorityClass(testCase.priority)}
+                  `}
+                >
+                  {testCase.priority}
+                </span>
+              </div>
+
+              {/* STATUS */}
+
+              <div>
+                <span
+                  className={`
+                    inline-flex
+                    items-center
+                    justify-center
+                    rounded-[6px]
+                    px-[8px]
+                    py-[4px]
+                    text-[9px]
+                    font-[600]
+                    leading-[10px]
+                    ${getStatusClass(testCase.status)}
+                  `}
+                >
+                  {testCase.status}
+                </span>
+              </div>
+
+              {/* DATE */}
+
+              <div
+                className="
+                  text-[9px]
+                  font-[400]
+                  leading-[12px]
+                  text-[#8d98a8]
+                "
+              >
+                {testCase.date}
+              </div>
+
+              {/* ACTION */}
+
+              <div className="flex items-center gap-[6px]">
+                {/* PASS */}
+
+                {testCase.status !== "Passed" && (
+                  <button
+                    type="button"
+                    className="
+                      flex
+                      h-[24px]
+                      items-center
+                      justify-center
+                      rounded-[6px]
+                      border
+                      border-[#b9ead4]
+                      bg-[#f0fbf6]
+                      px-[9px]
+                      text-[9px]
+                      font-[600]
+                      leading-[10px]
+                      text-[#20b978]
+                      transition
+                      hover:bg-[#e5f8ef]
+                    "
+                  >
+                    Pass
+                  </button>
+                )}
+
+                {/* FAIL */}
+
+                <button
+                  type="button"
+                  className="
+                    flex
+                    h-[24px]
+                    items-center
+                    justify-center
+                    rounded-[6px]
+                    border
+                    border-[#ffc9c9]
+                    bg-[#fff4f4]
+                    px-[9px]
+                    text-[9px]
+                    font-[600]
+                    leading-[10px]
+                    text-[#ff4b4b]
+                    transition
+                    hover:bg-[#ffeaea]
+                  "
+                >
+                  Fail
+                </button>
+              </div>
             </div>
-          ))
-        ) : (
-          <div className="p-10 text-center">
-
-            <FileCheck2
-              size={28}
-              className="mx-auto text-slate-300"
-            />
-
-            <p className="mt-3 text-sm font-bold text-slate-600">
-              No test cases found
-            </p>
-
-            <p className="mt-1 text-xs text-slate-400">
-              Try changing your search or filter.
-            </p>
-
-          </div>
-        )}
-
+          ))}
+        </div>
       </div>
-
     </div>
   );
 };
+
+export default QATestCases;
