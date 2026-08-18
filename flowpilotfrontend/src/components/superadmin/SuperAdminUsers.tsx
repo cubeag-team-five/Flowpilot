@@ -141,16 +141,29 @@ const departments = [
   'Design',
 ];
 
+const designations = [
+  'Software Engineer',
+  'Senior Software Engineer',
+  'Project Manager',
+  'Scrum Master',
+  'QA Engineer',
+  'Business Analyst',
+  'UI/UX Designer',
+  'Team Lead',
+];
+
 const SuperAdminUsers: React.FC = () => {
   const [users, setUsers] = useState<User[]>(initialUsers);
-  const [showModal, setShowModal] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
+  const [showForm, setShowForm] = useState(false);
 
   const [form, setForm] = useState({
     name: '',
     email: '',
-    role: 'Developer',
-    department: 'Engineering',
+    employeeId: '',
+    role: '',
+    department: '',
+    designation: '',
   });
 
   const activeUsers = users.filter(
@@ -163,11 +176,13 @@ const SuperAdminUsers: React.FC = () => {
     setForm({
       name: '',
       email: '',
-      role: 'Developer',
-      department: 'Engineering',
+      employeeId: '',
+      role: '',
+      department: '',
+      designation: '',
     });
 
-    setShowModal(true);
+    setShowForm(true);
   };
 
   const openEditModal = (user: User) => {
@@ -176,16 +191,27 @@ const SuperAdminUsers: React.FC = () => {
     setForm({
       name: user.name,
       email: user.email,
+      employeeId: user.id,
       role: user.role,
       department: user.department,
+      designation: '',
     });
 
-    setShowModal(true);
+    setShowForm(true);
   };
 
   const closeModal = () => {
-    setShowModal(false);
+    setShowForm(false);
     setEditingUser(null);
+
+    setForm({
+      name: '',
+      email: '',
+      employeeId: '',
+      role: '',
+      department: '',
+      designation: '',
+    });
   };
 
   const getInitials = (name: string) => {
@@ -200,7 +226,14 @@ const SuperAdminUsers: React.FC = () => {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!form.name.trim() || !form.email.trim()) {
+    if (
+      !form.name.trim() ||
+      !form.email.trim() ||
+      !form.employeeId.trim() ||
+      !form.role ||
+      !form.department ||
+      !form.designation
+    ) {
       return;
     }
 
@@ -210,8 +243,8 @@ const SuperAdminUsers: React.FC = () => {
           user.id === editingUser.id
             ? {
                 ...user,
-                name: form.name,
-                email: form.email,
+                name: form.name.trim(),
+                email: form.email.trim(),
                 role: form.role,
                 department: form.department,
                 initials: getInitials(form.name),
@@ -221,9 +254,9 @@ const SuperAdminUsers: React.FC = () => {
       );
     } else {
       const newUser: User = {
-        id: `EMP-${String(users.length + 1).padStart(3, '0')}`,
-        name: form.name,
-        email: form.email,
+        id: form.employeeId.trim(),
+        name: form.name.trim(),
+        email: form.email.trim(),
         role: form.role,
         department: form.department,
         status: 'Active',
@@ -594,130 +627,118 @@ const SuperAdminUsers: React.FC = () => {
           background: #fff1f2;
         }
 
-        /* MODAL */
+        /* ADD USER FORM */
 
-        .modal-overlay {
-          position: fixed;
-          inset: 0;
-          z-index: 9999;
-          background: rgba(15, 23, 42, 0.42);
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          padding: 20px;
-          overflow-y: auto;
-        }
-
-        .user-modal {
+        .add-user-form-card {
           width: 100%;
-          max-width: 470px;
-          max-height: calc(100vh - 40px);
           background: #ffffff;
-          border-radius: 15px;
-          overflow: hidden;
-          box-shadow: 0 25px 60px rgba(15, 23, 42, 0.25);
+          border: 1px solid #e7eaf0;
+          border-radius: 16px;
+          padding: 26px 28px 22px;
+          margin-bottom: 16px;
+          box-shadow: 0 6px 20px rgba(15, 23, 42, 0.05);
         }
 
-        .modal-header {
-          height: 62px;
-          padding: 0 21px;
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          border-bottom: 1px solid #edf0f3;
-        }
-
-        .modal-title {
-          font-size: 17px;
+        .add-user-form-title {
+          margin: 0 0 20px;
+          font-size: 16px;
+          line-height: 20px;
           font-weight: 750;
           color: #111827;
         }
 
-        .close-button {
-          width: 32px;
-          height: 32px;
-          border: none;
-          border-radius: 8px;
-          background: #f3f4f6;
-          color: #65778b;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          cursor: pointer;
-          flex-shrink: 0;
+        .add-user-fields {
+          display: grid;
+          grid-template-columns: repeat(3, minmax(0, 1fr));
+          column-gap: 14px;
+          row-gap: 16px;
         }
 
-        .close-button svg {
-          width: 17px;
-          height: 17px;
+        .inline-form-group {
+          min-width: 0;
         }
 
-        .modal-body {
-          padding: 21px;
-          overflow-y: auto;
-        }
-
-        .form-group {
-          margin-bottom: 16px;
-        }
-
-        .form-label {
+        .inline-form-label {
           display: block;
-          margin-bottom: 6px;
-          font-size: 12px;
-          line-height: 16px;
+          margin-bottom: 7px;
+          font-size: 11px;
+          line-height: 14px;
           font-weight: 700;
+          letter-spacing: 0.02em;
           color: #405a76;
+          text-transform: uppercase;
         }
 
-        .form-input,
-        .form-select {
+        .inline-form-input,
+        .inline-form-select {
           width: 100%;
-          height: 41px;
-          padding: 0 11px;
+          height: 40px;
+          padding: 0 12px;
           border: 1px solid #dce2e8;
-          border-radius: 8px;
+          border-radius: 9px;
           background: #ffffff;
           color: #18283c;
           outline: none;
           font-family: inherit;
-          font-size: 13px;
+          font-size: 14px;
+          line-height: 18px;
         }
 
-        .form-input:focus,
-        .form-select:focus {
-          border-color: #7bb9ef;
+        .inline-form-input::placeholder {
+          color: #98a3b1;
+          opacity: 1;
         }
 
-        .modal-footer {
-          padding: 14px 21px;
-          border-top: 1px solid #edf0f3;
-          display: flex;
-          justify-content: flex-end;
-          gap: 8px;
+        .inline-form-input:focus,
+        .inline-form-select:focus {
+          border-color: #9bbfe0;
+          box-shadow: 0 0 0 2px rgba(123, 185, 239, 0.08);
         }
 
-        .cancel-button,
-        .save-button {
-          height: 37px;
-          padding: 0 17px;
-          border-radius: 8px;
-          font-family: inherit;
-          font-size: 13px;
-          font-weight: 700;
+        .inline-form-select {
           cursor: pointer;
         }
 
-        .cancel-button {
-          border: 1px solid #dce2e8;
+        .inline-form-actions {
+          grid-column: 1 / -1;
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          margin-top: -1px;
+        }
+
+        .inline-create-button,
+        .inline-cancel-button {
+          height: 40px;
+          padding: 0 19px;
+          border-radius: 9px;
+          font-family: inherit;
+          font-size: 13px;
+          line-height: 17px;
+          font-weight: 700;
+          cursor: pointer;
+          transition: all 0.15s ease;
+        }
+
+        .inline-create-button {
+          border: 1px solid #ff2930;
+          background: #ff2930;
+          color: #ffffff;
+          box-shadow: 0 5px 12px rgba(255, 41, 48, 0.13);
+        }
+
+        .inline-create-button:hover {
+          background: #ed2027;
+        }
+
+        .inline-cancel-button {
+          border: 1px solid #d7dfe8;
           background: #ffffff;
           color: #536b84;
         }
 
-        .save-button {
-          border: 1px solid #ff2930;
-          background: #ff2930;
-          color: #ffffff;
+        .inline-cancel-button:hover {
+          background: #f8fafc;
         }
 
         /* TABLET */
@@ -843,42 +864,35 @@ const SuperAdminUsers: React.FC = () => {
             font-size: 13px;
           }
 
-          .users-table-container {
-            border-radius: 12px;
-          }
-
-          .modal-overlay {
-            padding: 12px;
-            align-items: center;
-          }
-
-          .user-modal {
-            max-height: calc(100vh - 24px);
+          .add-user-form-card {
+            padding: 20px 16px 18px;
             border-radius: 13px;
           }
 
-          .modal-header {
-            height: 56px;
-            padding: 0 16px;
+          .add-user-form-title {
+            margin-bottom: 17px;
+            font-size: 15px;
           }
 
-          .modal-title {
-            font-size: 16px;
+          .add-user-fields {
+            grid-template-columns: 1fr;
+            row-gap: 14px;
           }
 
-          .modal-body {
-            padding: 16px;
+          .inline-form-actions {
+            grid-column: auto;
+            margin-top: 1px;
           }
 
-          .modal-footer {
-            padding: 12px 16px;
-          }
-
-          .cancel-button,
-          .save-button {
-            height: 36px;
-            padding: 0 14px;
+          .inline-create-button,
+          .inline-cancel-button {
+            height: 39px;
+            padding: 0 15px;
             font-size: 12px;
+          }
+
+          .users-table-container {
+            border-radius: 12px;
           }
         }
       `}</style>
@@ -903,6 +917,146 @@ const SuperAdminUsers: React.FC = () => {
             </button>
 
           </div>
+
+          {showForm && (
+            <form className="add-user-form-card" onSubmit={handleSubmit}>
+              <h2 className="add-user-form-title">
+                {editingUser ? 'Edit User' : 'Add New User'}
+              </h2>
+
+              <div className="add-user-fields">
+
+                <div className="inline-form-group">
+                  <label className="inline-form-label">Full Name</label>
+                  <input
+                    type="text"
+                    className="inline-form-input"
+                    placeholder="Full Name"
+                    value={form.name}
+                    onChange={(e) =>
+                      setForm({
+                        ...form,
+                        name: e.target.value,
+                      })
+                    }
+                  />
+                </div>
+
+                <div className="inline-form-group">
+                  <label className="inline-form-label">Email Address</label>
+                  <input
+                    type="email"
+                    className="inline-form-input"
+                    placeholder="Email Address"
+                    value={form.email}
+                    onChange={(e) =>
+                      setForm({
+                        ...form,
+                        email: e.target.value,
+                      })
+                    }
+                  />
+                </div>
+
+                <div className="inline-form-group">
+                  <label className="inline-form-label">Employee ID</label>
+                  <input
+                    type="text"
+                    className="inline-form-input"
+                    placeholder="Employee ID"
+                    value={form.employeeId}
+                    onChange={(e) =>
+                      setForm({
+                        ...form,
+                        employeeId: e.target.value,
+                      })
+                    }
+                  />
+                </div>
+
+                <div className="inline-form-group">
+                  <label className="inline-form-label">Role</label>
+                  <select
+                    className="inline-form-select"
+                    value={form.role}
+                    onChange={(e) =>
+                      setForm({
+                        ...form,
+                        role: e.target.value,
+                      })
+                    }
+                  >
+                    <option value="">Select Role</option>
+                    {roles.map((role) => (
+                      <option key={role} value={role}>
+                        {role}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="inline-form-group">
+                  <label className="inline-form-label">Department</label>
+                  <select
+                    className="inline-form-select"
+                    value={form.department}
+                    onChange={(e) =>
+                      setForm({
+                        ...form,
+                        department: e.target.value,
+                      })
+                    }
+                  >
+                    <option value="">Select Department</option>
+                    {departments.map((department) => (
+                      <option key={department} value={department}>
+                        {department}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="inline-form-group">
+                  <label className="inline-form-label">Designation</label>
+                  <select
+                    className="inline-form-select"
+                    value={form.designation}
+                    onChange={(e) =>
+                      setForm({
+                        ...form,
+                        designation: e.target.value,
+                      })
+                    }
+                  >
+                    <option value="">Select Designation</option>
+                    {designations.map((designation) => (
+                      <option key={designation} value={designation}>
+                        {designation}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="inline-form-actions">
+                  <button
+                    type="submit"
+                    className="inline-create-button"
+                  >
+                    {editingUser ? 'Save Changes' : 'Create User'}
+                  </button>
+
+                  <button
+                    type="button"
+                    className="inline-cancel-button"
+                    onClick={closeModal}
+                  >
+                    Cancel
+                  </button>
+                </div>
+
+              </div>
+            </form>
+          )}
 
           <div className="users-table-container">
 
@@ -1051,168 +1205,6 @@ const SuperAdminUsers: React.FC = () => {
           </div>
 
         </main>
-
-        {showModal && (
-          <div
-            className="modal-overlay"
-            onMouseDown={(event) => {
-              if (event.target === event.currentTarget) {
-                closeModal();
-              }
-            }}
-          >
-
-            <div className="user-modal">
-
-              <div className="modal-header">
-
-                <div className="modal-title">
-                  {editingUser
-                    ? 'Edit User'
-                    : 'Add User'}
-                </div>
-
-                <button
-                  type="button"
-                  className="close-button"
-                  onClick={closeModal}
-                >
-                  <X />
-                </button>
-
-              </div>
-
-              <form onSubmit={handleSubmit}>
-
-                <div className="modal-body">
-
-                  <div className="form-group">
-
-                    <label className="form-label">
-                      Full Name
-                    </label>
-
-                    <input
-                      type="text"
-                      className="form-input"
-                      placeholder="Enter full name"
-                      value={form.name}
-                      onChange={(e) =>
-                        setForm({
-                          ...form,
-                          name: e.target.value,
-                        })
-                      }
-                    />
-
-                  </div>
-
-                  <div className="form-group">
-
-                    <label className="form-label">
-                      Email
-                    </label>
-
-                    <input
-                      type="email"
-                      className="form-input"
-                      placeholder="Enter email address"
-                      value={form.email}
-                      onChange={(e) =>
-                        setForm({
-                          ...form,
-                          email: e.target.value,
-                        })
-                      }
-                    />
-
-                  </div>
-
-                  <div className="form-group">
-
-                    <label className="form-label">
-                      Role
-                    </label>
-
-                    <select
-                      className="form-select"
-                      value={form.role}
-                      onChange={(e) =>
-                        setForm({
-                          ...form,
-                          role: e.target.value,
-                        })
-                      }
-                    >
-                      {roles.map((role) => (
-                        <option
-                          key={role}
-                          value={role}
-                        >
-                          {role}
-                        </option>
-                      ))}
-                    </select>
-
-                  </div>
-
-                  <div className="form-group">
-
-                    <label className="form-label">
-                      Department
-                    </label>
-
-                    <select
-                      className="form-select"
-                      value={form.department}
-                      onChange={(e) =>
-                        setForm({
-                          ...form,
-                          department: e.target.value,
-                        })
-                      }
-                    >
-                      {departments.map((department) => (
-                        <option
-                          key={department}
-                          value={department}
-                        >
-                          {department}
-                        </option>
-                      ))}
-                    </select>
-
-                  </div>
-
-                </div>
-
-                <div className="modal-footer">
-
-                  <button
-                    type="button"
-                    className="cancel-button"
-                    onClick={closeModal}
-                  >
-                    Cancel
-                  </button>
-
-                  <button
-                    type="submit"
-                    className="save-button"
-                  >
-                    {editingUser
-                      ? 'Save Changes'
-                      : 'Add User'}
-                  </button>
-
-                </div>
-
-              </form>
-
-            </div>
-
-          </div>
-        )}
 
       </div>
     </>
