@@ -445,6 +445,7 @@ const QATestCases: React.FC = () => {
           </div>
         ))}
       </div>
+    </div>
   );
 };
 
