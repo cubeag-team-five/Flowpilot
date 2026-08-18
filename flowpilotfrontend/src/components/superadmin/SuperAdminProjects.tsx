@@ -149,21 +149,10 @@ export const SuperAdminProjects: React.FC = () => {
         }
       `}</style>
 
-      <div
-        className="
-          w-full
-          px-[28px]
-          pt-[14px]
-          pb-[30px]
-          max-lg:px-[22px]
-          max-md:px-[16px]
-          max-sm:px-[10px]
-          max-sm:pt-[22px]
-        "
-      >
-        {/* SEARCH - same page format, functionality restored */}
-        <div className="mb-[14px] flex items-center justify-center gap-[10px] max-sm:flex-col">
-          <div className="relative w-[290px] max-sm:w-full">
+      <div className="w-full">
+        {/* SEARCH */}
+        <div className="mb-[14px] flex items-center justify-center gap-[10px] flex-wrap sm:flex-nowrap">
+          <div className="relative w-full sm:w-[290px]">
             <Search
               size={16}
               strokeWidth={2}
@@ -206,20 +195,7 @@ export const SuperAdminProjects: React.FC = () => {
           <button
             type="button"
             onClick={() => setShowAddProject(true)}
-            className="
-              h-[42px]
-              rounded-[10px]
-              bg-red-500
-              px-[18px]
-              text-[12px]
-              font-bold
-              text-white
-              shadow-sm
-              transition
-              hover:bg-red-600
-              active:scale-[0.98]
-              whitespace-nowrap
-            "
+            className="h-[42px] w-full sm:w-auto rounded-[10px] bg-red-500 px-[18px] text-[12px] font-bold text-white shadow-sm transition hover:bg-red-600 active:scale-[0.98] whitespace-nowrap"
           >
             + Add Project
           </button>
@@ -598,18 +574,8 @@ export const SuperAdminProjects: React.FC = () => {
           </div>
         )}
 
-        {/* SAME TABLE FORMAT */}
-        <div
-          className="
-            w-full
-            overflow-hidden
-            rounded-[16px]
-            border
-            border-slate-200/80
-            bg-white
-            shadow-[0_2px_7px_rgba(15,23,42,0.04)]
-          "
-        >
+        {/* TABLE — desktop */}
+        <div className="hidden md:block w-full overflow-hidden rounded-[16px] border border-slate-200/80 bg-white shadow-[0_2px_7px_rgba(15,23,42,0.04)]">
           <div className="projects-scroll w-full overflow-x-auto">
             <table className="w-full min-w-[1260px] border-collapse">
               <colgroup>
@@ -776,6 +742,49 @@ export const SuperAdminProjects: React.FC = () => {
               </tbody>
             </table>
           </div>
+        </div>
+
+        {/* CARDS — mobile */}
+        <div className="md:hidden space-y-3">
+          {filteredProjects.length === 0 ? (
+            <div className="rounded-[14px] border border-dashed border-slate-200 bg-white p-8 text-center">
+              <p className="text-[13px] font-bold text-slate-600">No projects found</p>
+              <p className="mt-1 text-[11px] text-slate-400">Try another project name, code, manager or sprint.</p>
+            </div>
+          ) : (
+            filteredProjects.map((project) => (
+              <div key={project.code} className="rounded-[14px] border border-slate-200/80 bg-white p-4 shadow-sm">
+                <div className="flex items-start justify-between gap-2 mb-3">
+                  <div className="min-w-0">
+                    <p className="text-[10px] text-slate-400 font-mono mb-0.5">{project.code}</p>
+                    <p className="text-[13px] font-bold text-slate-900 leading-tight">{project.name}</p>
+                    <p className="text-[11px] text-slate-500 mt-0.5">{project.manager}</p>
+                  </div>
+                  <span className={`shrink-0 inline-flex items-center rounded-[8px] px-[10px] py-[4px] text-[10px] font-bold whitespace-nowrap ${healthClasses[project.health]}`}>
+                    {project.health}
+                  </span>
+                </div>
+                <div className="grid grid-cols-2 gap-2 text-[11px] text-slate-500 mb-3">
+                  <div><span className="text-slate-400">Sprint: </span>{project.sprint}</div>
+                  <div><span className="text-slate-400">Status: </span>{project.status}</div>
+                  <div><span className="text-slate-400">Start: </span>{project.startDate}</div>
+                  <div><span className="text-slate-400">End: </span>{project.endDate}</div>
+                </div>
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-[10px] text-slate-400">Progress</span>
+                    <span className="text-[10px] font-semibold text-slate-600">{project.progress}%</span>
+                  </div>
+                  <div className="h-[5px] w-full overflow-hidden rounded-full bg-slate-100">
+                    <div
+                      className={`h-full rounded-full ${project.health === 'At Risk' ? 'bg-amber-500' : project.health === 'Delayed' ? 'bg-rose-500' : 'bg-emerald-500'}`}
+                      style={{ width: `${project.progress}%` }}
+                    />
+                  </div>
+                </div>
+              </div>
+            ))
+          )}
         </div>
       </div>
     </div>
