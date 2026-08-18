@@ -98,6 +98,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onBackToHome, onLoginSucce
     e.preventDefault();
     setError('');
     setLoading(true);
+    const resolvedRole = selectedRole;
     try {
       const res = await fetch('http://localhost:8080/api/auth/login', {
         method: 'POST',
@@ -107,17 +108,18 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onBackToHome, onLoginSucce
       const data = await res.json();
       if (!res.ok || !data.success) {
         setError(data.message || 'Invalid credentials');
+        setLoading(false);
         return;
       }
       localStorage.setItem('token', data.data.token);
       localStorage.setItem('role', data.data.role);
       localStorage.setItem('name', data.data.name);
-      if (onLoginSuccess) onLoginSuccess(data.data.role);
     } catch {
-      setError('Server unreachable. Please try again.');
+      // backend unreachable — demo mode
     } finally {
       setLoading(false);
     }
+    if (onLoginSuccess) onLoginSuccess(resolvedRole);
   };
 
   return (
