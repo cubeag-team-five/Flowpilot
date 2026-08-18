@@ -65,35 +65,6 @@ export function PMProjects() {
   );
 }
 
-/* NAV ITEM */
-
-function NavItem({
-  icon,
-  text,
-  active = false,
-}: {
-  icon: string;
-  text: string;
-  active?: boolean;
-}) {
-  return (
-    <button
-      className={`
-        group flex w-full items-center gap-2 rounded-xl
-        px-4 py-3.5 text-left text-sm font-bold
-        transition
-        ${
-          active
-            ? "border-l-2 border-purple-400 bg-purple-500/15 text-purple-300"
-            : "text-slate-400 hover:bg-white/5 hover:text-white"
-        }
-      `}
-    >
-      <span className="w-3 shrink-0 text-center text-lg">{icon}</span>
-      <span className="truncate">{text}</span>
-    </button>
-  );
-}
 
 /* PROJECT CARD */
 
