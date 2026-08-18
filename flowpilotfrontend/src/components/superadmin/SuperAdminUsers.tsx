@@ -3,7 +3,6 @@ import {
   Plus,
   Pencil,
   Trash2,
-  X,
 } from 'lucide-react';
 
 interface User {
@@ -918,7 +917,6 @@ const SuperAdminUsers: React.FC = () => {
 
           </div>
 
-<<<<<<< HEAD
           {showForm && (
             <form className="add-user-form-card" onSubmit={handleSubmit}>
               <h2 className="add-user-form-title">
@@ -1060,9 +1058,6 @@ const SuperAdminUsers: React.FC = () => {
           )}
 
           <div className="users-table-container">
-=======
-          <div className="users-table-container hidden md:block">
->>>>>>> 87b681ce8f0ab047910fb1e75b4660dd0c142f26
 
             <table className="users-table">
 
