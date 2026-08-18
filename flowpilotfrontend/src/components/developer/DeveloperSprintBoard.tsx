@@ -117,20 +117,20 @@ const DeveloperSprintBoard: React.FC = () => {
   return (
     <div className="w-full">
       {/* Info Banner */}
-      <div className="mb-3 rounded-xl border border-teal-100 bg-teal-50/70 px-4 py-2.5 text-sm text-gray-500">
+      <div className="mb-3 rounded-xl border border-teal-100 bg-teal-50/70 px-4 py-2.5 text-sm text-gray-400">
         💡 Your tasks are highlighted. Other tasks shown for visibility.
       </div>
 
       {/* Board */}
       <div className="overflow-x-auto pb-3">
-        <div className="grid min-w-[1180px] grid-cols-5 gap-3">
+        <div className="grid min-w-[1080px] grid-cols-5 gap-1">
           {columns.map((column) => (
             <div
               key={column.title}
               className="min-h-[380px] rounded-2xl border border-gray-100 bg-white/60 p-2.5"
             >
               {/* Column Header */}
-              <div className="px-2 py-2">
+              <div className="px-2 py-5">
                 <h3
                   className={`text-sm font-semibold ${
                     column.title === "In Progress"
@@ -149,7 +149,7 @@ const DeveloperSprintBoard: React.FC = () => {
               </div>
 
               {/* Cards */}
-              <div className="space-y-2">
+              <div className="space-y-1">
                 {column.cards.map((card) => {
                   const highlighted = card.isMyTask;
                   const completed = card.completed;
@@ -157,7 +157,7 @@ const DeveloperSprintBoard: React.FC = () => {
                   return (
                     <div
                       key={card.id}
-                      className={`rounded-xl border bg-white p-3 transition-all duration-200 hover:-translate-y-[1px] hover:shadow-md ${
+                      className={`rounded-xl border bg-white p-1 transition-all duration-100 hover:-translate-y-[1px] hover:shadow-md ${
                         highlighted
                           ? completed
                             ? "border-emerald-300"
@@ -177,23 +177,23 @@ const DeveloperSprintBoard: React.FC = () => {
                         </div>
                       )}
 
-                      <div className="font-mono text-[11px] text-gray-300">
+                      <div className="font-mono text-[11px] text-gray-00">
                         {card.id}
                       </div>
 
                       <div
-                        className={`mt-1 pr-5 text-sm ${
+                        className={`mt-1 pr-5 text-xs ${
                           highlighted
                             ? "font-semibold text-gray-900"
-                            : "font-medium text-gray-500"
+                            : "font-xs text-gray-400"
                         }`}
                       >
                         {card.title}
                       </div>
 
-                      <div className="mt-2 flex items-center justify-between">
+                      <div className="mt-1 flex items-center justify-between">
                         <span
-                          className={`text-[11px] ${
+                          className={`text-[10px] ${
                             highlighted
                               ? "text-gray-400"
                               : "text-gray-300"
@@ -205,8 +205,8 @@ const DeveloperSprintBoard: React.FC = () => {
                         <span
                           className={`rounded-md px-2 py-1 text-[10px] font-semibold ${
                             highlighted
-                              ? "bg-gray-50 text-gray-500"
-                              : "bg-gray-50 text-gray-300"
+                              ? "bg-gray-50 text-gray-700"
+                              : "bg-gray-50 text-gray-400"
                           }`}
                         >
                           {card.points}p

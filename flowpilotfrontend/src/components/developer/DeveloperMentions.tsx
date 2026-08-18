@@ -113,7 +113,7 @@ const DeveloperMentions: React.FC = () => {
                 : "border-gray-100"
             }`}
           >
-            <div className="flex items-start gap-4">
+            <div className="flex items-start gap-3">
               {/* Avatar */}
               <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-cyan-300 to-indigo-300 text-xs font-bold text-white">
                 {mention.initials}
@@ -121,8 +121,8 @@ const DeveloperMentions: React.FC = () => {
 
               {/* Content */}
               <div className="min-w-0 flex-1">
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="text-sm font-semibold text-gray-900">
+                <div className="flex flex-wrap items-center gap-1">
+                  <span className="text-[13px] font-bold text-gray-900">
                     {mention.name}
                   </span>
 
@@ -135,13 +135,13 @@ const DeveloperMentions: React.FC = () => {
                   </span>
 
                   {mention.unread && (
-                    <span className="rounded-md bg-teal-50 px-2 py-0.5 text-[10px] font-semibold text-teal-500">
+                    <span className="rounded-md bg-teal-50 px-2 py-0.5 text-[10px] font-bold text-teal-600">
                       NEW
                     </span>
                   )}
                 </div>
 
-                <p className="mt-2 text-sm leading-6 text-gray-700">
+                <p className="mt-2 text-[13px] leading-6 text-gray-700">
                   {mention.message}
                 </p>
 

@@ -100,15 +100,15 @@ const DeveloperTimeLog: React.FC = () => {
   };
 
   return (
-    <div className="w-full space-y-5">
+    <div className="w-full space-y-1">
       {/* Log Time Card */}
-      <div className="rounded-2xl border border-gray-100 bg-white p-6 shadow-[0_3px_15px_rgba(0,0,0,0.04)]">
-        <h2 className="text-base font-semibold text-gray-900">
+      <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-[0_3px_15px_rgba(0,0,0,0.04)]">
+        <h2 className="text-[13.5px] font-bold text-gray-1000">
           Log Time for Today
         </h2>
 
-        <form onSubmit={handleLogTime} className="mt-5">
-          <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_130px]">
+        <form onSubmit={handleLogTime} className="mt-1">
+          <div className="grid grid-cols-1 gap-2 lg:grid-cols-[1fr_130px]">
             {/* Task */}
             <div>
               <label className="mb-2 block text-xs font-semibold uppercase tracking-wide text-gray-400">
@@ -133,7 +133,7 @@ const DeveloperTimeLog: React.FC = () => {
 
             {/* Hours */}
             <div>
-              <label className="mb-2 block text-xs font-semibold uppercase tracking-wide text-gray-400">
+              <label className="mb-2 block text-xs font-bold uppercase tracking-wide text-gray-400">
                 Hours
               </label>
 
@@ -149,8 +149,8 @@ const DeveloperTimeLog: React.FC = () => {
           </div>
 
           {/* Notes */}
-          <div className="mt-4">
-            <label className="mb-2 block text-xs font-semibold uppercase tracking-wide text-gray-400">
+          <div className="mt-3">
+            <label className="mb-2 block text-[13px] font-semibold uppercase tracking-wide text-gray-400">
               Notes
             </label>
 
@@ -167,7 +167,7 @@ const DeveloperTimeLog: React.FC = () => {
           <div className="mt-4 flex flex-wrap items-center gap-3">
             <button
               type="submit"
-              className="rounded-xl bg-gradient-to-r from-cyan-400 to-emerald-400 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-emerald-100 transition hover:-translate-y-[1px] hover:shadow-xl"
+              className="rounded-xl bg-gradient-to-r from-cyan-400 to-emerald-400 px-5 py-2 text-sm font-semibold text-white shadow-lg shadow-emerald-100 transition hover:-translate-y-[1px] hover:shadow-xl"
             >
               Log Time
             </button>
@@ -190,11 +190,11 @@ const DeveloperTimeLog: React.FC = () => {
       {/* History */}
       <div className="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-[0_3px_15px_rgba(0,0,0,0.04)]">
         <div className="flex items-center justify-between border-b border-gray-100 px-5 py-4">
-          <h2 className="text-base font-semibold text-gray-900">
+          <h2 className="text-[13px] font-bold text-gray-900">
             Time Log History
           </h2>
 
-          <span className="text-sm font-semibold text-teal-400">
+          <span className="text-sm font-bold text-teal-400">
             {totalHours}h this week
           </span>
         </div>
@@ -203,16 +203,16 @@ const DeveloperTimeLog: React.FC = () => {
           <table className="min-w-[850px] w-full">
             <thead>
               <tr className="border-b border-gray-100 bg-gray-50/60 text-left">
-                <th className="px-4 py-3 text-xs font-semibold text-gray-400">
+                <th className="px-4 py-3 text-[10.5px] font-bold text-gray-400">
                   DATE
                 </th>
-                <th className="px-4 py-3 text-xs font-semibold text-gray-400">
+                <th className="px-4 py-3 text-[10.5px] font-bold text-gray-400">
                   TASK
                 </th>
-                <th className="px-4 py-3 text-xs font-semibold text-gray-400">
+                <th className="px-4 py-3 text-[10.5px] font-bold text-gray-400">
                   HOURS
                 </th>
-                <th className="px-4 py-3 text-xs font-semibold text-gray-400">
+                <th className="px-4 py-3 text-[10.5px] font-bold text-gray-400">
                   NOTES
                 </th>
               </tr>
@@ -224,19 +224,19 @@ const DeveloperTimeLog: React.FC = () => {
                   key={entry.id}
                   className="border-b border-gray-100 last:border-b-0"
                 >
-                  <td className="px-4 py-4 text-sm text-gray-500">
+                  <td className="px-4 py-4 text-[12px] text-gray-400">
                     {entry.date}
                   </td>
 
-                  <td className="px-4 py-4 text-sm text-gray-600">
+                  <td className="px-4 py-4 text-[12.5px] text-gray-600">
                     {entry.task}
                   </td>
 
-                  <td className="px-4 py-4 text-sm font-semibold text-teal-400">
+                  <td className="px-4 py-4 text-[14px] font-bold text-teal-400">
                     {entry.hours}h
                   </td>
 
-                  <td className="px-4 py-4 text-sm text-gray-400">
+                  <td className="px-4 py-4 text-[12px] text-gray-400">
                     {entry.notes}
                   </td>
                 </tr>
