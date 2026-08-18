@@ -27,7 +27,7 @@ import { ViewerLayout } from './components/viewer/ViewerLayout';
 
 export function App() {
   const [currentView, setCurrentView] = useState<'landing' | 'login' | 'dashboard'>('landing');
-  const [activeRole, setActiveRole] = useState<string>('Super Admin');
+  const [activeRole, setActiveRole] = useState<string>('');
   const [isDemoModalOpen, setIsDemoModalOpen] = useState(false);
 
   if (currentView === 'login') {
@@ -42,8 +42,8 @@ export function App() {
     );
   }
 
-  if (currentView === 'dashboard') {
-    const logout = () => setCurrentView('landing');
+  if (currentView === 'dashboard' && activeRole) {
+    const logout = () => { setActiveRole(''); setCurrentView('landing'); };
     switch (activeRole) {
       case 'Super Admin': return <SuperAdminLayout onLogout={logout} />;
       case 'Admin': return <AdminLayout onLogout={logout} />;
