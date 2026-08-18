@@ -88,71 +88,47 @@ const DeveloperTasks: React.FC = () => {
         {filteredTasks.map((task) => (
           <div
             key={task.id}
-            className="group flex min-h-[104px] items-center gap-3 rounded-2xl border border-gray-200 bg-white px-5 py-1 shadow-[0_3px_15px_rgba(0,0,0,0.04)] transition-all duration-200 hover:-translate-y-[1px] hover:shadow-md"
+            className="group rounded-2xl border border-gray-100 bg-white px-4 py-4 shadow-[0_3px_15px_rgba(0,0,0,0.04)] transition-all duration-200 hover:-translate-y-[1px] hover:shadow-md"
           >
-            {/* Left Icon */}
-            <div
-              className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${
-                task.status === "Done"
-                  ? "bg-emerald-50"
-                  : task.status === "To Do"
-                  ? "bg-gray-50"
-                  : "bg-orange-50"
-              }`}
-            >
-              {task.status === "Done" ? (
-                <span className="text-lg text-emerald-500">✅</span>
-              ) : task.status === "To Do" ? (
-                <span className="text-lg text-orange-500">📋</span>
-              ) : (
-                <span className="text-lg text-orange-500">⚡</span>
-              )}
-            </div>
-
-            {/* Main Content */}
-            <div className="min-w-0 flex-1">
-              <div className="mb-1 flex flex-wrap items-center gap-2">
-                <span className="font-mono text-xs text-gray-400">
-                  {task.id}
-                </span>
-
-                <span
-                  className={`rounded-md px-2 py-0.5 text-[11px] font-semibold ${
-                    task.priority === "High"
-                      ? "bg-red-50 text-red-500"
-                      : "bg-orange-50 text-orange-500"
-                  }`}
-                >
-                  {task.priority}
-                </span>
+            <div className="flex items-start gap-3">
+              {/* Left Icon - hidden on mobile */}
+              <div
+                className={`hidden sm:flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${
+                  task.status === "Done" ? "bg-emerald-50" : task.status === "To Do" ? "bg-gray-50" : "bg-orange-50"
+                }`}
+              >
+                {task.status === "Done" ? (
+                  <span className="text-lg text-emerald-500">✓</span>
+                ) : task.status === "To Do" ? (
+                  <span className="text-lg text-orange-500">▤</span>
+                ) : (
+                  <span className="text-lg text-orange-500">ϟ</span>
+                )}
               </div>
 
-              <h3 className="text-[14px] font-bold text-gray-2000">
-                {task.title}
-              </h3>
+              {/* Main Content */}
+              <div className="min-w-0 flex-1">
+                <div className="mb-1 flex flex-wrap items-center gap-2">
+                  <span className="font-mono text-xs text-gray-400">{task.id}</span>
+                  <span className={`rounded-md px-2 py-0.5 text-[11px] font-semibold ${
+                    task.priority === "High" ? "bg-red-50 text-red-500" : "bg-orange-50 text-orange-500"
+                  }`}>{task.priority}</span>
+                </div>
+                <h3 className="text-[14px] sm:text-[16px] font-semibold text-gray-900">{task.title}</h3>
+                <p className="mt-1 text-xs sm:text-sm text-gray-400">{task.details}</p>
+              </div>
 
-              <p className="mt-0 text-[10.5px] text-gray-400">
-                {task.details}
-              </p>
-            </div>
-
-            {/* Right Content */}
-            <div className="flex shrink-1 items-center gap-3">
-              <span
-                className={`rounded-lg px-3 py-1.2 text-xs font-semibold ${
+              {/* Right Content */}
+              <div className="flex shrink-0 flex-col sm:flex-row items-end sm:items-center gap-2 sm:gap-5">
+                <span className={`rounded-lg px-2.5 py-1 text-xs font-semibold ${
                   task.status === "In Progress"
                     ? "border border-orange-100 bg-orange-50 text-orange-500"
                     : task.status === "Done"
                     ? "border border-emerald-100 bg-emerald-50 text-emerald-500"
                     : "border border-gray-100 bg-gray-50 text-slate-400"
-                }`}
-              >
-                {task.status}
-              </span>
-
-              <span className="text-sm font-semibold text-teal-400">
-                {task.storyPoints} SP
-              </span>
+                }`}>{task.status}</span>
+                <span className="text-xs sm:text-sm font-semibold text-teal-400">{task.storyPoints} SP</span>
+              </div>
             </div>
           </div>
         ))}

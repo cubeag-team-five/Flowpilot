@@ -113,78 +113,23 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({
   onNavigate,
 }) => {
   return (
-    <div
-      className="
-        w-full
-        min-w-0
-        bg-[#f8fafc]
-        font-['Plus_Jakarta_Sans',sans-serif]
-        px-[30px]
-        py-[28px]
-        sm:px-[30px]
-        sm:py-[28px]
-        lg:px-[30px]
-        xl:px-[30px]
-      "
-    >
+    <div className="w-full min-w-0 font-['Plus_Jakarta_Sans',sans-serif]">
 
       {/* STATISTICS */}
 
-      <div
-        className="
-          grid
-          grid-cols-1
-          gap-4
-          sm:grid-cols-2
-          xl:grid-cols-4
-        "
-      >
+      <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
         {statistics.map((stat) => (
           <div
             key={stat.title}
-            className="
-              h-[136px]
-              min-w-0
-              rounded-[18px]
-              border
-              border-[#efefef]
-              bg-white
-              px-6
-              py-5
-              shadow-[0_2px_8px_rgba(0,0,0,0.02)]
-              flex
-              flex-col
-              justify-between
-            "
+            className="min-w-0 rounded-[18px] border border-[#efefef] bg-white px-4 py-4 md:px-6 md:py-5 shadow-[0_2px_8px_rgba(0,0,0,0.02)] flex flex-col justify-between"
           >
-            <div
-              className="
-                text-[11px]
-                font-bold
-                uppercase
-                tracking-[0.05em]
-                text-[#8c94a0]
-              "
-            >
+            <div className="text-[9px] md:text-[11px] font-bold uppercase tracking-[0.05em] text-[#8c94a0]">
               {stat.title}
             </div>
-
-            <div
-              className="
-                text-[34px]
-                font-extrabold
-                leading-none
-                tracking-tight
-                text-[#0a0a0a]
-              "
-            >
+            <div className="text-[26px] md:text-[34px] font-extrabold leading-none tracking-tight text-[#0a0a0a] my-2">
               {stat.value}
             </div>
-
-            <div
-              className="text-[12px] font-semibold"
-              style={{ color: stat.footerColor }}
-            >
+            <div className="text-[11px] md:text-[12px] font-semibold" style={{ color: stat.footerColor }}>
               {stat.footer}
             </div>
           </div>
