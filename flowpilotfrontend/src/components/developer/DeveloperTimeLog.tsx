@@ -199,7 +199,8 @@ const DeveloperTimeLog: React.FC = () => {
           </span>
         </div>
 
-        <div className="overflow-x-auto">
+        {/* History table — desktop */}
+        <div className="hidden md:block overflow-x-auto">
           <table className="min-w-[850px] w-full">
             <thead>
               <tr className="border-b border-gray-100 bg-gray-50/60 text-left">
@@ -243,6 +244,20 @@ const DeveloperTimeLog: React.FC = () => {
               ))}
             </tbody>
           </table>
+        </div>
+
+        {/* History cards — mobile */}
+        <div className="md:hidden divide-y divide-gray-100">
+          {entries.map((entry) => (
+            <div key={entry.id} className="px-4 py-3">
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-xs font-semibold text-teal-400">{entry.hours}h</span>
+                <span className="text-xs text-gray-400">{entry.date}</span>
+              </div>
+              <p className="text-sm text-gray-600 mb-1">{entry.task}</p>
+              <p className="text-xs text-gray-400">{entry.notes}</p>
+            </div>
+          ))}
         </div>
       </div>
     </div>
