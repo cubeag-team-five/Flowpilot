@@ -62,74 +62,31 @@ const QADashboardView: React.FC = () => {
   ];
 
   return (
-    <div className="w-full min-h-[calc(100vh-52px)] bg-[#f5f6f8] px-6 py-[22px]">
+    <div className="w-full">
 
       {/* ================= STATISTICS ================= */}
 
-      <div className="grid grid-cols-1 gap-[12px] sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid grid-cols-2 gap-[10px] xl:grid-cols-4">
 
         {/* CARD */}
 
-        <div className="h-[108px] rounded-[12px] border border-[#ededed] bg-white px-[18px] py-[17px] shadow-[0_2px_8px_rgba(17,24,39,0.05)]">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.09em] text-[#7c8796]">
-            Tests in Progress
-          </p>
-
-          <p className="mt-[11px] text-[25px] font-semibold leading-[28px] text-[#111827]">
-            2
-          </p>
-
-          <p className="mt-[7px] text-[10px] font-medium leading-[12px] text-[#32d583]">
-            Active testing tasks
-          </p>
-        </div>
-
-        <div className="h-[108px] rounded-[12px] border border-[#ededed] bg-white px-[18px] py-[17px] shadow-[0_2px_8px_rgba(17,24,39,0.05)]">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.09em] text-[#7c8796]">
-            Tests Passed
-          </p>
-
-          <p className="mt-[11px] text-[25px] font-semibold leading-[28px] text-[#111827]">
-            8
-          </p>
-
-          <p className="mt-[7px] text-[10px] font-medium leading-[12px] text-[#32d583]">
-            This sprint
-          </p>
-        </div>
-
-        <div className="h-[108px] rounded-[12px] border border-[#ededed] bg-white px-[18px] py-[17px] shadow-[0_2px_8px_rgba(17,24,39,0.05)]">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.09em] text-[#7c8796]">
-            Open Bugs
-          </p>
-
-          <p className="mt-[11px] text-[25px] font-semibold leading-[28px] text-[#111827]">
-            3
-          </p>
-
-          <p className="mt-[7px] text-[10px] font-medium leading-[12px] text-[#ff3b3b]">
-            1 high severity
-          </p>
-        </div>
-
-        <div className="h-[108px] rounded-[12px] border border-[#ededed] bg-white px-[18px] py-[17px] shadow-[0_2px_8px_rgba(17,24,39,0.05)]">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.09em] text-[#7c8796]">
-            Pass Rate
-          </p>
-
-          <p className="mt-[11px] text-[25px] font-semibold leading-[28px] text-[#111827]">
-            84%
-          </p>
-
-          <p className="mt-[7px] text-[10px] font-medium leading-[12px] text-[#32d583]">
-            Sprint 12 average
-          </p>
-        </div>
+        {[
+          { label: 'Tests in Progress', value: '2', sub: 'Active testing tasks', subColor: 'text-[#32d583]' },
+          { label: 'Tests Passed', value: '8', sub: 'This sprint', subColor: 'text-[#32d583]' },
+          { label: 'Open Bugs', value: '3', sub: '1 high severity', subColor: 'text-[#ff3b3b]' },
+          { label: 'Pass Rate', value: '84%', sub: 'Sprint 12 average', subColor: 'text-[#32d583]' },
+        ].map((s) => (
+          <div key={s.label} className="rounded-[12px] border border-[#ededed] bg-white px-3 py-3 md:px-[18px] md:py-[17px] shadow-[0_2px_8px_rgba(17,24,39,0.05)]">
+            <p className="text-[9px] md:text-[10px] font-semibold uppercase tracking-[0.09em] text-[#7c8796]">{s.label}</p>
+            <p className="mt-2 text-[20px] md:text-[25px] font-semibold leading-none text-[#111827]">{s.value}</p>
+            <p className={`mt-1.5 text-[9px] md:text-[10px] font-medium leading-[12px] ${s.subColor}`}>{s.sub}</p>
+          </div>
+        ))}
       </div>
 
       {/* ================= LOWER SECTION ================= */}
 
-      <div className="mt-[18px] grid grid-cols-1 gap-[14px] xl:grid-cols-[1.03fr_0.97fr]">
+      <div className="mt-[14px] grid grid-cols-1 gap-[14px] xl:grid-cols-[1.03fr_0.97fr]">
 
         {/* ================= TEST TASK STATUS ================= */}
 

@@ -282,7 +282,7 @@ const SuperAdminUsers: React.FC = () => {
 
         .users-content {
           width: 100%;
-          padding: 20px 30px 30px;
+          padding: 0;
         }
 
         /* SUMMARY + ADD USER */
@@ -904,7 +904,7 @@ const SuperAdminUsers: React.FC = () => {
 
           </div>
 
-          <div className="users-table-container">
+          <div className="users-table-container hidden md:block">
 
             <table className="users-table">
 
@@ -1048,6 +1048,41 @@ const SuperAdminUsers: React.FC = () => {
 
             </table>
 
+          </div>
+
+          {/* Mobile cards */}
+          <div className="md:hidden space-y-3 mt-1">
+            {users.map((user) => (
+              <div key={user.id} className="rounded-[14px] border border-[#e7eaf0] bg-white p-4">
+                <div className="flex items-start justify-between gap-3 mb-3">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="user-avatar shrink-0">{user.initials}</div>
+                    <div className="min-w-0">
+                      <div className="text-[13px] font-bold text-[#101828] truncate">{user.name}</div>
+                      <div className="text-[11px] text-[#3f5f80] truncate">{user.email}</div>
+                    </div>
+                  </div>
+                  <span className={`status-badge shrink-0 ${user.status === 'Active' ? 'status-active' : 'status-inactive'}`}>{user.status}</span>
+                </div>
+                <div className="grid grid-cols-2 gap-2 text-[11px] text-[#304d6d] mb-3">
+                  <div><span className="text-[#7186a0]">ID: </span>{user.id}</div>
+                  <div><span className="text-[#7186a0]">Role: </span>{user.role}</div>
+                  <div><span className="text-[#7186a0]">Dept: </span>{user.department}</div>
+                  <div><span className="text-[#7186a0]">Login: </span>{user.lastLogin}</div>
+                </div>
+                <div className="flex gap-2 pt-2 border-t border-[#edf0f3]">
+                  <button type="button" className="action-button edit-button" onClick={() => openEditModal(user)}><Pencil />Edit</button>
+                  {user.status === 'Active' ? (
+                    <button type="button" className="action-button disable-button" onClick={() => toggleStatus(user.id)}>Disable</button>
+                  ) : (
+                    <>
+                      <button type="button" className="action-button edit-button" onClick={() => toggleStatus(user.id)}>Enable</button>
+                      <button type="button" className="action-button delete-button" onClick={() => deleteUser(user.id)}><Trash2 />Delete</button>
+                    </>
+                  )}
+                </div>
+              </div>
+            ))}
           </div>
 
         </main>

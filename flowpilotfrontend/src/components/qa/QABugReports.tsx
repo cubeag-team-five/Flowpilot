@@ -185,7 +185,7 @@ const QABugReports: React.FC = () => {
   const closedCount = bugs.filter((bug) => bug.status === "Closed").length;
 
   return (
-    <div className="w-full bg-[#f5f6f8] px-[24px] py-[20px]">
+    <div className="w-full">
       {/* =========================================================
           TOP ROW
       ========================================================= */}
@@ -586,11 +586,12 @@ const QABugReports: React.FC = () => {
       )}
 
       {/* =========================================================
-          BUG TABLE
+          BUG TABLE — desktop
       ========================================================= */}
 
       <div
         className="
+          hidden md:block
           overflow-x-auto
           rounded-[13px]
           border
@@ -897,6 +898,30 @@ const QABugReports: React.FC = () => {
             ))}
           </tbody>
         </table>
+      </div>
+
+      {/* =========================================================
+          BUG CARDS — mobile
+      ========================================================= */}
+      <div className="md:hidden space-y-3">
+        {bugs.map((bug) => (
+          <div key={bug.id} className="rounded-[13px] border border-[#eeeeee] bg-white p-4 shadow-[0_2px_8px_rgba(17,24,39,0.04)]">
+            <div className="flex items-start justify-between gap-2 mb-3">
+              <div className="min-w-0">
+                <p className="text-[9px] text-[#8993a1] mb-1">{bug.id}</p>
+                <p className="text-[11px] font-[600] text-[#111827] leading-[15px]">{bug.title}</p>
+              </div>
+              <span className={`shrink-0 rounded-[6px] px-[7px] py-[3px] text-[9px] font-[600] ${getSeverityClass(bug.severity)}`}>{bug.severity}</span>
+            </div>
+            <div className="grid grid-cols-2 gap-2 text-[9px]">
+              <div><span className="text-[#9aa8bb]">Status: </span><span className={`rounded-[5px] px-[6px] py-[2px] font-[600] ${getStatusClass(bug.status)}`}>{bug.status}</span></div>
+              <div><span className="text-[#9aa8bb]">Task: </span><span className="text-[#596579]">{bug.linkedTask}</span></div>
+              <div><span className="text-[#9aa8bb]">Assignee: </span><span className="text-[#596579]">{bug.assignee}</span></div>
+              <div><span className="text-[#9aa8bb]">Env: </span><span className="text-[#7c8796]">{bug.environment}</span></div>
+              <div><span className="text-[#9aa8bb]">Filed: </span><span className="text-[#8993a1]">{bug.filed}</span></div>
+            </div>
+          </div>
+        ))}
       </div>
     </div>
   );

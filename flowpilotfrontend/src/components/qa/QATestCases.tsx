@@ -84,12 +84,11 @@ const QATestCases: React.FC = () => {
   };
 
   return (
-    <div className="w-full min-h-[calc(100vh-60px)] bg-[#f5f6f8]">
+    <div className="w-full">
       {/* ============================================================
-          TABLE WRAPPER
+          TABLE — desktop
       ============================================================ */}
-
-      <div className="w-full overflow-x-auto">
+      <div className="hidden md:block w-full overflow-x-auto">
         <div
           className="
             min-w-[1050px]
@@ -417,7 +416,35 @@ const QATestCases: React.FC = () => {
           ))}
         </div>
       </div>
-    </div>
+
+      {/* ============================================================
+          CARDS — mobile
+      ============================================================ */}
+      <div className="md:hidden space-y-3">
+        {testCases.map((testCase) => (
+          <div key={testCase.id} className="rounded-[12px] border border-[#e5e7eb] bg-white p-4 shadow-sm">
+            <div className="flex items-start justify-between gap-2 mb-3">
+              <div className="min-w-0">
+                <p className="text-[9px] text-[#8d98a8] mb-1">{testCase.id}</p>
+                <p className="text-[11px] font-[600] text-[#111827] leading-[15px]">{testCase.title}</p>
+              </div>
+              <span className={`shrink-0 rounded-[6px] px-[7px] py-[3px] text-[9px] font-[600] ${getStatusClass(testCase.status)}`}>{testCase.status}</span>
+            </div>
+            <div className="grid grid-cols-2 gap-2 text-[9px] mb-3">
+              <div><span className="text-[#9aa8bb]">Type: </span><span className="bg-[#f4f6f8] text-[#657184] rounded-[5px] px-[6px] py-[2px]">{testCase.type}</span></div>
+              <div><span className="text-[#9aa8bb]">Task: </span><span className="text-[#8d98a8]">{testCase.linkedTask}</span></div>
+              <div><span className="text-[#9aa8bb]">Priority: </span><span className={`rounded-[5px] px-[6px] py-[2px] font-[600] ${getPriorityClass(testCase.priority)}`}>{testCase.priority}</span></div>
+              <div><span className="text-[#9aa8bb]">Date: </span><span className="text-[#8d98a8]">{testCase.date}</span></div>
+            </div>
+            <div className="flex gap-2 pt-2 border-t border-[#eeeeee]">
+              {testCase.status !== 'Passed' && (
+                <button type="button" className="flex h-[26px] items-center rounded-[6px] border border-[#b9ead4] bg-[#f0fbf6] px-[10px] text-[9px] font-[600] text-[#20b978]">Pass</button>
+              )}
+              <button type="button" className="flex h-[26px] items-center rounded-[6px] border border-[#ffc9c9] bg-[#fff4f4] px-[10px] text-[9px] font-[600] text-[#ff4b4b]">Fail</button>
+            </div>
+          </div>
+        ))}
+      </div>
   );
 };
 
