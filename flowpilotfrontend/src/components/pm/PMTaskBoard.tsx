@@ -15,7 +15,10 @@ const priorityStyles = {
   High: "bg-rose-50 text-rose-600",
 };
 
-const columns = [
+type Task = { id: string; title: string; owner: string; priority: keyof typeof priorityStyles; points: number };
+type Column = { title: keyof typeof columnStyles; tasks: Task[] };
+
+const columns: Column[] = [
   {
     title: "To Do",
     tasks: [

@@ -1,4 +1,4 @@
-const backlogItems = [
+const backlogItems: { title: string; tag: string; points: number; priority: keyof typeof priorityStyles }[] = [
   {
     title: "AI-powered task suggestions",
     tag: "Automation",
