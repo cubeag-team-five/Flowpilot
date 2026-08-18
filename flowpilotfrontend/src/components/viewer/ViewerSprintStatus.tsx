@@ -1,481 +1,199 @@
 import React from 'react';
-import {
-  Flame,
-  CheckCircle2,
-  Clock,
-  Users,
-  Flag,
-  Circle,
-  MoreHorizontal,
-} from 'lucide-react';
+import { Eye } from 'lucide-react';
+
+interface Sprint {
+  project: string;
+  sprint: string;
+  done: number;
+  inProgress: number;
+  todo: number;
+  completion: number;
+  barColor: string;
+  textColor: string;
+}
 
 export const ViewerSprintStatus: React.FC = () => {
-  const tasks = [
+  const sprints: Sprint[] = [
     {
-      name: 'Authentication flow',
-      owner: 'AK',
-      priority: 'High',
-      status: 'Completed',
-      statusColor:
-        'bg-emerald-50 text-emerald-600 border-emerald-200',
-      priorityColor:
-        'bg-rose-50 text-rose-600 border-rose-200',
+      project: 'IPMT Platform v2',
+      sprint: 'Sprint 12',
+      done: 7,
+      inProgress: 6,
+      todo: 5,
+      completion: 39,
+      barColor: 'bg-emerald-500',
+      textColor: 'text-emerald-500',
     },
     {
-      name: 'Dashboard UI implementation',
-      owner: 'VP',
-      priority: 'High',
-      status: 'In Progress',
-      statusColor:
-        'bg-blue-50 text-blue-600 border-blue-200',
-      priorityColor:
-        'bg-rose-50 text-rose-600 border-rose-200',
+      project: 'E-Commerce Relaunch',
+      sprint: 'Sprint 8',
+      done: 4,
+      inProgress: 5,
+      todo: 5,
+      completion: 29,
+      barColor: 'bg-amber-500',
+      textColor: 'text-amber-500',
     },
     {
-      name: 'API integration',
-      owner: 'RS',
-      priority: 'Medium',
-      status: 'In Progress',
-      statusColor:
-        'bg-blue-50 text-blue-600 border-blue-200',
-      priorityColor:
-        'bg-amber-50 text-amber-600 border-amber-200',
+      project: 'Mobile App Dev',
+      sprint: 'Sprint 2',
+      done: 2,
+      inProgress: 3,
+      todo: 3,
+      completion: 25,
+      barColor: 'bg-purple-400',
+      textColor: 'text-purple-400',
     },
     {
-      name: 'Testing and bug fixes',
-      owner: 'NK',
-      priority: 'Medium',
-      status: 'Pending',
-      statusColor:
-        'bg-slate-50 text-slate-500 border-slate-200',
-      priorityColor:
-        'bg-amber-50 text-amber-600 border-amber-200',
-    },
-    {
-      name: 'Documentation',
-      owner: 'SM',
-      priority: 'Low',
-      status: 'Pending',
-      statusColor:
-        'bg-slate-50 text-slate-500 border-slate-200',
-      priorityColor:
-        'bg-slate-50 text-slate-500 border-slate-200',
+      project: 'API Migration',
+      sprint: 'Sprint 5',
+      done: 5,
+      inProgress: 3,
+      todo: 3,
+      completion: 45,
+      barColor: 'bg-teal-400',
+      textColor: 'text-teal-400',
     },
   ];
 
   return (
-    <>
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <div className="text-[11px] font-extrabold tracking-wider text-slate-400 uppercase mb-1">
-            VIEWER
-          </div>
+    <div className="w-full min-w-0 space-y-5">
 
-          <div className="text-2xl font-black text-slate-900">
-            Sprint Status
-          </div>
+      {/* =====================================================
+          READ-ONLY ACCESS BANNER
+          ===================================================== */}
+      <section className="w-full rounded-2xl border border-slate-200 bg-slate-100/70 px-4 py-3.5 sm:px-5">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
 
-          <div className="text-sm text-slate-400 mt-1">
-            Track sprint progress, delivery and current tasks.
-          </div>
-        </div>
+          <div className="flex min-w-0 items-start gap-3 text-xs font-semibold leading-5 text-slate-600 sm:items-center">
+            <Eye
+              size={16}
+              strokeWidth={2}
+              className="mt-0.5 shrink-0 text-slate-500 sm:mt-0"
+            />
 
-        <div className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 rounded-xl">
-          <span className="w-2 h-2 bg-emerald-500 rounded-full" />
-
-          <span className="text-xs font-bold text-slate-700">
-            Sprint 12
-          </span>
-
-          <span className="text-xs text-slate-400">
-            · 8 days remaining
-          </span>
-        </div>
-      </div>
-
-      {/* Summary Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-5">
-
-        <div className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-2xs">
-          <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-500 flex items-center justify-center mb-4">
-            <Flame size={18} />
-          </div>
-
-          <div className="text-[11px] font-extrabold tracking-wider text-slate-400 uppercase mb-2">
-            SPRINT PROGRESS
-          </div>
-
-          <div className="text-3xl font-black text-slate-900">
-            72%
-          </div>
-
-          <div className="text-xs text-slate-400 mt-2">
-            18 of 25 tasks completed
-          </div>
-        </div>
-
-        <div className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-2xs">
-          <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-500 flex items-center justify-center mb-4">
-            <CheckCircle2 size={18} />
-          </div>
-
-          <div className="text-[11px] font-extrabold tracking-wider text-slate-400 uppercase mb-2">
-            COMPLETED
-          </div>
-
-          <div className="text-3xl font-black text-emerald-500">
-            18
-          </div>
-
-          <div className="text-xs text-slate-400 mt-2">
-            Tasks completed
-          </div>
-        </div>
-
-        <div className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-2xs">
-          <div className="w-9 h-9 rounded-xl bg-slate-100 text-slate-500 flex items-center justify-center mb-4">
-            <Clock size={18} />
-          </div>
-
-          <div className="text-[11px] font-extrabold tracking-wider text-slate-400 uppercase mb-2">
-            IN PROGRESS
-          </div>
-
-          <div className="text-3xl font-black text-slate-900">
-            05
-          </div>
-
-          <div className="text-xs text-slate-400 mt-2">
-            Currently active
-          </div>
-        </div>
-
-        <div className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-2xs">
-          <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-500 flex items-center justify-center mb-4">
-            <Flag size={18} />
-          </div>
-
-          <div className="text-[11px] font-extrabold tracking-wider text-slate-400 uppercase mb-2">
-            SPRINT HEALTH
-          </div>
-
-          <div className="text-3xl font-black text-emerald-500">
-            Good
-          </div>
-
-          <div className="text-xs text-slate-400 mt-2">
-            On track for delivery
-          </div>
-        </div>
-      </div>
-
-      {/* Sprint Progress + Team */}
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-5">
-
-        {/* Progress */}
-        <div className="bg-white border border-slate-200/80 rounded-2xl p-6 shadow-2xs">
-
-          <div className="flex items-center justify-between mb-6">
-            <div>
-              <div className="text-[11px] font-extrabold tracking-wider text-slate-400 uppercase">
-                CURRENT SPRINT
-              </div>
-
-              <div className="text-lg font-extrabold text-slate-900 mt-1">
-                Sprint 12 Progress
-              </div>
-            </div>
-
-            <span className="text-xs font-bold border border-emerald-200 bg-emerald-50 text-emerald-600 px-3 py-1 rounded-full">
-              On Track
+            <span>
+              You have read-only access. To request additional permissions,
+              contact your Admin.
             </span>
           </div>
 
-          <div className="flex items-end justify-between">
-            <div>
-              <div className="text-5xl font-black text-slate-900">
-                72%
-              </div>
-
-              <div className="text-xs text-slate-400 mt-2">
-                Overall completion
-              </div>
-            </div>
-
-            <div className="text-right">
-              <div className="text-sm font-extrabold text-slate-900">
-                18 / 25
-              </div>
-
-              <div className="text-xs text-slate-400 mt-1">
-                Tasks completed
-              </div>
-            </div>
-          </div>
-
-          <div className="w-full h-3 bg-slate-100 rounded-full overflow-hidden mt-7">
-            <div
-              className="h-full bg-emerald-500"
-              style={{ width: '72%' }}
-            />
-          </div>
-
-          <div className="flex justify-between text-[10px] font-bold text-slate-400 mt-2">
-            <span>START · AUG 04</span>
-            <span>END · AUG 15</span>
-          </div>
-
-          {/* Milestones */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-8">
-
-            <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-full bg-emerald-50 text-emerald-500 flex items-center justify-center">
-                <CheckCircle2 size={17} />
-              </div>
-
-              <div>
-                <div className="text-xs font-bold text-slate-900">
-                  Planning
-                </div>
-
-                <div className="text-[10px] text-slate-400 mt-0.5">
-                  Aug 04
-                </div>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-full bg-emerald-50 text-emerald-500 flex items-center justify-center">
-                <CheckCircle2 size={17} />
-              </div>
-
-              <div>
-                <div className="text-xs font-bold text-slate-900">
-                  Development
-                </div>
-
-                <div className="text-[10px] text-slate-400 mt-0.5">
-                  Aug 10
-                </div>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center">
-                <Circle size={17} />
-              </div>
-
-              <div>
-                <div className="text-xs font-bold text-slate-900">
-                  Review
-                </div>
-
-                <div className="text-[10px] text-slate-400 mt-0.5">
-                  Aug 15
-                </div>
-              </div>
-            </div>
-
-          </div>
-        </div>
-
-
-        {/* Team */}
-        <div className="bg-white border border-slate-200/80 rounded-2xl p-6 shadow-2xs">
-
-          <div className="flex items-center justify-between mb-6">
-            <div>
-              <div className="text-[11px] font-extrabold tracking-wider text-slate-400 uppercase">
-                TEAM
-              </div>
-
-              <div className="text-lg font-extrabold text-slate-900 mt-1">
-                Sprint Team
-              </div>
-            </div>
-
-            <div className="w-9 h-9 rounded-xl bg-slate-100 text-slate-500 flex items-center justify-center">
-              <Users size={18} />
-            </div>
-          </div>
-
-          <div className="space-y-5">
-
-            {[
-              {
-                initials: 'AK',
-                name: 'Aarav Kulkarni',
-                role: 'Frontend Developer',
-              },
-              {
-                initials: 'VP',
-                name: 'Vedant Patil',
-                role: 'Frontend Developer',
-              },
-              {
-                initials: 'RS',
-                name: 'Rohan Sharma',
-                role: 'Backend Developer',
-              },
-              {
-                initials: 'NK',
-                name: 'Neha Kulkarni',
-                role: 'UI / UX Designer',
-              },
-              {
-                initials: 'SM',
-                name: 'Sahil Mehta',
-                role: 'QA Engineer',
-              },
-            ].map((member) => (
-              <div
-                key={member.initials}
-                className="flex items-center gap-3"
-              >
-                <div className="w-10 h-10 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center text-xs font-extrabold">
-                  {member.initials}
-                </div>
-
-                <div>
-                  <div className="text-sm font-bold text-slate-900">
-                    {member.name}
-                  </div>
-
-                  <div className="text-xs text-slate-400 mt-0.5">
-                    {member.role}
-                  </div>
-                </div>
-              </div>
-            ))}
-
-          </div>
-        </div>
-      </div>
-
-
-      {/* Tasks */}
-      <div className="bg-white border border-slate-200/80 rounded-2xl shadow-2xs overflow-hidden">
-
-        <div className="p-5 border-b border-slate-100 flex items-center justify-between">
-
-          <div>
-            <div className="text-[11px] font-extrabold tracking-wider text-slate-400 uppercase">
-              SPRINT TASKS
-            </div>
-
-            <div className="text-lg font-extrabold text-slate-900 mt-1">
-              Task Progress
-            </div>
-          </div>
-
-          <button className="w-8 h-8 rounded-lg bg-slate-50 border border-slate-200 text-slate-500 flex items-center justify-center hover:bg-slate-100">
-            <MoreHorizontal size={16} />
+          <button
+            type="button"
+            className="w-full shrink-0 rounded-xl border border-slate-200 bg-slate-200/70 px-4 py-2 text-xs font-bold text-slate-700 transition-colors duration-200 hover:bg-slate-300 sm:w-auto"
+          >
+            Request Access
           </button>
 
         </div>
+      </section>
 
 
-        <div className="overflow-x-auto">
+      {/* =====================================================
+          SPRINT CARDS
+          ===================================================== */}
+      <section className="grid grid-cols-1 gap-4 xl:grid-cols-2">
 
-          <table className="w-full min-w-[700px]">
+        {sprints.map((sprint) => (
+          <article
+            key={sprint.sprint}
+            className="w-full min-w-0 rounded-2xl border border-slate-200/80 bg-white p-5 shadow-sm transition-shadow duration-200 hover:shadow-md sm:p-6"
+          >
 
-            <thead>
-              <tr className="bg-slate-50 border-b border-slate-200">
+            {/* Project name */}
+            <div className="mb-5">
+              <p className="mb-1 text-xs font-medium text-slate-400">
+                {sprint.project}
+              </p>
 
-                <th className="text-left px-5 py-3 text-[10px] font-extrabold text-slate-400 uppercase tracking-wider">
-                  Task
-                </th>
-
-                <th className="text-left px-5 py-3 text-[10px] font-extrabold text-slate-400 uppercase tracking-wider">
-                  Owner
-                </th>
-
-                <th className="text-left px-5 py-3 text-[10px] font-extrabold text-slate-400 uppercase tracking-wider">
-                  Priority
-                </th>
-
-                <th className="text-left px-5 py-3 text-[10px] font-extrabold text-slate-400 uppercase tracking-wider">
-                  Status
-                </th>
-
-              </tr>
-            </thead>
+              <h2 className="text-[17px] font-extrabold leading-tight text-slate-900 sm:text-[18px]">
+                {sprint.sprint}
+              </h2>
+            </div>
 
 
-            <tbody>
+            {/* =================================================
+                TASK COUNTS
+                ================================================= */}
+            <div className="grid grid-cols-3 gap-2 sm:gap-3">
 
-              {tasks.map((task) => (
-                <tr
-                  key={task.name}
-                  className="border-b border-slate-100 last:border-0 hover:bg-slate-50/70"
+              {/* Done */}
+              <div className="flex min-h-[60px] flex-col items-center justify-center rounded-xl bg-slate-50 px-2 py-3">
+                <span className="text-xl font-black leading-none text-emerald-500">
+                  {sprint.done}
+                </span>
+
+                <span className="mt-1 text-[10px] font-medium text-slate-400 sm:text-[11px]">
+                  Done
+                </span>
+              </div>
+
+
+              {/* In Progress */}
+              <div className="flex min-h-[60px] flex-col items-center justify-center rounded-xl bg-slate-50 px-2 py-3">
+                <span className="text-xl font-black leading-none text-amber-500">
+                  {sprint.inProgress}
+                </span>
+
+                <span className="mt-1 text-[10px] font-medium text-slate-400 sm:text-[11px]">
+                  In Progress
+                </span>
+              </div>
+
+
+              {/* To Do */}
+              <div className="flex min-h-[60px] flex-col items-center justify-center rounded-xl bg-slate-50 px-2 py-3">
+                <span className="text-xl font-black leading-none text-slate-400">
+                  {sprint.todo}
+                </span>
+
+                <span className="mt-1 text-[10px] font-medium text-slate-400 sm:text-[11px]">
+                  To Do
+                </span>
+              </div>
+
+            </div>
+
+
+            {/* =================================================
+                SPRINT COMPLETION
+                ================================================= */}
+            <div className="mt-5">
+
+              <div className="mb-2 flex items-center justify-between gap-3">
+
+                <span className="text-xs font-medium text-slate-500">
+                  Sprint Completion
+                </span>
+
+                <span
+                  className={`shrink-0 text-sm font-extrabold ${sprint.textColor}`}
                 >
+                  {sprint.completion}%
+                </span>
 
-                  <td className="px-5 py-4">
-
-                    <div className="flex items-center gap-3">
-
-                      {task.status === 'Completed' ? (
-                        <CheckCircle2
-                          size={18}
-                          className="text-emerald-500 shrink-0"
-                        />
-                      ) : (
-                        <Circle
-                          size={18}
-                          className="text-slate-300 shrink-0"
-                        />
-                      )}
-
-                      <span className="text-sm font-bold text-slate-900">
-                        {task.name}
-                      </span>
-
-                    </div>
-
-                  </td>
+              </div>
 
 
-                  <td className="px-5 py-4">
+              {/* Progress Bar */}
+              <div className="h-2 w-full overflow-hidden rounded-full bg-slate-100">
+                <div
+                  className={`h-full rounded-full transition-all duration-500 ${sprint.barColor}`}
+                  style={{
+                    width: `${sprint.completion}%`,
+                  }}
+                />
+              </div>
 
-                    <div className="w-8 h-8 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center text-[10px] font-extrabold">
-                      {task.owner}
-                    </div>
+            </div>
 
-                  </td>
+          </article>
+        ))}
 
+      </section>
 
-                  <td className="px-5 py-4">
-
-                    <span
-                      className={`text-[10px] font-bold border px-3 py-1 rounded-full ${task.priorityColor}`}
-                    >
-                      {task.priority}
-                    </span>
-
-                  </td>
-
-
-                  <td className="px-5 py-4">
-
-                    <span
-                      className={`text-[10px] font-bold border px-3 py-1 rounded-full ${task.statusColor}`}
-                    >
-                      {task.status}
-                    </span>
-
-                  </td>
-
-                </tr>
-              ))}
-
-            </tbody>
-
-          </table>
-
-        </div>
-
-      </div>
-    </>
+    </div>
   );
 };
+
+export default ViewerSprintStatus;
