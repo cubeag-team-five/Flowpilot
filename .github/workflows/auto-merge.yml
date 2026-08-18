@@ -14,7 +14,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v5
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
           token: ${{ secrets.CROSS_REPO_TOKEN }}
@@ -29,5 +29,5 @@ jobs:
           git fetch origin develop
           git checkout develop
           git pull origin develop
-          git merge origin/${{ github.ref_name }} --no-edit
+          git merge origin/${{ github.ref_name }} --no-edit -X theirs
           git push origin develop

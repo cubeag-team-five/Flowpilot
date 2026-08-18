@@ -944,8 +944,7 @@ export const SuperAdminRoles: React.FC = () => {
 
       {/* ROLE SELECTOR */}
       <div className="w-full min-w-0 overflow-x-auto rounded-xl border border-slate-200/80 bg-white p-2 shadow-sm">
-
-        <div className="grid min-w-[700px] grid-cols-7 gap-1 lg:min-w-0">
+        <div className="flex gap-1 min-w-max lg:grid lg:min-w-0 lg:grid-cols-7">
 
           {roles.map((role) => {
             const active = selectedRole === role.key;
@@ -1023,8 +1022,8 @@ export const SuperAdminRoles: React.FC = () => {
 
         </div>
 
-        {/* PERMISSION MATRIX */}
-        <div className="w-full min-w-0 overflow-x-auto overscroll-x-contain">
+        {/* PERMISSION MATRIX — desktop */}
+        <div className="hidden sm:block w-full min-w-0 overflow-x-auto overscroll-x-contain">
 
           <table className="w-full min-w-[700px] border-collapse">
 
@@ -1143,7 +1142,26 @@ export const SuperAdminRoles: React.FC = () => {
 
         </div>
 
-        {/* FOOTER */}
+        {/* PERMISSION MATRIX — mobile */}
+        <div className="sm:hidden divide-y divide-slate-100">
+          {activePermissions.map((permission) => (
+            <div key={permission.id} className="px-4 py-3">
+              <p className="text-[11px] font-bold text-slate-700 mb-0.5">{permission.name}</p>
+              <p className="text-[9px] text-slate-400 mb-2">{permission.description}</p>
+              <div className="grid grid-cols-4 gap-2">
+                {(['read', 'create', 'edit', 'delete'] as const).map((type) => (
+                  <div key={type} className="flex flex-col items-center gap-1">
+                    <span className="text-[8px] font-extrabold uppercase tracking-wide text-slate-400">{type}</span>
+                    <PermissionToggle
+                      enabled={permission[type]}
+                      onClick={() => togglePermission(permission.id, type)}
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
         <div className="flex flex-col gap-3 border-t border-slate-100 bg-slate-50/40 px-3 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-5">
 
           <div className="flex flex-wrap items-center gap-2 text-[9px] font-medium text-slate-400">

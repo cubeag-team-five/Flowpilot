@@ -176,8 +176,8 @@ const SuperAdminAuditLogs: React.FC = () => {
         </div>
       </div>
 
-      {/* AUDIT TABLE */}
-      <div className="w-full overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-sm">
+      {/* AUDIT TABLE — desktop */}
+      <div className="hidden md:block w-full overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-sm">
         <div className="w-full overflow-x-auto overscroll-x-contain">
           <table className="w-full min-w-[850px] border-collapse">
             <thead>
@@ -252,6 +252,31 @@ const SuperAdminAuditLogs: React.FC = () => {
             </tbody>
           </table>
         </div>
+      </div>
+
+      {/* AUDIT CARDS — mobile */}
+      <div className="md:hidden space-y-3">
+        {filteredLogs.length === 0 ? (
+          <div className="rounded-2xl border border-dashed border-slate-200 bg-white p-8 text-center">
+            <p className="text-[11px] font-bold text-slate-700">No audit logs found</p>
+            <p className="mt-1 text-[9px] text-slate-400">Try another filter or search term.</p>
+          </div>
+        ) : (
+          filteredLogs.map((log) => (
+            <div key={log.id} className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm">
+              <div className="flex items-start justify-between gap-2 mb-2">
+                <span className="inline-flex rounded-md bg-red-50 px-2.5 py-1 text-[9px] font-semibold text-red-500 whitespace-nowrap">{log.action}</span>
+                <span className="text-[10px] text-slate-400 whitespace-nowrap shrink-0">{log.time}</span>
+              </div>
+              <p className="text-[12px] font-bold text-slate-800 mb-2">{log.user}</p>
+              <div className="grid grid-cols-2 gap-1 text-[10px] text-slate-500">
+                <div><span className="text-slate-400">Entity: </span>{log.entity}</div>
+                <div><span className="text-slate-400">ID: </span><span className="font-mono">{log.entityId}</span></div>
+                <div className="col-span-2"><span className="text-slate-400">IP: </span><span className="font-mono">{log.ip}</span></div>
+              </div>
+            </div>
+          ))
+        )}
       </div>
     </div>
   );
