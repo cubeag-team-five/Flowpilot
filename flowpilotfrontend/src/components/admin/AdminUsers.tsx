@@ -95,13 +95,13 @@ const initialUsers: User[] = [
 export const AdminUsers: React.FC = () => {
   const [users, setUsers] = useState<User[]>(initialUsers);
 
-  const [search, setSearch] = useState('');
+  const [_search] = useState('');
 
-  const [statusFilter, setStatusFilter] =
+  const [_statusFilter] =
     useState<'All' | 'Active' | 'Inactive'>('All');
 
   const filteredUsers = users.filter((user) => {
-    const searchText = search.toLowerCase();
+    const searchText = _search.toLowerCase();
 
     const matchesSearch =
       user.name.toLowerCase().includes(searchText) ||
@@ -110,8 +110,8 @@ export const AdminUsers: React.FC = () => {
       user.department.toLowerCase().includes(searchText);
 
     const matchesStatus =
-      statusFilter === 'All' ||
-      user.status === statusFilter;
+      _statusFilter === 'All' ||
+      user.status === _statusFilter;
 
     return matchesSearch && matchesStatus;
   });

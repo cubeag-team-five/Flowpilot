@@ -124,7 +124,7 @@ export const SuperAdminProjects: React.FC = () => {
         project.manager.toLowerCase().includes(query) ||
         project.sprint.toLowerCase().includes(query)
     );
-  }, [search]);
+  }, [search, projects]);
 
   return (
     <div className="w-full min-w-0 overflow-x-hidden">

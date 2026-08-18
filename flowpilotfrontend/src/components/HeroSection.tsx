@@ -35,7 +35,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onOpenDemo }) => {
     }, speed);
 
     return () => clearTimeout(timer);
-  }, [displayText, isDeleting, wordIdx, dynamicWords.length]);
+  }, [displayText, isDeleting, wordIdx]);
 
   const [tasks, setTasks] = useState([
     { id: 1, title: 'DB Schema', sp: '3sp', user: 'AN', color: '#10b981', col: 'backlog' },
