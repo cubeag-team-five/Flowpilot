@@ -6,15 +6,16 @@ interface HeroSectionProps {
   onOpenDemo: () => void;
 }
 
+const dynamicWords = ['Together.', 'Smarter.', 'Faster.'];
+
 export const HeroSection: React.FC<HeroSectionProps> = ({ onOpenDemo }) => {
-  const dynamicWords = ['Together.', 'Smarter.', 'Faster.'];
   const [displayText, setDisplayText] = useState('');
   const [wordIdx, setWordIdx] = useState(0);
   const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     const currentWord = dynamicWords[wordIdx];
-    let speed = isDeleting ? 60 : 120;
+    const speed = isDeleting ? 60 : 120;
 
     if (!isDeleting && displayText === currentWord) {
       const timeout = setTimeout(() => setIsDeleting(true), 1800);
@@ -34,7 +35,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onOpenDemo }) => {
     }, speed);
 
     return () => clearTimeout(timer);
-  }, [displayText, isDeleting, wordIdx]);
+  }, [displayText, isDeleting, wordIdx, dynamicWords.length]);
 
   const [tasks, setTasks] = useState([
     { id: 1, title: 'DB Schema', sp: '3sp', user: 'AN', color: '#10b981', col: 'backlog' },
