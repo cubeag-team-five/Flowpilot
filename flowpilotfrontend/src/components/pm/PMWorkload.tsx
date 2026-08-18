@@ -94,7 +94,7 @@ function WorkloadBar({ done, assigned, theme }: { done: number; assigned: number
   );
 }
 
-function WorkloadRow({ initials, name, role, done, assigned, theme: themeKey }: { initials: string; name: string; role: string; done: number; assigned: number; theme: keyof typeof colorThemes }) {
+function WorkloadRow({ initials, name, role, done, assigned, theme: themeKey }: { initials: string; name: string; role: string; done: number; assigned: number; theme: "teal" | "violet" | "amber" | "green" | "red" }) {
   const theme = colorThemes[themeKey];
   const percent = Math.round((done / assigned) * 100);
 
@@ -130,16 +130,34 @@ function WorkloadRow({ initials, name, role, done, assigned, theme: themeKey }: 
   );
 }
 
-export function PMWorkload() {
+function TeamWorkloadCard() {
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-3 sm:p-7">
-      <h2 className="mb-0 text-base font-bold text-slate-900 sm:text-lg sm:font-bold">
+    <div className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-8">
+      <h2 className="mb-2 text-base font-bold text-slate-900 sm:text-lg">
         Team Workload — Sprint 12
       </h2>
       <div>
         {team.map((member) => (
-          <WorkloadRow key={member.name} initials={member.initials} name={member.name} role={member.role} done={member.done} assigned={member.assigned} theme={member.theme as keyof typeof colorThemes} />
+          <WorkloadRow key={member.name} {...member} />
         ))}
+      </div>
+    </div>
+  );
+}
+
+export default function TeamWorkloadPage() {
+  return (
+    <div className="flex min-h-screen w-full flex-col bg-slate-50 lg:flex-row">
+      <div className="lg:sticky lg:top-0 lg:h-screen">
+        <Sidebar />
+      </div>
+
+      <div className="flex-1">
+        <Topbar />
+
+        <main className="p-4 sm:p-6 lg:p-8">
+          <TeamWorkloadCard />
+        </main>
       </div>
     </div>
   );

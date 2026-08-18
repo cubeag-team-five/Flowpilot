@@ -30,7 +30,7 @@ const navItems = [
 
 const pageTitles: Record<string, string> = {
   'Dashboard': 'Admin Dashboard',
-  'Users': 'Users',
+  'Users': 'User Management',
   'Departments': 'Departments',
   'Projects': 'Projects',
   'Reports': 'Reports',

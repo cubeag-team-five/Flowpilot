@@ -1,380 +1,783 @@
-import React, { useState } from 'react';
-import {
-  FolderKanban,
-  Users,
-  TrendingUp,
-  Search,
-  MoreHorizontal,
-  CalendarDays,
-} from 'lucide-react';
+import React, { useMemo, useState } from 'react';
+import { Search } from 'lucide-react';
 
 interface Project {
-  id: string;
+  code: string;
   name: string;
   manager: string;
-  members: number;
+  status: 'In Progress' | 'Planning' | 'On Hold';
   sprint: string;
+  startDate: string;
+  endDate: string;
   progress: number;
-  status: 'On Track' | 'At Risk' | 'Completed';
+  health: 'On Track' | 'At Risk' | 'Delayed' | 'On Hold';
 }
 
-const projects: Project[] = [
+const initialProjects: Project[] = [
   {
-    id: 'PRJ-001',
-    name: 'Flowpilot Platform v2',
+    code: 'PRJ-001',
+    name: 'IPMT Platform v2',
     manager: 'Arjun Shah',
-    members: 12,
+    status: 'In Progress',
     sprint: 'Sprint 12',
+    startDate: '01 Jan 2026',
+    endDate: '30 Jun 2026',
     progress: 72,
-    status: 'On Track',
+    health: 'On Track',
   },
   {
-    id: 'PRJ-002',
+    code: 'PRJ-002',
     name: 'E-Commerce Relaunch',
-    manager: 'Rohit Verma',
-    members: 8,
+    manager: 'Rohit Varma',
+    status: 'In Progress',
     sprint: 'Sprint 8',
+    startDate: '15 Feb 2026',
+    endDate: '30 Sep 2026',
     progress: 45,
-    status: 'At Risk',
+    health: 'At Risk',
   },
   {
-    id: 'PRJ-003',
-    name: 'Mobile App Development',
+    code: 'PRJ-003',
+    name: 'Mobile App Dev',
     manager: 'Arjun Shah',
-    members: 6,
+    status: 'Planning',
     sprint: 'Sprint 2',
+    startDate: '01 Apr 2026',
+    endDate: '31 Dec 2026',
     progress: 22,
-    status: 'On Track',
+    health: 'On Track',
   },
   {
-    id: 'PRJ-004',
-    name: 'CRM Integration',
-    manager: 'Nisha Agarwal',
-    members: 9,
-    sprint: 'Sprint 5',
-    progress: 58,
-    status: 'At Risk',
-  },
-  {
-    id: 'PRJ-005',
-    name: 'Analytics Dashboard',
+    code: 'PRJ-004',
+    name: 'API Gateway Migration',
     manager: 'Karan Mehta',
-    members: 7,
-    sprint: 'Sprint 4',
-    progress: 84,
-    status: 'On Track',
+    status: 'In Progress',
+    sprint: 'Sprint 5',
+    startDate: '01 Mar 2026',
+    endDate: '31 Aug 2026',
+    progress: 58,
+    health: 'Delayed',
   },
   {
-    id: 'PRJ-006',
-    name: 'Internal Automation',
-    manager: 'Sneha Rao',
-    members: 5,
-    sprint: 'Sprint 7',
-    progress: 100,
-    status: 'Completed',
+    code: 'PRJ-005',
+    name: 'Analytics Dashboard',
+    manager: 'Priya Rajan',
+    status: 'On Hold',
+    sprint: '—',
+    startDate: '01 May 2026',
+    endDate: '31 Oct 2026',
+    progress: 0,
+    health: 'On Hold',
   },
 ];
 
-const statusStyles = {
-  'On Track': {
-    text: 'text-emerald-600',
-    bg: 'bg-emerald-50',
-    bar: 'bg-emerald-500',
-  },
-  'At Risk': {
-    text: 'text-amber-600',
-    bg: 'bg-amber-50',
-    bar: 'bg-amber-500',
-  },
-  Completed: {
-    text: 'text-blue-600',
-    bg: 'bg-blue-50',
-    bar: 'bg-blue-500',
-  },
+const statusClasses: Record<Project['status'], string> = {
+  'In Progress': 'bg-slate-100 text-slate-600',
+  Planning: 'bg-slate-100 text-slate-600',
+  'On Hold': 'bg-slate-100 text-slate-600',
 };
 
-const SuperAdminProjects: React.FC = () => {
+const healthClasses: Record<Project['health'], string> = {
+  'On Track': 'border border-emerald-100 bg-emerald-50 text-emerald-600',
+  'At Risk': 'border border-amber-100 bg-amber-50 text-amber-600',
+  Delayed: 'border border-rose-100 bg-rose-50 text-rose-500',
+  'On Hold': 'border border-slate-200 bg-slate-50 text-slate-500',
+};
+
+export const SuperAdminProjects: React.FC = () => {
+  const [projects, setProjects] = useState<Project[]>(initialProjects);
   const [search, setSearch] = useState('');
+  const [showAddProject, setShowAddProject] = useState(false);
 
-  const filteredProjects = projects.filter((project) => {
-    const query = search.toLowerCase().trim();
-
-    return (
-      project.name.toLowerCase().includes(query) ||
-      project.id.toLowerCase().includes(query) ||
-      project.manager.toLowerCase().includes(query) ||
-      project.sprint.toLowerCase().includes(query)
-    );
+  const [newProject, setNewProject] = useState({
+    code: '',
+    name: '',
+    manager: '',
+    status: 'In Progress' as Project['status'],
+    sprint: '',
+    startDate: '',
+    endDate: '',
+    progress: 0,
+    health: 'On Track' as Project['health'],
   });
 
+  /*
+    Existing functionality retained:
+    - Search state
+    - Search filtering
+    - Matching by project name
+    - Matching by project code
+    - Matching by manager
+    - Matching by sprint
+  */
+  const filteredProjects = useMemo(() => {
+    const query = search.toLowerCase().trim();
+
+    if (!query) {
+      return projects;
+    }
+
+    return projects.filter(
+      (project) =>
+        project.name.toLowerCase().includes(query) ||
+        project.code.toLowerCase().includes(query) ||
+        project.manager.toLowerCase().includes(query) ||
+        project.sprint.toLowerCase().includes(query)
+    );
+  }, [search, projects]);
+
   return (
-    <div className="space-y-5">
+    <div className="w-full min-w-0 overflow-x-hidden">
+      <style>{`
+        .projects-scroll {
+          -webkit-overflow-scrolling: touch;
+          scrollbar-width: thin;
+          scrollbar-color: #cbd5e1 transparent;
+        }
 
-      {/* PAGE HEADER */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        .projects-scroll::-webkit-scrollbar {
+          height: 6px;
+        }
 
-        <div>
-          <h1 className="text-[19px] font-extrabold tracking-tight text-slate-900">
-            Projects Overview
-          </h1>
+        .projects-scroll::-webkit-scrollbar-track {
+          background: transparent;
+        }
 
-          <p className="mt-1 text-[11px] font-medium text-slate-400">
-            Monitor and manage all organization projects
-          </p>
-        </div>
+        .projects-scroll::-webkit-scrollbar-thumb {
+          background: #cbd5e1;
+          border-radius: 999px;
+        }
+      `}</style>
 
-        {/* WORKING SEARCH */}
-        <div className="relative w-full sm:w-[260px]">
+      <div
+        className="
+          w-full
+          px-[28px]
+          pt-[14px]
+          pb-[30px]
+          max-lg:px-[22px]
+          max-md:px-[16px]
+          max-sm:px-[10px]
+          max-sm:pt-[22px]
+        "
+      >
+        {/* SEARCH - same page format, functionality restored */}
+        <div className="mb-[14px] flex items-center justify-center gap-[10px] max-sm:flex-col">
+          <div className="relative w-[290px] max-sm:w-full">
+            <Search
+              size={16}
+              strokeWidth={2}
+              className="
+                pointer-events-none
+                absolute
+                left-[14px]
+                top-1/2
+                -translate-y-1/2
+                text-slate-400
+              "
+            />
 
-          <Search
-            size={15}
-            className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
-          />
-
-          <input
-            type="text"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search projects..."
-            className="h-10 w-full rounded-lg border border-slate-200 bg-white pl-9 pr-3 text-[11px] font-medium text-slate-700 outline-none transition placeholder:text-slate-400 focus:border-slate-400 focus:ring-2 focus:ring-slate-100"
-          />
-
-        </div>
-
-      </div>
-
-      {/* INFO BANNER */}
-      <div className="flex items-center gap-3 rounded-lg border border-slate-200 bg-white px-4 py-3 shadow-sm">
-
-        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-blue-500">
-          <FolderKanban size={15} />
-        </div>
-
-        <div>
-          <p className="text-[10px] font-bold text-slate-700">
-            Organization Projects
-          </p>
-
-          <p className="mt-0.5 text-[9px] font-medium text-slate-400">
-            View project progress, teams and sprint status across the organization.
-          </p>
-        </div>
-
-      </div>
-
-      {/* STAT CARDS */}
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-
-        <div className="rounded-xl border border-slate-200/80 bg-white p-4 shadow-sm">
-          <div className="flex items-center justify-between">
-
-            <div>
-              <p className="text-[9px] font-extrabold uppercase tracking-wider text-slate-400">
-                Total Projects
-              </p>
-
-              <p className="mt-2 text-[25px] font-extrabold text-slate-900">
-                24
-              </p>
-            </div>
-
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-blue-50 text-blue-500">
-              <FolderKanban size={17} />
-            </div>
-
+            <input
+              type="text"
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              placeholder="Search projects..."
+              className="
+                h-[42px]
+                w-full
+                rounded-[10px]
+                border
+                border-slate-200
+                bg-white
+                pl-[40px]
+                pr-[14px]
+                text-[12px]
+                font-medium
+                text-slate-700
+                outline-none
+                placeholder:text-slate-400
+                focus:border-slate-300
+                focus:ring-2
+                focus:ring-slate-100
+              "
+            />
           </div>
+
+          <button
+            type="button"
+            onClick={() => setShowAddProject(true)}
+            className="
+              h-[42px]
+              rounded-[10px]
+              bg-red-500
+              px-[18px]
+              text-[12px]
+              font-bold
+              text-white
+              shadow-sm
+              transition
+              hover:bg-red-600
+              active:scale-[0.98]
+              whitespace-nowrap
+            "
+          >
+            + Add Project
+          </button>
         </div>
 
-        <div className="rounded-xl border border-slate-200/80 bg-white p-4 shadow-sm">
-          <div className="flex items-center justify-between">
-
-            <div>
-              <p className="text-[9px] font-extrabold uppercase tracking-wider text-slate-400">
-                Active / In Progress
-              </p>
-
-              <p className="mt-2 text-[25px] font-extrabold text-emerald-500">
-                16
-              </p>
-            </div>
-
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-emerald-50 text-emerald-500">
-              <TrendingUp size={17} />
-            </div>
-
-          </div>
-        </div>
-
-        <div className="rounded-xl border border-slate-200/80 bg-white p-4 shadow-sm">
-          <div className="flex items-center justify-between">
-
-            <div>
-              <p className="text-[9px] font-extrabold uppercase tracking-wider text-slate-400">
-                Teams Involved
-              </p>
-
-              <p className="mt-2 text-[25px] font-extrabold text-slate-900">
-                6
-              </p>
-            </div>
-
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-violet-50 text-violet-500">
-              <Users size={17} />
-            </div>
-
-          </div>
-        </div>
-
-      </div>
-
-      {/* PROJECT LIST */}
-      <section className="overflow-hidden rounded-xl border border-slate-200/80 bg-white shadow-sm">
-
-        {/* TABLE HEADER */}
-        <div className="grid grid-cols-[1.8fr_1fr_1fr_1.5fr_auto] items-center gap-4 border-b border-slate-100 bg-slate-50/50 px-5 py-3">
-
-          <p className="text-[9px] font-extrabold uppercase tracking-wider text-slate-400">
-            Project
-          </p>
-
-          <p className="text-[9px] font-extrabold uppercase tracking-wider text-slate-400">
-            Team
-          </p>
-
-          <p className="text-[9px] font-extrabold uppercase tracking-wider text-slate-400">
-            Sprint
-          </p>
-
-          <p className="text-[9px] font-extrabold uppercase tracking-wider text-slate-400">
-            Progress
-          </p>
-
-          <span />
-
-        </div>
-
-        {/* PROJECTS */}
-        {filteredProjects.length > 0 ? (
-
-          filteredProjects.map((project) => {
-
-            const style = statusStyles[project.status];
-
-            return (
-              <div
-                key={project.id}
-                className="grid grid-cols-[1.8fr_1fr_1fr_1.5fr_auto] items-center gap-4 border-b border-slate-100 px-5 py-4 transition hover:bg-slate-50/50 last:border-b-0"
-              >
-
-                {/* PROJECT */}
-                <div className="min-w-0">
-
-                  <p className="text-[8px] font-extrabold uppercase tracking-wider text-slate-400">
-                    {project.id}
-                  </p>
-
-                  <p className="mt-1 truncate text-[11px] font-extrabold text-slate-800">
-                    {project.name}
-                  </p>
-
-                  <p className="mt-1 text-[9px] font-medium text-slate-400">
-                    PM: {project.manager}
-                  </p>
-
-                </div>
-
-                {/* TEAM */}
-                <div className="flex items-center gap-2">
-
-                  <div className="flex h-7 w-7 items-center justify-center rounded-full bg-slate-100 text-slate-500">
-                    <Users size={12} />
-                  </div>
-
-                  <span className="text-[9px] font-semibold text-slate-600">
-                    {project.members} members
-                  </span>
-
-                </div>
-
-                {/* SPRINT */}
-                <div className="flex items-center gap-2">
-
-                  <CalendarDays
-                    size={12}
-                    className="text-slate-400"
-                  />
-
-                  <span className="text-[9px] font-semibold text-slate-600">
-                    {project.sprint}
-                  </span>
-
-                </div>
-
-                {/* PROGRESS */}
+        {showAddProject && (
+          <div
+            className="
+              fixed
+              inset-0
+              z-50
+              flex
+              items-center
+              justify-center
+              bg-slate-900/30
+              p-4
+            "
+          >
+            <div
+              className="
+                w-full
+                max-w-[520px]
+                rounded-[16px]
+                bg-white
+                p-[24px]
+                shadow-xl
+                max-sm:p-[18px]
+              "
+            >
+              <div className="mb-[20px] flex items-start justify-between">
                 <div>
-
-                  <div className="mb-1.5 flex items-center justify-between">
-
-                    <span className="text-[9px] font-bold text-slate-500">
-                      {project.progress}%
-                    </span>
-
-                    <span
-                      className={`rounded-full px-2 py-0.5 text-[7px] font-extrabold ${style.bg} ${style.text}`}
-                    >
-                      {project.status}
-                    </span>
-
-                  </div>
-
-                  <div className="h-1.5 overflow-hidden rounded-full bg-slate-100">
-
-                    <div
-                      className={`h-full rounded-full transition-all ${style.bar}`}
-                      style={{
-                        width: `${project.progress}%`,
-                      }}
-                    />
-
-                  </div>
-
+                  <h3 className="text-[18px] font-bold text-slate-900">
+                    Add New Project
+                  </h3>
+                  <p className="mt-1 text-[11px] text-slate-400">
+                    Create a new project.
+                  </p>
                 </div>
 
-                {/* MENU */}
                 <button
                   type="button"
-                  className="flex h-7 w-7 items-center justify-center rounded-lg text-slate-400 transition hover:bg-slate-100 hover:text-slate-600"
+                  onClick={() => setShowAddProject(false)}
+                  className="
+                    text-[22px]
+                    leading-none
+                    text-slate-400
+                    hover:text-slate-700
+                  "
+                  aria-label="Close"
                 >
-                  <MoreHorizontal size={15} />
+                  ×
                 </button>
-
               </div>
-            );
-          })
 
-        ) : (
+              <form
+                onSubmit={(event) => {
+                  event.preventDefault();
 
-          /* NO RESULTS */
-          <div className="flex min-h-[180px] flex-col items-center justify-center">
+                  const project: Project = {
+                    ...newProject,
+                    sprint: newProject.sprint || '—',
+                    progress: Math.max(
+                      0,
+                      Math.min(100, Number(newProject.progress))
+                    ),
+                  };
 
-            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-50 text-slate-400">
-              <Search size={17} />
+                  setProjects((current) => [...current, project]);
+                  setShowAddProject(false);
+
+                  setNewProject({
+                    code: '',
+                    name: '',
+                    manager: '',
+                    status: 'In Progress',
+                    sprint: '',
+                    startDate: '',
+                    endDate: '',
+                    progress: 0,
+                    health: 'On Track',
+                  });
+                }}
+                className="grid grid-cols-2 gap-[12px] max-sm:grid-cols-1"
+              >
+                <label>
+                  <span className="mb-[6px] block text-[11px] font-bold text-slate-500">
+                    Project Code
+                  </span>
+                  <input
+                    required
+                    value={newProject.code}
+                    onChange={(event) =>
+                      setNewProject((current) => ({
+                        ...current,
+                        code: event.target.value,
+                      }))
+                    }
+                    placeholder="PRJ-006"
+                    className="
+                      h-[40px]
+                      w-full
+                      rounded-[9px]
+                      border
+                      border-slate-200
+                      px-[12px]
+                      text-[12px]
+                      outline-none
+                      focus:border-slate-300
+                    "
+                  />
+                </label>
+
+                <label>
+                  <span className="mb-[6px] block text-[11px] font-bold text-slate-500">
+                    Project Name
+                  </span>
+                  <input
+                    required
+                    value={newProject.name}
+                    onChange={(event) =>
+                      setNewProject((current) => ({
+                        ...current,
+                        name: event.target.value,
+                      }))
+                    }
+                    placeholder="Project name"
+                    className="
+                      h-[40px]
+                      w-full
+                      rounded-[9px]
+                      border
+                      border-slate-200
+                      px-[12px]
+                      text-[12px]
+                      outline-none
+                      focus:border-slate-300
+                    "
+                  />
+                </label>
+
+                <label>
+                  <span className="mb-[6px] block text-[11px] font-bold text-slate-500">
+                    Project Manager
+                  </span>
+                  <input
+                    required
+                    value={newProject.manager}
+                    onChange={(event) =>
+                      setNewProject((current) => ({
+                        ...current,
+                        manager: event.target.value,
+                      }))
+                    }
+                    placeholder="Manager name"
+                    className="
+                      h-[40px]
+                      w-full
+                      rounded-[9px]
+                      border
+                      border-slate-200
+                      px-[12px]
+                      text-[12px]
+                      outline-none
+                      focus:border-slate-300
+                    "
+                  />
+                </label>
+
+                <label>
+                  <span className="mb-[6px] block text-[11px] font-bold text-slate-500">
+                    Active Sprint
+                  </span>
+                  <input
+                    value={newProject.sprint}
+                    onChange={(event) =>
+                      setNewProject((current) => ({
+                        ...current,
+                        sprint: event.target.value,
+                      }))
+                    }
+                    placeholder="Sprint 1"
+                    className="
+                      h-[40px]
+                      w-full
+                      rounded-[9px]
+                      border
+                      border-slate-200
+                      px-[12px]
+                      text-[12px]
+                      outline-none
+                      focus:border-slate-300
+                    "
+                  />
+                </label>
+
+                <label>
+                  <span className="mb-[6px] block text-[11px] font-bold text-slate-500">
+                    Start Date
+                  </span>
+                  <input
+                    required
+                    value={newProject.startDate}
+                    onChange={(event) =>
+                      setNewProject((current) => ({
+                        ...current,
+                        startDate: event.target.value,
+                      }))
+                    }
+                    placeholder="01 Jan 2026"
+                    className="
+                      h-[40px]
+                      w-full
+                      rounded-[9px]
+                      border
+                      border-slate-200
+                      px-[12px]
+                      text-[12px]
+                      outline-none
+                      focus:border-slate-300
+                    "
+                  />
+                </label>
+
+                <label>
+                  <span className="mb-[6px] block text-[11px] font-bold text-slate-500">
+                    End Date
+                  </span>
+                  <input
+                    required
+                    value={newProject.endDate}
+                    onChange={(event) =>
+                      setNewProject((current) => ({
+                        ...current,
+                        endDate: event.target.value,
+                      }))
+                    }
+                    placeholder="30 Jun 2026"
+                    className="
+                      h-[40px]
+                      w-full
+                      rounded-[9px]
+                      border
+                      border-slate-200
+                      px-[12px]
+                      text-[12px]
+                      outline-none
+                      focus:border-slate-300
+                    "
+                  />
+                </label>
+
+                <label>
+                  <span className="mb-[6px] block text-[11px] font-bold text-slate-500">
+                    Status
+                  </span>
+                  <select
+                    value={newProject.status}
+                    onChange={(event) =>
+                      setNewProject((current) => ({
+                        ...current,
+                        status: event.target.value as Project['status'],
+                      }))
+                    }
+                    className="
+                      h-[40px]
+                      w-full
+                      rounded-[9px]
+                      border
+                      border-slate-200
+                      px-[12px]
+                      text-[12px]
+                      outline-none
+                    "
+                  >
+                    <option>In Progress</option>
+                    <option>Planning</option>
+                    <option>On Hold</option>
+                  </select>
+                </label>
+
+                <label>
+                  <span className="mb-[6px] block text-[11px] font-bold text-slate-500">
+                    Health
+                  </span>
+                  <select
+                    value={newProject.health}
+                    onChange={(event) =>
+                      setNewProject((current) => ({
+                        ...current,
+                        health: event.target.value as Project['health'],
+                      }))
+                    }
+                    className="
+                      h-[40px]
+                      w-full
+                      rounded-[9px]
+                      border
+                      border-slate-200
+                      px-[12px]
+                      text-[12px]
+                      outline-none
+                    "
+                  >
+                    <option>On Track</option>
+                    <option>At Risk</option>
+                    <option>Delayed</option>
+                    <option>On Hold</option>
+                  </select>
+                </label>
+
+                <label className="col-span-2 max-sm:col-span-1">
+                  <span className="mb-[6px] block text-[11px] font-bold text-slate-500">
+                    Progress %
+                  </span>
+                  <input
+                    type="number"
+                    min="0"
+                    max="100"
+                    value={newProject.progress}
+                    onChange={(event) =>
+                      setNewProject((current) => ({
+                        ...current,
+                        progress: Number(event.target.value),
+                      }))
+                    }
+                    className="
+                      h-[40px]
+                      w-full
+                      rounded-[9px]
+                      border
+                      border-slate-200
+                      px-[12px]
+                      text-[12px]
+                      outline-none
+                    "
+                  />
+                </label>
+
+                <div className="col-span-2 mt-[6px] flex justify-end gap-[10px] max-sm:col-span-1">
+                  <button
+                    type="button"
+                    onClick={() => setShowAddProject(false)}
+                    className="
+                      h-[40px]
+                      rounded-[9px]
+                      border
+                      border-slate-200
+                      px-[16px]
+                      text-[12px]
+                      font-bold
+                      text-slate-500
+                      hover:bg-slate-50
+                    "
+                  >
+                    Cancel
+                  </button>
+
+                  <button
+                    type="submit"
+                    className="
+                      h-[40px]
+                      rounded-[9px]
+                      bg-red-500
+                      px-[18px]
+                      text-[12px]
+                      font-bold
+                      text-white
+                      hover:bg-red-600
+                    "
+                  >
+                    Add Project
+                  </button>
+                </div>
+              </form>
             </div>
-
-            <p className="mt-3 text-[11px] font-bold text-slate-700">
-              No projects found
-            </p>
-
-            <p className="mt-1 text-[9px] text-slate-400">
-              Try searching with another project name or ID.
-            </p>
-
           </div>
-
         )}
 
-      </section>
+        {/* SAME TABLE FORMAT */}
+        <div
+          className="
+            w-full
+            overflow-hidden
+            rounded-[16px]
+            border
+            border-slate-200/80
+            bg-white
+            shadow-[0_2px_7px_rgba(15,23,42,0.04)]
+          "
+        >
+          <div className="projects-scroll w-full overflow-x-auto">
+            <table className="w-full min-w-[1260px] border-collapse">
+              <colgroup>
+                <col style={{ width: '8%' }} />
+                <col style={{ width: '17%' }} />
+                <col style={{ width: '15%' }} />
+                <col style={{ width: '11%' }} />
+                <col style={{ width: '11%' }} />
+                <col style={{ width: '11%' }} />
+                <col style={{ width: '11%' }} />
+                <col style={{ width: '9%' }} />
+                <col style={{ width: '7%' }} />
+              </colgroup>
 
+              <thead>
+                <tr className="border-b border-slate-100">
+                  {[
+                    'CODE',
+                    'PROJECT NAME',
+                    'PROJECT MANAGER',
+                    'STATUS',
+                    'ACTIVE SPRINT',
+                    'START DATE',
+                    'END DATE',
+                    'PROGRESS',
+                    'HEALTH',
+                  ].map((heading) => (
+                    <th
+                      key={heading}
+                      className="
+                        h-[50px]
+                        px-[20px]
+                        text-left
+                        align-middle
+                        text-[10px]
+                        font-bold
+                        tracking-[0.04em]
+                        text-slate-500
+                        whitespace-nowrap
+                        max-md:px-[16px]
+                      "
+                    >
+                      {heading}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+
+              <tbody>
+                {filteredProjects.map((project) => (
+                  <tr
+                    key={project.code}
+                    className="
+                      border-b
+                      border-slate-100
+                      last:border-b-0
+                      transition-colors
+                      hover:bg-slate-50/40
+                    "
+                  >
+                    <td className="h-[61px] px-[20px] align-middle text-[13px] font-medium text-slate-400 whitespace-nowrap max-md:px-[16px]">
+                      {project.code}
+                    </td>
+
+                    <td className="h-[61px] px-[20px] align-middle text-[13px] font-bold text-slate-900 whitespace-nowrap max-md:px-[16px]">
+                      {project.name}
+                    </td>
+
+                    <td className="h-[61px] px-[20px] align-middle text-[13px] font-medium text-slate-500 whitespace-nowrap max-md:px-[16px]">
+                      {project.manager}
+                    </td>
+
+                    <td className="h-[61px] px-[20px] align-middle max-md:px-[16px]">
+                      <span
+                        className={`
+                          inline-flex
+                          items-center
+                          rounded-[8px]
+                          px-[10px]
+                          py-[4px]
+                          text-[10px]
+                          font-bold
+                          leading-[15px]
+                          whitespace-nowrap
+                          ${statusClasses[project.status]}
+                        `}
+                      >
+                        {project.status}
+                      </span>
+                    </td>
+
+                    <td className="h-[61px] px-[20px] align-middle text-[13px] font-medium text-slate-500 whitespace-nowrap max-md:px-[16px]">
+                      {project.sprint}
+                    </td>
+
+                    <td className="h-[61px] px-[20px] align-middle text-[13px] font-medium text-slate-400 whitespace-nowrap max-md:px-[16px]">
+                      {project.startDate}
+                    </td>
+
+                    <td className="h-[61px] px-[20px] align-middle text-[13px] font-medium text-slate-400 whitespace-nowrap max-md:px-[16px]">
+                      {project.endDate}
+                    </td>
+
+                    {/* EXISTING PROGRESS FUNCTIONALITY */}
+                    <td className="h-[61px] px-[20px] align-middle max-md:px-[16px]">
+                      <div className="w-[120px]">
+                        <div className="mb-[5px] text-[10px] font-medium text-slate-500">
+                          {project.progress}%
+                        </div>
+
+                        <div className="h-[5px] w-full overflow-hidden rounded-full bg-slate-100">
+                          <div
+                            className={`
+                              h-full
+                              rounded-full
+                              transition-all
+                              ${
+                                project.health === 'At Risk'
+                                  ? 'bg-amber-500'
+                                  : project.health === 'Delayed'
+                                    ? 'bg-rose-500'
+                                    : 'bg-emerald-500'
+                              }
+                            `}
+                            style={{ width: `${project.progress}%` }}
+                          />
+                        </div>
+                      </div>
+                    </td>
+
+                    <td className="h-[61px] px-[20px] align-middle max-md:px-[16px]">
+                      <span
+                        className={`
+                          inline-flex
+                          items-center
+                          rounded-[8px]
+                          px-[10px]
+                          py-[4px]
+                          text-[10px]
+                          font-bold
+                          leading-[15px]
+                          whitespace-nowrap
+                          ${healthClasses[project.health]}
+                        `}
+                      >
+                        {project.health}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+
+                {filteredProjects.length === 0 && (
+                  <tr>
+                    <td colSpan={9} className="py-[55px] text-center">
+                      <p className="text-[13px] font-bold text-slate-600">
+                        No projects found
+                      </p>
+                      <p className="mt-1 text-[11px] text-slate-400">
+                        Try another project name, code, manager or sprint.
+                      </p>
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
     </div>
   );
 };

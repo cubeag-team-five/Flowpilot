@@ -929,12 +929,12 @@ export const SuperAdminRoles: React.FC = () => {
   };
 
   return (
-    <div className="space-y-5">
+    <div className="w-full min-w-0 space-y-5 overflow-x-hidden">
 
       {/* PAGE HEADER */}
       <div>
         <h1 className="text-[19px] font-extrabold tracking-tight text-slate-900">
-          Roles & Permissions
+          Permission Matrix
         </h1>
 
         <p className="mt-1 text-[11px] font-medium text-slate-400">
@@ -943,9 +943,9 @@ export const SuperAdminRoles: React.FC = () => {
       </div>
 
       {/* ROLE SELECTOR */}
-      <div className="rounded-xl border border-slate-200/80 bg-white p-2 shadow-sm">
+      <div className="w-full min-w-0 overflow-x-auto rounded-xl border border-slate-200/80 bg-white p-2 shadow-sm">
 
-        <div className="grid grid-cols-2 gap-1 sm:grid-cols-4 lg:grid-cols-7">
+        <div className="grid min-w-[700px] grid-cols-7 gap-1 lg:min-w-0">
 
           {roles.map((role) => {
             const active = selectedRole === role.key;
@@ -994,9 +994,9 @@ export const SuperAdminRoles: React.FC = () => {
       <section className="overflow-hidden rounded-xl border border-slate-200/80 bg-white shadow-sm">
 
         {/* HEADER */}
-        <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4">
+        <div className="flex items-center justify-between gap-3 border-b border-slate-100 px-3 py-4 sm:px-5">
 
-          <div className="flex items-center gap-3">
+          <div className="flex min-w-0 items-center gap-3">
 
             <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-rose-50 text-rose-500">
               <ShieldCheck size={17} />
@@ -1014,7 +1014,7 @@ export const SuperAdminRoles: React.FC = () => {
 
           </div>
 
-          <div className="hidden items-center gap-2 rounded-lg bg-slate-50 px-3 py-2 sm:flex">
+          <div className="hidden shrink-0 items-center gap-2 rounded-lg bg-slate-50 px-3 py-2 sm:flex">
             <span className="h-2 w-2 rounded-full bg-emerald-500" />
             <span className="text-[9px] font-bold text-slate-500">
               Active role
@@ -1024,9 +1024,9 @@ export const SuperAdminRoles: React.FC = () => {
         </div>
 
         {/* PERMISSION MATRIX */}
-        <div className="overflow-x-auto">
+        <div className="w-full min-w-0 overflow-x-auto overscroll-x-contain">
 
-          <table className="w-full min-w-[650px] border-collapse">
+          <table className="w-full min-w-[700px] border-collapse">
 
             <thead>
               <tr className="border-b border-slate-100 bg-slate-50/60">
@@ -1144,9 +1144,9 @@ export const SuperAdminRoles: React.FC = () => {
         </div>
 
         {/* FOOTER */}
-        <div className="flex items-center justify-between border-t border-slate-100 bg-slate-50/40 px-5 py-3">
+        <div className="flex flex-col gap-3 border-t border-slate-100 bg-slate-50/40 px-3 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-5">
 
-          <div className="flex items-center gap-2 text-[9px] font-medium text-slate-400">
+          <div className="flex flex-wrap items-center gap-2 text-[9px] font-medium text-slate-400">
             <span className="h-2 w-2 rounded-full bg-emerald-500" />
             ON = Allowed
 
@@ -1157,7 +1157,7 @@ export const SuperAdminRoles: React.FC = () => {
           <button
             type="button"
             onClick={savePermissions}
-            className="rounded-lg bg-[#101827] px-4 py-2 text-[10px] font-bold text-white transition hover:bg-slate-800"
+            className="w-full rounded-lg bg-[#101827] px-4 py-2 text-[10px] font-bold text-white transition hover:bg-slate-800 sm:w-auto"
           >
             {saved ? 'Saved ✓' : 'Save Permissions'}
           </button>

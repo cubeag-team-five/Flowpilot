@@ -1,571 +1,258 @@
 import React, { useMemo, useState } from 'react';
-import {
-  Search,
-  Filter,
-  ShieldCheck,
-  UserPlus,
-  UserCog,
-  Trash2,
-  Settings,
-  FolderPlus,
-  KeyRound,
-  Download,
-  CheckCircle2,
-  XCircle,
-  ChevronDown,
-  MoreHorizontal,
-} from 'lucide-react';
+import { Search } from 'lucide-react';
 
-type ActionType =
-  | 'User Created'
-  | 'User Updated'
-  | 'User Deleted'
-  | 'Project Created'
-  | 'Permission Changed'
-  | 'Settings Updated'
-  | 'Report Exported';
-
-type LogStatus = 'Success' | 'Failed';
+type FilterType =
+  | 'All'
+  | 'Today'
+  | 'This Week'
+  | 'USER_CREATED'
+  | 'PROJECT_UPDATED'
+  | 'SPRINT_STARTED';
 
 interface AuditLog {
   id: number;
-  user: string;
-  initials: string;
-  role: string;
-  action: ActionType;
-  target: string;
-  date: string;
   time: string;
+  user: string;
+  action: string;
+  entity: string;
+  entityId: string;
   ip: string;
-  status: LogStatus;
+  day: 'Today' | 'Yesterday';
 }
 
 const auditLogs: AuditLog[] = [
   {
     id: 1,
-    user: 'Aditya Kate',
-    initials: 'AK',
-    role: 'Super Admin',
-    action: 'Permission Changed',
-    target: 'Admin Role',
-    date: '12 Aug 2026',
     time: '10:42 AM',
-    ip: '192.168.1.24',
-    status: 'Success',
+    user: 'Nisha Agarwal',
+    action: 'USER_CREATED',
+    entity: 'User',
+    entityId: 'EMP-011',
+    ip: '192.168.1.14',
+    day: 'Today',
   },
   {
     id: 2,
-    user: 'Nisha Agarwal',
-    initials: 'NA',
-    role: 'Admin',
-    action: 'User Created',
-    target: 'Aarav Mehta',
-    date: '12 Aug 2026',
     time: '10:18 AM',
-    ip: '192.168.1.31',
-    status: 'Success',
+    user: 'Arjun Shah',
+    action: 'PROJECT_UPDATED',
+    entity: 'Project',
+    entityId: 'PRJ-002',
+    ip: '192.168.1.22',
+    day: 'Today',
   },
   {
     id: 3,
-    user: 'Arjun Shah',
-    initials: 'AS',
-    role: 'Project Manager',
-    action: 'Project Created',
-    target: 'Mobile App Development',
-    date: '12 Aug 2026',
-    time: '09:56 AM',
-    ip: '192.168.1.45',
-    status: 'Success',
+    time: '09:55 AM',
+    user: 'Aryan Kapoor',
+    action: 'SPRINT_STARTED',
+    entity: 'Sprint',
+    entityId: 'SPR-012',
+    ip: '192.168.1.8',
+    day: 'Today',
   },
   {
     id: 4,
-    user: 'Aryan Kapoor',
-    initials: 'AK',
-    role: 'Scrum Master',
-    action: 'User Updated',
-    target: 'Sneh Rao',
-    date: '12 Aug 2026',
-    time: '09:32 AM',
-    ip: '192.168.1.51',
-    status: 'Success',
+    time: '09:30 AM',
+    user: 'Sneha Rao',
+    action: 'TASK_STATUS_CHANGED',
+    entity: 'Task',
+    entityId: 'T-042',
+    ip: '192.168.1.33',
+    day: 'Today',
   },
   {
     id: 5,
-    user: 'Sneha Rao',
-    initials: 'SR',
-    role: 'Developer',
-    action: 'Settings Updated',
-    target: 'Notification Settings',
-    date: '12 Aug 2026',
-    time: '09:14 AM',
-    ip: '192.168.1.67',
-    status: 'Success',
+    time: '09:12 AM',
+    user: 'Priya Rajan',
+    action: 'BUG_FILED',
+    entity: 'Bug',
+    entityId: 'BUG-089',
+    ip: '192.168.1.11',
+    day: 'Today',
   },
   {
     id: 6,
-    user: 'Aditya Kate',
-    initials: 'AK',
-    role: 'Super Admin',
-    action: 'User Deleted',
-    target: 'Temporary Account',
-    date: '11 Aug 2026',
-    time: '06:41 PM',
-    ip: '192.168.1.24',
-    status: 'Success',
+    time: '08:45 AM',
+    user: 'Rajeev Kumar',
+    action: 'ROLE_ASSIGNED',
+    entity: 'User',
+    entityId: 'EMP-010',
+    ip: '192.168.1.1',
+    day: 'Today',
   },
   {
     id: 7,
-    user: 'Karan Mehta',
-    initials: 'KM',
-    role: 'Admin',
-    action: 'Report Exported',
-    target: 'Monthly Activity Report',
-    date: '11 Aug 2026',
-    time: '05:27 PM',
-    ip: '192.168.1.72',
-    status: 'Success',
+    time: 'Yesterday',
+    user: 'Nisha Agarwal',
+    action: 'USER_DISABLED',
+    entity: 'User',
+    entityId: 'EMP-009',
+    ip: '192.168.1.14',
+    day: 'Yesterday',
   },
   {
     id: 8,
-    user: 'Rohit Verma',
-    initials: 'RV',
-    role: 'Project Manager',
-    action: 'Permission Changed',
-    target: 'Project Team',
-    date: '11 Aug 2026',
-    time: '04:52 PM',
-    ip: '192.168.1.83',
-    status: 'Failed',
+    time: 'Yesterday',
+    user: 'Arjun Shah',
+    action: 'SPRINT_CLOSED',
+    entity: 'Sprint',
+    entityId: 'SPR-011',
+    ip: '192.168.1.22',
+    day: 'Yesterday',
   },
 ];
 
-const actionIcons: Record<ActionType, React.ReactNode> = {
-  'User Created': <UserPlus size={13} />,
-  'User Updated': <UserCog size={13} />,
-  'User Deleted': <Trash2 size={13} />,
-  'Project Created': <FolderPlus size={13} />,
-  'Permission Changed': <KeyRound size={13} />,
-  'Settings Updated': <Settings size={13} />,
-  'Report Exported': <Download size={13} />,
-};
-
-const actionColors: Record<ActionType, string> = {
-  'User Created': 'bg-emerald-50 text-emerald-600',
-  'User Updated': 'bg-blue-50 text-blue-600',
-  'User Deleted': 'bg-red-50 text-red-500',
-  'Project Created': 'bg-violet-50 text-violet-600',
-  'Permission Changed': 'bg-rose-50 text-rose-500',
-  'Settings Updated': 'bg-slate-100 text-slate-500',
-  'Report Exported': 'bg-amber-50 text-amber-600',
-};
+const filters: FilterType[] = [
+  'All',
+  'Today',
+  'This Week',
+  'USER_CREATED',
+  'PROJECT_UPDATED',
+  'SPRINT_STARTED',
+];
 
 const SuperAdminAuditLogs: React.FC = () => {
+  const [activeFilter, setActiveFilter] = useState<FilterType>('All');
   const [search, setSearch] = useState('');
-  const [actionFilter, setActionFilter] = useState('All Actions');
-  const [roleFilter, setRoleFilter] = useState('All Roles');
 
   const filteredLogs = useMemo(() => {
-    const query = search.toLowerCase().trim();
+    const query = search.trim().toLowerCase();
 
     return auditLogs.filter((log) => {
       const matchesSearch =
         !query ||
         log.user.toLowerCase().includes(query) ||
         log.action.toLowerCase().includes(query) ||
-        log.target.toLowerCase().includes(query) ||
+        log.entity.toLowerCase().includes(query) ||
+        log.entityId.toLowerCase().includes(query) ||
         log.ip.toLowerCase().includes(query);
 
-      const matchesAction =
-        actionFilter === 'All Actions' ||
-        log.action === actionFilter;
+      const matchesFilter =
+        activeFilter === 'All' ||
+        activeFilter === 'This Week' ||
+        (activeFilter === 'Today' && log.day === 'Today') ||
+        log.action === activeFilter;
 
-      const matchesRole =
-        roleFilter === 'All Roles' ||
-        log.role === roleFilter;
-
-      return matchesSearch && matchesAction && matchesRole;
+      return matchesSearch && matchesFilter;
     });
-  }, [search, actionFilter, roleFilter]);
+  }, [activeFilter, search]);
 
   return (
-    <div className="space-y-5">
-
-      {/* HEADER */}
-      <div>
-        <h1 className="text-[19px] font-extrabold tracking-tight text-slate-900">
-          Audit Logs
-        </h1>
-
-        <p className="mt-1 text-[11px] font-medium text-slate-400">
-          Track important activities and changes across the system
-        </p>
+    <div className="w-full min-w-0">
+      {/* FILTER BAR */}
+      <div className="mb-4 overflow-x-auto pb-1">
+        <div className="flex w-max min-w-full items-center gap-2">
+          {filters.map((filter) => (
+            <button
+              key={filter}
+              type="button"
+              onClick={() => setActiveFilter(filter)}
+              className={`shrink-0 rounded-lg border px-4 py-2 text-[10px] font-semibold transition sm:px-5 sm:text-[11px] ${
+                activeFilter === filter
+                  ? 'border-red-200 bg-red-50 text-red-500'
+                  : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
+              }`}
+            >
+              {filter}
+            </button>
+          ))}
+        </div>
       </div>
 
-      {/* SUMMARY CARDS */}
-      <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
-
-        <div className="rounded-xl border border-slate-200/80 bg-white p-4 shadow-sm">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-[9px] font-extrabold uppercase tracking-wider text-slate-400">
-                Total Events
-              </p>
-
-              <p className="mt-2 text-[24px] font-extrabold text-slate-900">
-                1,248
-              </p>
-
-              <p className="mt-1 text-[9px] font-semibold text-emerald-500">
-                +18 today
-              </p>
-            </div>
-
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-blue-50 text-blue-500">
-              <ShieldCheck size={17} />
-            </div>
-          </div>
+      {/* OPTIONAL SEARCH - compact and responsive */}
+      <div className="mb-4">
+        <div className="relative mx-auto w-full sm:max-w-[280px]">
+          <Search
+            size={14}
+            className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+          />
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search logs..."
+            className="h-9 w-full rounded-lg border border-slate-200 bg-white pl-9 pr-3 text-[10px] text-slate-600 outline-none placeholder:text-slate-400 focus:border-slate-300"
+          />
         </div>
-
-        <div className="rounded-xl border border-slate-200/80 bg-white p-4 shadow-sm">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-[9px] font-extrabold uppercase tracking-wider text-slate-400">
-                Successful
-              </p>
-
-              <p className="mt-2 text-[24px] font-extrabold text-emerald-500">
-                1,226
-              </p>
-
-              <p className="mt-1 text-[9px] font-semibold text-slate-400">
-                98.2% of events
-              </p>
-            </div>
-
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-emerald-50 text-emerald-500">
-              <CheckCircle2 size={17} />
-            </div>
-          </div>
-        </div>
-
-        <div className="rounded-xl border border-slate-200/80 bg-white p-4 shadow-sm">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-[9px] font-extrabold uppercase tracking-wider text-slate-400">
-                Failed Events
-              </p>
-
-              <p className="mt-2 text-[24px] font-extrabold text-red-500">
-                22
-              </p>
-
-              <p className="mt-1 text-[9px] font-semibold text-red-400">
-                Requires attention
-              </p>
-            </div>
-
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-red-50 text-red-500">
-              <XCircle size={17} />
-            </div>
-          </div>
-        </div>
-
-      </div>
-
-      {/* FILTERS */}
-      <div className="rounded-xl border border-slate-200/80 bg-white p-3 shadow-sm">
-
-        <div className="flex flex-col gap-2 lg:flex-row">
-
-          <div className="relative flex-1">
-
-            <Search
-              size={14}
-              className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
-            />
-
-            <input
-              type="text"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search user, action, target or IP..."
-              className="h-9 w-full rounded-lg border border-slate-200 bg-slate-50/40 pl-9 pr-3 text-[10px] font-medium text-slate-700 outline-none placeholder:text-slate-400 focus:border-slate-300 focus:bg-white"
-            />
-
-          </div>
-
-          <div className="relative">
-
-            <Filter
-              size={12}
-              className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
-            />
-
-            <select
-              value={actionFilter}
-              onChange={(e) => setActionFilter(e.target.value)}
-              className="h-9 w-full appearance-none rounded-lg border border-slate-200 bg-white pl-8 pr-8 text-[10px] font-semibold text-slate-600 outline-none sm:w-[165px]"
-            >
-              <option>All Actions</option>
-              <option>User Created</option>
-              <option>User Updated</option>
-              <option>User Deleted</option>
-              <option>Project Created</option>
-              <option>Permission Changed</option>
-              <option>Settings Updated</option>
-              <option>Report Exported</option>
-            </select>
-
-            <ChevronDown
-              size={12}
-              className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-slate-400"
-            />
-
-          </div>
-
-          <div className="relative">
-
-            <select
-              value={roleFilter}
-              onChange={(e) => setRoleFilter(e.target.value)}
-              className="h-9 w-full appearance-none rounded-lg border border-slate-200 bg-white px-3 pr-8 text-[10px] font-semibold text-slate-600 outline-none sm:w-[150px]"
-            >
-              <option>All Roles</option>
-              <option>Super Admin</option>
-              <option>Admin</option>
-              <option>Project Manager</option>
-              <option>Scrum Master</option>
-              <option>Developer</option>
-            </select>
-
-            <ChevronDown
-              size={12}
-              className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-slate-400"
-            />
-
-          </div>
-
-        </div>
-
       </div>
 
       {/* AUDIT TABLE */}
-      <section className="overflow-hidden rounded-xl border border-slate-200/80 bg-white shadow-sm">
-
-        <div className="flex items-center justify-between border-b border-slate-100 px-5 py-3">
-
-          <div>
-            <h2 className="text-[12px] font-extrabold text-slate-800">
-              Recent Activity
-            </h2>
-
-            <p className="mt-0.5 text-[9px] font-medium text-slate-400">
-              {filteredLogs.length} events displayed
-            </p>
-          </div>
-
-          <button
-            type="button"
-            className="hidden items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-1.5 text-[9px] font-bold text-slate-500 transition hover:bg-slate-50 sm:flex"
-          >
-            <Download size={11} />
-            Export Logs
-          </button>
-
-        </div>
-
-        <div className="overflow-x-auto">
-
-          <table className="w-full min-w-[900px] border-collapse">
-
+      <div className="w-full overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-sm">
+        <div className="w-full overflow-x-auto overscroll-x-contain">
+          <table className="w-full min-w-[850px] border-collapse">
             <thead>
-              <tr className="border-b border-slate-100 bg-slate-50/50">
-
-                <th className="px-5 py-3 text-left text-[8px] font-extrabold uppercase tracking-wider text-slate-400">
+              <tr className="border-b border-slate-100 bg-white">
+                <th className="w-[12%] whitespace-nowrap px-5 py-3 text-left text-[9px] font-extrabold uppercase tracking-wider text-slate-400">
+                  Time
+                </th>
+                <th className="w-[17%] whitespace-nowrap px-4 py-3 text-left text-[9px] font-extrabold uppercase tracking-wider text-slate-400">
                   User
                 </th>
-
-                <th className="px-3 py-3 text-left text-[8px] font-extrabold uppercase tracking-wider text-slate-400">
+                <th className="w-[26%] whitespace-nowrap px-4 py-3 text-left text-[9px] font-extrabold uppercase tracking-wider text-slate-400">
                   Action
                 </th>
-
-                <th className="px-3 py-3 text-left text-[8px] font-extrabold uppercase tracking-wider text-slate-400">
-                  Target
+                <th className="w-[10%] whitespace-nowrap px-4 py-3 text-left text-[9px] font-extrabold uppercase tracking-wider text-slate-400">
+                  Entity
                 </th>
-
-                <th className="px-3 py-3 text-left text-[8px] font-extrabold uppercase tracking-wider text-slate-400">
-                  Date & Time
+                <th className="w-[12%] whitespace-nowrap px-4 py-3 text-left text-[9px] font-extrabold uppercase tracking-wider text-slate-400">
+                  Entity ID
                 </th>
-
-                <th className="px-3 py-3 text-left text-[8px] font-extrabold uppercase tracking-wider text-slate-400">
+                <th className="w-[23%] whitespace-nowrap px-4 py-3 text-left text-[9px] font-extrabold uppercase tracking-wider text-slate-400">
                   IP Address
                 </th>
-
-                <th className="px-3 py-3 text-center text-[8px] font-extrabold uppercase tracking-wider text-slate-400">
-                  Status
-                </th>
-
-                <th className="px-3 py-3" />
-
               </tr>
             </thead>
 
             <tbody>
-
               {filteredLogs.length > 0 ? (
-
                 filteredLogs.map((log) => (
-
                   <tr
                     key={log.id}
                     className="border-b border-slate-100 last:border-b-0 hover:bg-slate-50/40"
                   >
-
-                    {/* USER */}
-                    <td className="px-5 py-3.5">
-
-                      <div className="flex items-center gap-2.5">
-
-                        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-slate-100 text-[9px] font-extrabold text-slate-500">
-                          {log.initials}
-                        </div>
-
-                        <div>
-                          <p className="text-[10px] font-bold text-slate-700">
-                            {log.user}
-                          </p>
-
-                          <p className="mt-0.5 text-[8px] font-medium text-slate-400">
-                            {log.role}
-                          </p>
-                        </div>
-
-                      </div>
-
+                    <td className="whitespace-nowrap px-5 py-3.5 text-[10px] font-medium text-slate-400">
+                      {log.time}
                     </td>
 
-                    {/* ACTION */}
-                    <td className="px-3 py-3.5">
-
-                      <div className="flex items-center gap-2">
-
-                        <span
-                          className={`flex h-7 w-7 items-center justify-center rounded-lg ${actionColors[log.action]}`}
-                        >
-                          {actionIcons[log.action]}
-                        </span>
-
-                        <span className="text-[9px] font-bold text-slate-600">
-                          {log.action}
-                        </span>
-
-                      </div>
-
+                    <td className="whitespace-nowrap px-4 py-3.5 text-[11px] font-bold text-slate-800">
+                      {log.user}
                     </td>
 
-                    {/* TARGET */}
-                    <td className="px-3 py-3.5">
-
-                      <span className="text-[9px] font-semibold text-slate-600">
-                        {log.target}
+                    <td className="px-4 py-3.5">
+                      <span className="inline-flex whitespace-nowrap rounded-md bg-red-50 px-2.5 py-1 text-[9px] font-semibold text-red-500">
+                        {log.action}
                       </span>
-
                     </td>
 
-                    {/* DATE */}
-                    <td className="px-3 py-3.5">
-
-                      <p className="text-[9px] font-semibold text-slate-600">
-                        {log.date}
-                      </p>
-
-                      <p className="mt-0.5 text-[8px] font-medium text-slate-400">
-                        {log.time}
-                      </p>
-
+                    <td className="whitespace-nowrap px-4 py-3.5 text-[10px] font-medium text-slate-500">
+                      {log.entity}
                     </td>
 
-                    {/* IP */}
-                    <td className="px-3 py-3.5">
-
-                      <span className="font-mono text-[8px] text-slate-500">
-                        {log.ip}
-                      </span>
-
+                    <td className="whitespace-nowrap px-4 py-3.5 font-mono text-[10px] text-slate-400">
+                      {log.entityId}
                     </td>
 
-                    {/* STATUS */}
-                    <td className="px-3 py-3.5 text-center">
-
-                      {log.status === 'Success' ? (
-
-                        <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-1 text-[7px] font-extrabold text-emerald-600">
-                          <CheckCircle2 size={9} />
-                          Success
-                        </span>
-
-                      ) : (
-
-                        <span className="inline-flex items-center gap-1 rounded-full bg-red-50 px-2 py-1 text-[7px] font-extrabold text-red-500">
-                          <XCircle size={9} />
-                          Failed
-                        </span>
-
-                      )}
-
+                    <td className="whitespace-nowrap px-4 py-3.5 font-mono text-[10px] text-slate-400">
+                      {log.ip}
                     </td>
-
-                    {/* MORE */}
-                    <td className="px-3 py-3.5">
-
-                      <button
-                        type="button"
-                        className="flex h-7 w-7 items-center justify-center rounded-lg text-slate-400 transition hover:bg-slate-100 hover:text-slate-600"
-                      >
-                        <MoreHorizontal size={14} />
-                      </button>
-
-                    </td>
-
                   </tr>
-
                 ))
-
               ) : (
-
                 <tr>
-
-                  <td
-                    colSpan={7}
-                    className="py-16 text-center"
-                  >
-
-                    <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-full bg-slate-50 text-slate-400">
-                      <Search size={16} />
-                    </div>
-
-                    <p className="mt-3 text-[11px] font-bold text-slate-700">
+                  <td colSpan={6} className="py-14 text-center">
+                    <p className="text-[11px] font-bold text-slate-700">
                       No audit logs found
                     </p>
-
                     <p className="mt-1 text-[9px] text-slate-400">
-                      Try changing your search or filters.
+                      Try another filter or search term.
                     </p>
-
                   </td>
-
                 </tr>
-
               )}
-
             </tbody>
-
           </table>
-
         </div>
-
-      </section>
-
+      </div>
     </div>
   );
 };

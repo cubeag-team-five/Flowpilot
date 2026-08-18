@@ -1,6 +1,4 @@
-import React from "react";
-
-const backlogItems: { title: string; tag: string; points: number; priority: "Low" | "Medium" | "High" }[] = [
+const backlogItems: { title: string; tag: string; points: number; priority: keyof typeof priorityStyles }[] = [
   {
     title: "AI-powered task suggestions",
     tag: "Automation",
@@ -39,7 +37,7 @@ const priorityStyles = {
   High: "bg-rose-100 text-rose-500",
 };
 
-function StatCard({ label, value }: { label: string; value: React.ReactNode }) {
+function StatCard({ label, value }: { label: string; value: string }) {
   return (
     <div className="rounded-lg bg-slate-50 px-3 py-2.5 sm:px-3 sm:py-4">
       <p className="text-[11px] text-slate-400">{label}</p>
@@ -47,7 +45,6 @@ function StatCard({ label, value }: { label: string; value: React.ReactNode }) {
     </div>
   );
 }
-
 
 function ActiveSprintCard() {
   return (
@@ -70,7 +67,7 @@ function ActiveSprintCard() {
   );
 }
 
-function BacklogRow({ title, tag, points, priority }: { title: string; tag: string; points: number; priority: "Low" | "Medium" | "High" }) {
+function BacklogRow({ title, tag, points, priority }: { title: string; tag: string; points: number; priority: keyof typeof priorityStyles }) {
   return (
     <div className="flex flex-col gap-2 border-b border-slate-100 py-3 last:border-none sm:flex-row sm:items-center sm:justify-between">
       <div className="min-w-0">

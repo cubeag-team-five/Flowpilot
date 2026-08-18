@@ -29,7 +29,6 @@ const velocityData = [
 
 const maxValue = Math.max(...velocityData.map((d) => d.value));
 
-
 interface StatCardProps {
   label: string;
   value: string;

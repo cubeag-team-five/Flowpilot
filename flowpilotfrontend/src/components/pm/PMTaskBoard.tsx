@@ -1,6 +1,5 @@
 import { useState } from "react";
 
-
 const filters = ["All", "Mine", "Unassigned", "Blocked"];
 
 const columnStyles = {
@@ -16,7 +15,10 @@ const priorityStyles = {
   High: "bg-rose-50 text-rose-600",
 };
 
-const columns = [
+type Task = { id: string; title: string; owner: string; priority: keyof typeof priorityStyles; points: number };
+type Column = { title: keyof typeof columnStyles; tasks: Task[] };
+
+const columns: Column[] = [
   {
     title: "To Do",
     tasks: [
@@ -47,8 +49,6 @@ const columns = [
   },
 ] as const;
 
-
-
 function FilterTabs({ active, onChange }: { active: string; onChange: (label: string) => void }) {
   return (
     <div className="flex flex-wrap gap-2">
@@ -72,7 +72,7 @@ function FilterTabs({ active, onChange }: { active: string; onChange: (label: st
   );
 }
 
-function TaskCard({ id, title, owner, priority, points }: { id: string; title: string; owner: string; priority: "Low" | "Medium" | "High"; points: number }) {
+function TaskCard({ id, title, owner, priority, points }: { id: string; title: string; owner: string; priority: keyof typeof priorityStyles; points: number }) {
   return (
     <div className="rounded-xl border border-slate-100 bg-white p-4 shadow-sm">
       <p className="mb-1 text-xs text-slate-400">{id}</p>
@@ -96,7 +96,7 @@ function TaskCard({ id, title, owner, priority, points }: { id: string; title: s
   );
 }
 
-function BoardColumn({ title, tasks }: { title: keyof typeof columnStyles; tasks: readonly { id: string; title: string; owner: string; priority: "Low" | "Medium" | "High"; points: number }[] }) {
+function BoardColumn({ title, tasks }: { title: keyof typeof columnStyles; tasks: { id: string; title: string; owner: string; priority: keyof typeof priorityStyles; points: number }[] }) {
   const style = columnStyles[title];
   return (
     <div className="flex w-full shrink-0 flex-col gap-3 rounded-2xl bg-slate-100/60 p-3 sm:w-72 lg:w-auto">
