@@ -1,25 +1,4 @@
-import React, { useState } from "react";
-import {
-  LayoutGrid,
-  Home,
-  Folder,
-  PersonStanding,
-  Kanban,
-  Users,
-  BarChart3,
-  Search,
-  Bell,
-  Power,
-} from "lucide-react";
-
-const navItems = [
-  { label: "Dashboard", icon: Home },
-  { label: "My Projects", icon: Folder },
-  { label: "Sprint Planning", icon: PersonStanding },
-  { label: "Task Board", icon: Kanban, active: true },
-  { label: "Team Workload", icon: Users },
-  { label: "Analytics & Reports", icon: BarChart3 },
-];
+import { useState } from "react";
 
 const filters = ["All", "Mine", "Unassigned", "Blocked"];
 
@@ -67,105 +46,6 @@ const columns = [
   },
 ];
 
-function Sidebar() {
-  return (
-    <aside className="flex h-full w-full flex-col bg-[#0b0b12] text-slate-300 lg:w-72">
-      <div className="flex items-center gap-3 px-6 py-6">
-        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-400 to-teal-500">
-          <LayoutGrid className="h-5 w-5 text-white" />
-        </div>
-        <div>
-          <p className="text-sm font-bold tracking-wide text-white">IPMT</p>
-          <p className="text-[10px] tracking-widest text-slate-500">
-            PLATFORM V2.0
-          </p>
-        </div>
-      </div>
-
-      <div className="px-6 pb-4">
-        <div className="flex items-center gap-2 rounded-lg border border-violet-500/30 bg-violet-500/10 px-3 py-2">
-          <span className="h-2 w-2 rounded-full bg-violet-400" />
-          <span className="text-xs font-semibold tracking-wide text-violet-300">
-            SENIOR PROJECT MANAGER
-          </span>
-        </div>
-      </div>
-
-      <div className="border-t border-white/5" />
-
-      <nav className="flex-1 space-y-1 px-4 py-4">
-        {navItems.map(({ label, icon: Icon, active }) => (
-          <button
-            key={label}
-            className={`flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-colors ${
-              active
-                ? "bg-violet-500/15 font-semibold text-violet-300 ring-1 ring-inset ring-violet-500/20"
-                : "text-slate-400 hover:bg-white/5 hover:text-slate-200"
-            }`}
-          >
-            <Icon size={18} className="shrink-0" />
-            <span>{label}</span>
-          </button>
-        ))}
-      </nav>
-
-      <div className="flex items-center gap-3 border-t border-white/5 px-4 py-4">
-        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-violet-500 text-xs font-bold text-white">
-          AS
-        </div>
-        <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-semibold text-white">
-            Arjun Shah
-          </p>
-          <p className="text-xs text-slate-500">Product</p>
-        </div>
-        <button
-          aria-label="Sign out"
-          className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/5 text-slate-400 hover:text-white"
-        >
-          <Power className="h-4 w-4" />
-        </button>
-      </div>
-    </aside>
-  );
-}
-
-function Topbar() {
-  return (
-    <header className="flex flex-col gap-4 border-b border-slate-200 bg-white px-4 py-5 sm:flex-row sm:items-center sm:justify-between sm:px-8">
-      <div>
-        <h1 className="text-xl font-bold text-slate-900 sm:text-2xl">
-          Task Board
-        </h1>
-        <p className="text-sm text-slate-400">Thursday, 13 August 2026</p>
-      </div>
-
-      <div className="flex items-center gap-3">
-        <div className="relative flex-1 sm:w-64">
-          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-          <input
-            type="text"
-            placeholder="Search..."
-            className="w-full rounded-lg border border-slate-200 bg-slate-50 py-2 pl-9 pr-3 text-sm text-slate-700 placeholder:text-slate-400 focus:border-violet-400 focus:outline-none focus:ring-2 focus:ring-violet-200"
-          />
-        </div>
-
-        <button
-          aria-label="Notifications"
-          className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-slate-200 text-slate-500 hover:bg-slate-50"
-        >
-          <Bell className="h-4 w-4" />
-          <span className="absolute right-2.5 top-2.5 h-1.5 w-1.5 rounded-full bg-rose-500" />
-        </button>
-
-        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-violet-500 text-sm font-bold text-white">
-          AS
-        </div>
-      </div>
-    </header>
-  );
-}
-
 function FilterTabs({ active, onChange }: { active: string; onChange: (label: string) => void }) {
   return (
     <div className="flex flex-wrap gap-2">
@@ -189,7 +69,7 @@ function FilterTabs({ active, onChange }: { active: string; onChange: (label: st
   );
 }
 
-function TaskCard({ id, title, owner, priority, points }) {
+function TaskCard({ id, title, owner, priority, points }: { id: string; title: string; owner: string; priority: keyof typeof priorityStyles; points: number }) {
   return (
     <div className="rounded-xl border border-slate-100 bg-white p-4 shadow-sm">
       <p className="mb-1 text-xs text-slate-400">{id}</p>
@@ -213,7 +93,7 @@ function TaskCard({ id, title, owner, priority, points }) {
   );
 }
 
-function BoardColumn({ title, tasks }) {
+function BoardColumn({ title, tasks }: { title: keyof typeof columnStyles; tasks: { id: string; title: string; owner: string; priority: keyof typeof priorityStyles; points: number }[] }) {
   const style = columnStyles[title];
   return (
     <div className="flex w-full shrink-0 flex-col gap-3 rounded-2xl bg-slate-100/60 p-3 sm:w-72 lg:w-auto">
