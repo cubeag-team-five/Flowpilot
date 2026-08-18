@@ -43,18 +43,6 @@ export const AdminProjects: React.FC = () => {
   return (
     <div className="w-full space-y-5 font-sans">
 
-      {/* ==================== PAGE HEADER ==================== */}
-
-      <div>
-        <h1 className="text-[18px] sm:text-[19px] font-extrabold tracking-tight text-slate-900">
-          Projects Overview
-        </h1>
-
-        <p className="mt-0.5 text-[11px] sm:text-[12px] font-medium text-slate-400">
-          Thursday, 13 August 2026
-        </p>
-      </div>
-
       {/* ==================== SUMMARY CARDS ==================== */}
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
@@ -64,68 +52,71 @@ export const AdminProjects: React.FC = () => {
         <div
           className="
             rounded-xl
-            border border-slate-200
+            border border-slate-200/80
             bg-white
-            px-4 py-4
-            shadow-sm
+            px-4 py-5
+            shadow-[0_3px_12px_rgba(15,23,42,0.04)]
             transition-shadow
-            hover:shadow-md
+            hover:shadow-[0_4px_16px_rgba(15,23,42,0.06)]
           "
         >
-          <p className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-slate-400">
+          <p className="text-[12px] font-bold uppercase tracking-wider text-slate-500">
             Total Projects
           </p>
 
-          <p className="mt-2 text-[23px] sm:text-[24px] font-extrabold leading-none text-amber-500">
+          <p className="mt-2 text-[26px] font-extrabold leading-none text-amber-500">
             24
           </p>
         </div>
+
 
         {/* IN PROGRESS */}
 
         <div
           className="
             rounded-xl
-            border border-slate-200
+            border border-slate-200/80
             bg-white
-            px-4 py-4
-            shadow-sm
+            px-4 py-5
+            shadow-[0_3px_12px_rgba(15,23,42,0.04)]
             transition-shadow
-            hover:shadow-md
+            hover:shadow-[0_4px_16px_rgba(15,23,42,0.06)]
           "
         >
-          <p className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-slate-400">
+          <p className="text-[12px] font-bold uppercase tracking-wider text-slate-500">
             In Progress
           </p>
 
-          <p className="mt-2 text-[23px] sm:text-[24px] font-extrabold leading-none text-emerald-500">
+          <p className="mt-2 text-[26px] font-extrabold leading-none text-emerald-500">
             16
           </p>
         </div>
+
 
         {/* BLOCKED / AT RISK */}
 
         <div
           className="
             rounded-xl
-            border border-slate-200
+            border border-slate-200/80
             bg-white
-            px-4 py-4
-            shadow-sm
+            px-4 py-5
+            shadow-[0_3px_12px_rgba(15,23,42,0.04)]
             transition-shadow
-            hover:shadow-md
+            hover:shadow-[0_4px_16px_rgba(15,23,42,0.06)]
           "
         >
-          <p className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-slate-400">
+          <p className="text-[12px] font-bold uppercase tracking-wider text-slate-500">
             Blocked / At Risk
           </p>
 
-          <p className="mt-2 text-[23px] sm:text-[24px] font-extrabold leading-none text-rose-500">
+          <p className="mt-2 text-[26px] font-extrabold leading-none text-rose-500">
             5
           </p>
         </div>
 
       </div>
+
 
       {/* ==================== PROJECT LIST ==================== */}
 
@@ -133,21 +124,22 @@ export const AdminProjects: React.FC = () => {
         className="
           overflow-hidden
           rounded-xl
-          border border-slate-200
+          border border-slate-200/80
           bg-white
-          shadow-sm
+          shadow-[0_3px_12px_rgba(15,23,42,0.04)]
         "
       >
 
         {/* TITLE */}
 
-        <div className="px-4 py-4 sm:px-5">
+        <div className="px-4 py-5 pb-0 sm:px-5">
 
-          <h2 className="text-[13px] sm:text-[14px] font-extrabold text-slate-900">
+          <h2 className="text-[15px] font-bold text-slate-900">
             Project List
           </h2>
 
         </div>
+
 
         {/* ==================== DESKTOP / TABLET PROJECT LIST ==================== */}
 
@@ -163,7 +155,7 @@ export const AdminProjects: React.FC = () => {
                 justify-between
                 gap-5
                 px-5
-                py-4
+                py-3
                 transition-colors
                 hover:bg-slate-50/60
                 ${
@@ -178,79 +170,84 @@ export const AdminProjects: React.FC = () => {
 
               <div className="min-w-0 flex-1">
 
-                <h3 className="text-[13px] sm:text-[14px] font-extrabold text-slate-800">
+                <h3 className="text-[14px] font-bold text-slate-900">
                   {project.name}
                 </h3>
 
-                <p className="mt-1 text-[10px] sm:text-[11px] font-medium text-slate-400">
+                <p className="mt-1 text-[12px] font-medium text-slate-500">
                   {project.members} members
                 </p>
 
               </div>
 
+
               {/* RIGHT SIDE */}
 
               <div className="flex shrink-0 items-center gap-4">
 
+
                 {/* PROGRESS */}
 
-                <div className="flex w-[145px] items-center gap-3">
+                <div className="w-[145px]">
 
-                  <div className="flex-1">
+                  {/* PROGRESS LABEL + PERCENTAGE */}
 
-                    <div className="mb-1 flex items-center justify-between">
+                  <div className="mb-1 flex items-center justify-between">
 
-                      <span className="text-[10px] font-medium text-slate-400">
-                        Progress
-                      </span>
+                    <span className="text-[11px] font-medium text-slate-500">
+                      Progress
+                    </span>
 
-                    </div>
+                    <span className="text-[11px] font-extrabold text-slate-700">
+                      {project.progress}%
+                    </span>
 
-                    <div className="h-[4px] w-full overflow-hidden rounded-full bg-slate-100">
+                  </div>
 
-                      <div
-                        className={`h-full rounded-full ${
-                          project.status === 'On Track'
-                            ? 'bg-emerald-500'
-                            : project.status === 'At Risk'
-                            ? 'bg-amber-500'
-                            : 'bg-rose-500'
-                        }`}
-                        style={{
-                          width: `${project.progress}%`,
-                        }}
-                      />
+                  {/* PROGRESS BAR */}
+
+                  <div className="h-[5px] w-full overflow-hidden rounded-full bg-slate-100">
+
+                    <div
+                      className={`h-full rounded-full ${
+                        project.status === 'On Track'
+                        ? 'bg-emerald-500'
+                        : project.status === 'At Risk'
+                        ? 'bg-amber-500'
+                        : 'bg-rose-500'
+                      }`}
+                      style={{
+                        width: `${project.progress}%`,
+                      }}
+                    />
 
                     </div>
 
                   </div>
 
-                  <span className="w-[32px] text-right text-[11px] font-extrabold text-slate-700">
-                    {project.progress}%
-                  </span>
-
-                </div>
 
                 {/* STATUS */}
 
-                <div className="w-[62px]">
+                <div className="w-[68px]">
 
                   <span
                     className={`
                       inline-flex
+                      h-7
+                      min-w-[80px]
                       items-center
                       justify-center
                       rounded-md
-                      px-2
-                      py-1
-                      text-[9px]
+                      border
+                      px-2.5
+                      text-[11px]
                       font-extrabold
                       ${
                         project.status === 'On Track'
-                          ? 'bg-emerald-50 text-emerald-500'
-                          : project.status === 'At Risk'
-                          ? 'bg-amber-50 text-amber-500'
-                          : 'bg-rose-50 text-rose-500'
+                        ? 'border-emerald-100 bg-emerald-50 text-emerald-500'
+                        : project.status === 'At Risk'
+                        ? 'border-amber-100 bg-amber-50 text-amber-500'
+                        : 'border-rose-100 bg-rose-50 text-rose-500'
                       }
                     `}
                   >
@@ -267,6 +264,7 @@ export const AdminProjects: React.FC = () => {
 
         </div>
 
+
         {/* ==================== MOBILE PROJECT CARDS ==================== */}
 
         <div className="space-y-3 p-3 sm:hidden">
@@ -280,7 +278,7 @@ export const AdminProjects: React.FC = () => {
                 border border-slate-100
                 bg-white
                 p-4
-                shadow-sm
+                shadow-[0_2px_10px_rgba(15,23,42,0.04)]
               "
             >
 
@@ -290,24 +288,27 @@ export const AdminProjects: React.FC = () => {
 
                 <div className="min-w-0">
 
-                  <h3 className="text-[13px] font-extrabold text-slate-800">
+                  <h3 className="text-[14px] font-bold text-slate-900">
                     {project.name}
                   </h3>
 
-                  <p className="mt-1 text-[10px] font-medium text-slate-400">
+                  <p className="mt-1 text-[12px] font-medium text-slate-500">
                     {project.members} members
                   </p>
 
                 </div>
 
+
+                {/* STATUS */}
+
                 <span
                   className={`
                     shrink-0
                     rounded-md
-                    px-2
+                    px-2.5
                     py-1
-                    text-[9px]
-                    font-extrabold
+                    text-[11px]
+                    font-bold
                     ${
                       project.status === 'On Track'
                         ? 'bg-emerald-50 text-emerald-500'
@@ -322,17 +323,18 @@ export const AdminProjects: React.FC = () => {
 
               </div>
 
+
               {/* PROGRESS */}
 
-              <div className="mt-4">
+              <div className="mt-5">
 
                 <div className="mb-1.5 flex items-center justify-between">
 
-                  <span className="text-[10px] font-medium text-slate-400">
+                  <span className="text-[11px] font-medium text-slate-500">
                     Progress
                   </span>
 
-                  <span className="text-[10px] font-extrabold text-slate-700">
+                  <span className="text-[12px] font-bold text-slate-700">
                     {project.progress}%
                   </span>
 

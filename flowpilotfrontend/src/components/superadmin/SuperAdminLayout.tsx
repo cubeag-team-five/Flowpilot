@@ -1,5 +1,14 @@
 import React, { useState } from 'react';
-import { LayoutGrid, Users, FolderKanban, Shield, FileText, Settings, Layers } from 'lucide-react';
+import {
+  LayoutGrid,
+  Users,
+  FolderKanban,
+  Shield,
+  FileText,
+  Settings,
+  Layers,
+} from 'lucide-react';
+
 import { DashboardLayout } from '../common/DashboardLayout';
 import { SuperAdminDashboard } from './SuperAdminDashboard';
 import SuperAdminUsers from './SuperAdminUsers';
@@ -10,11 +19,16 @@ import * as SuperAdminRolesModule from './SuperAdminRoles';
 import * as SuperAdminProjectsModule from './SuperAdminProjects';
 
 const SuperAdminDepartments =
-  (SuperAdminDepartmentsModule as any).default ?? (SuperAdminDepartmentsModule as any).SuperAdminDepartments;
+  (SuperAdminDepartmentsModule as any).default ??
+  (SuperAdminDepartmentsModule as any).SuperAdminDepartments;
+
 const SuperAdminRoles =
-  (SuperAdminRolesModule as any).default ?? (SuperAdminRolesModule as any).SuperAdminRoles;
+  (SuperAdminRolesModule as any).default ??
+  (SuperAdminRolesModule as any).SuperAdminRoles;
+
 const SuperAdminProjects =
-  (SuperAdminProjectsModule as any).default ?? (SuperAdminProjectsModule as any).SuperAdminProjects;
+  (SuperAdminProjectsModule as any).default ??
+  (SuperAdminProjectsModule as any).SuperAdminProjects;
 
 const roleConfig = {
   label: 'SUPER ADMINISTRATOR',
@@ -26,23 +40,44 @@ const roleConfig = {
 };
 
 const navItems = [
-  { name: 'Overview', icon: <LayoutGrid size={18} /> },
-  { name: 'User Management', icon: <Users size={18} /> },
-  { name: 'Departments', icon: <FolderKanban size={18} /> },
-  { name: 'Roles & Permissions', icon: <Shield size={18} /> },
-  { name: 'All Projects', icon: <Layers size={18} /> },
-  { name: 'Audit Logs', icon: <FileText size={18} /> },
-  { name: 'System Settings', icon: <Settings size={18} /> },
+  {
+    name: 'Overview',
+    icon: <LayoutGrid size={18} />,
+  },
+  {
+    name: 'User Management',
+    icon: <Users size={18} />,
+  },
+  {
+    name: 'Departments',
+    icon: <FolderKanban size={18} />,
+  },
+  {
+    name: 'Roles & Permissions',
+    icon: <Shield size={18} />,
+  },
+  {
+    name: 'All Projects',
+    icon: <Layers size={18} />,
+  },
+  {
+    name: 'Audit Logs',
+    icon: <FileText size={18} />,
+  },
+  {
+    name: 'System Settings',
+    icon: <Settings size={18} />,
+  },
 ];
 
 const pageTitles: Record<string, string> = {
+  Overview: 'System Overview',
   'User Management': 'User Management',
-  'Departments': 'Departments',
+  Departments: 'Departments',
   'Roles & Permissions': 'Roles & Permissions',
   'All Projects': 'All Projects',
   'Audit Logs': 'Audit Logs',
   'System Settings': 'System Settings',
-  'Overview': 'System Overview',
 };
 
 interface Props {
@@ -50,10 +85,38 @@ interface Props {
 }
 
 const notifications = [
-  { id: 1, title: 'New user registered', message: 'Rohit Varma added to Leadership.', time: '2 min ago', unread: true, color: 'bg-emerald-500' },
-  { id: 2, title: 'Role assigned', message: 'Business Analyst role assigned to Rohit Varma.', time: '18 min ago', unread: true, color: 'bg-purple-400' },
-  { id: 3, title: 'System health check', message: 'All services running normally.', time: '1 hour ago', unread: false, color: 'bg-slate-300' },
-  { id: 4, title: 'Audit log alert', message: 'Unusual login attempt detected.', time: '2 hours ago', unread: true, color: 'bg-rose-500' },
+  {
+    id: 1,
+    title: 'New user registered',
+    message: 'Rohit Varma added to Leadership.',
+    time: '2 min ago',
+    unread: true,
+    color: 'bg-emerald-500',
+  },
+  {
+    id: 2,
+    title: 'Role assigned',
+    message: 'Business Analyst role assigned to Rohit Varma.',
+    time: '18 min ago',
+    unread: true,
+    color: 'bg-purple-400',
+  },
+  {
+    id: 3,
+    title: 'System health check',
+    message: 'All services running normally.',
+    time: '1 hour ago',
+    unread: false,
+    color: 'bg-slate-300',
+  },
+  {
+    id: 4,
+    title: 'Audit log alert',
+    message: 'Unusual login attempt detected.',
+    time: '2 hours ago',
+    unread: true,
+    color: 'bg-rose-500',
+  },
 ];
 
 const profileConfig = {
@@ -68,13 +131,31 @@ export const SuperAdminLayout: React.FC<Props> = ({ onLogout }) => {
 
   const renderContent = () => {
     switch (activeTab) {
-      case 'User Management': return <SuperAdminUsers />;
-      case 'Departments': return SuperAdminDepartments ? <SuperAdminDepartments /> : null;
-      case 'Roles & Permissions': return SuperAdminRoles ? <SuperAdminRoles /> : null;
-      case 'All Projects': return SuperAdminProjects ? <SuperAdminProjects /> : null;
-      case 'Audit Logs': return <SuperAdminAuditLogs />;
-      case 'System Settings': return <SuperAdminSettings />;
-      default: return <SuperAdminDashboard />;
+      case 'User Management':
+        return <SuperAdminUsers />;
+
+      case 'Departments':
+        return SuperAdminDepartments ? <SuperAdminDepartments /> : null;
+
+      case 'Roles & Permissions':
+        return SuperAdminRoles ? <SuperAdminRoles /> : null;
+
+      case 'All Projects':
+        return SuperAdminProjects ? <SuperAdminProjects /> : null;
+
+      case 'Audit Logs':
+        return <SuperAdminAuditLogs />;
+
+      case 'System Settings':
+        return <SuperAdminSettings />;
+
+      case 'Overview':
+      default:
+        return (
+          <SuperAdminDashboard
+            onNavigate={(tab) => setActiveTab(tab)}
+          />
+        );
     }
   };
 

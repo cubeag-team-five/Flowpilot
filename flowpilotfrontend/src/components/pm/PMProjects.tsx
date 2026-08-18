@@ -54,29 +54,6 @@ const projects: Project[] = [
   },
 ];
 
-const notifications = [
-  {
-    text: "Sprint 12 planning meeting in 30 mins",
-    time: "5m ago",
-    color: "bg-green-500",
-  },
-  {
-    text: "Priya Rajan marked task #T-042 as Done",
-    time: "18m ago",
-    color: "bg-purple-400",
-  },
-  {
-    text: "New bug report filed: BUG-089",
-    time: "1h ago",
-    color: "bg-red-500",
-  },
-  {
-    text: "Daily standup reminder",
-    time: "2h ago",
-    color: "bg-orange-500",
-  },
-];
-
 export function PMProjects() {
   const [search, setSearch] = useState("");
 
@@ -107,40 +84,6 @@ export function PMProjects() {
         </div>
       )}
     </div>
-  );
-}
-
-
-/* NAV ITEM */
-
-function NavItem({
-  icon,
-  text,
-  active = false,
-}: {
-  icon: string;
-  text: string;
-  active?: boolean;
-}) {
-  return (
-    <button
-      className={`
-        group flex w-full items-center gap-4 rounded-xl
-        px-4 py-3.5 text-left text-sm font-semibold
-        transition
-        ${
-          active
-            ? "border-l-2 border-purple-400 bg-purple-500/15 text-purple-300"
-            : "text-slate-400 hover:bg-white/5 hover:text-white"
-        }
-      `}
-    >
-      <span className="w-5 text-center text-lg">
-        {icon}
-      </span>
-
-      <span>{text}</span>
-    </button>
   );
 }
 

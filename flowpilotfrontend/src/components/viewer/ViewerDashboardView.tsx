@@ -1,65 +1,232 @@
 import React from 'react';
 import { Eye } from 'lucide-react';
 
+interface Project {
+  id: string;
+  name: string;
+  pm: string;
+  sprint: string;
+  pct: number;
+  status: string;
+  barColor: string;
+  textColor: string;
+  badgeColor: string;
+}
+
 export const ViewerDashboardView: React.FC = () => {
+  const projects: Project[] = [
+    {
+      id: 'PRJ-001',
+      name: 'IPMT Platform v2',
+      pm: 'Arjun Shah · 12 members',
+      sprint: 'Sprint 12',
+      pct: 72,
+      status: 'On Track',
+      barColor: 'bg-emerald-500',
+      textColor: 'text-emerald-500',
+      badgeColor:
+        'border-emerald-200 bg-emerald-50 text-emerald-600',
+    },
+    {
+      id: 'PRJ-002',
+      name: 'E-Commerce Relaunch',
+      pm: 'Rohit Varma · 8 members',
+      sprint: 'Sprint 8',
+      pct: 45,
+      status: 'At Risk',
+      barColor: 'bg-amber-500',
+      textColor: 'text-amber-500',
+      badgeColor:
+        'border-amber-200 bg-amber-50 text-amber-600',
+    },
+    {
+      id: 'PRJ-003',
+      name: 'Mobile App Development',
+      pm: 'Arjun Shah · 6 members',
+      sprint: 'Sprint 2',
+      pct: 22,
+      status: 'On Track',
+      barColor: 'bg-emerald-500',
+      textColor: 'text-emerald-500',
+      badgeColor:
+        'border-emerald-200 bg-emerald-50 text-emerald-600',
+    },
+    {
+      id: 'PRJ-004',
+      name: 'API Gateway Migration',
+      pm: 'Karan Mehta · 5 members',
+      sprint: 'Sprint 5',
+      pct: 58,
+      status: 'Delayed',
+      barColor: 'bg-rose-500',
+      textColor: 'text-rose-500',
+      badgeColor:
+        'border-rose-200 bg-rose-50 text-rose-600',
+    },
+  ];
+
   return (
-    <>
-      <div className="bg-slate-100/80 border border-slate-200 rounded-2xl p-4 flex items-center justify-between">
-        <div className="flex items-center gap-3 text-xs font-semibold text-slate-600">
-          <Eye size={16} className="text-slate-500" />
-          You have read-only access. To request additional permissions, contact your Admin.
-        </div>
-        <button className="px-4 py-1.5 bg-slate-200/80 hover:bg-slate-300 text-slate-800 text-xs font-bold rounded-xl transition-colors cursor-pointer">
-          Request Access
-        </button>
-      </div>
+    <div className="w-full min-w-0 space-y-5">
 
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
-        <div className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-2xs">
-          <div className="text-[11px] font-extrabold tracking-wider text-slate-400 uppercase mb-2">TOTAL PROJECTS</div>
-          <div className="text-3xl font-black text-slate-900 leading-none">24</div>
-        </div>
+      {/* =====================================================
+          READ-ONLY ACCESS BANNER
+      ===================================================== */}
+      <section className="w-full rounded-2xl border border-slate-200 bg-slate-100/70 px-4 py-4 sm:px-5">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
 
-        <div className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-2xs">
-          <div className="text-[11px] font-extrabold tracking-wider text-slate-400 uppercase mb-2">ACTIVE / IN PROGRESS</div>
-          <div className="text-3xl font-black text-emerald-500 leading-none">16</div>
-        </div>
+          <div className="flex min-w-0 items-start gap-3 text-xs font-semibold leading-5 text-slate-600 sm:items-center">
+            <Eye
+              size={17}
+              strokeWidth={2}
+              className="mt-0.5 shrink-0 text-slate-500 sm:mt-0"
+            />
 
-        <div className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-2xs">
-          <div className="text-[11px] font-extrabold tracking-wider text-slate-400 uppercase mb-2">TEAMS INVOLVED</div>
-          <div className="text-3xl font-black text-slate-900 leading-none">6</div>
-        </div>
-      </div>
-
-      <div className="space-y-4">
-        {[
-          { id: 'PRJ-001', name: 'Flowpilot Platform v2', pm: 'Arjun Shah · 12 members', sprint: 'Sprint 12', pct: '72%', status: 'On Track', barColor: 'bg-emerald-500', badgeColor: 'bg-emerald-50 text-emerald-600 border-emerald-200' },
-          { id: 'PRJ-002', name: 'E-Commerce Relaunch', pm: 'Rohit Varma · 8 members', sprint: 'Sprint 8', pct: '45%', status: 'At Risk', barColor: 'bg-amber-500', badgeColor: 'bg-amber-50 text-amber-600 border-amber-200' },
-          { id: 'PRJ-003', name: 'Mobile App Development', pm: 'Arjun Shah · 6 members', sprint: 'Sprint 2', pct: '22%', status: 'On Track', barColor: 'bg-emerald-500', badgeColor: 'bg-emerald-50 text-emerald-600 border-emerald-200' },
-          { id: 'PRJ-004', name: 'API Gateway Migration', pm: 'Karan Mehta · 5 members', sprint: 'Sprint 5', pct: '58%', status: 'Delayed', barColor: 'bg-rose-500', badgeColor: 'bg-rose-50 text-rose-600 border-rose-200' }
-        ].map((prj) => (
-          <div key={prj.id} className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-2xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-            <div>
-              <div className="text-[10px] font-extrabold text-slate-400 tracking-wider uppercase mb-0.5">{prj.id}</div>
-              <div className="text-base font-extrabold text-slate-900">{prj.name}</div>
-              <div className="text-xs text-slate-400 mt-0.5">PM: {prj.pm}</div>
-            </div>
-
-            <div className="flex items-center gap-6 w-full sm:w-auto">
-              <div className="flex-1 sm:w-48">
-                <div className="flex justify-between text-xs font-bold mb-1">
-                  <span className="text-slate-400">{prj.sprint}</span>
-                  <span className="text-slate-900">{prj.pct}</span>
-                </div>
-                <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
-                  <div className={`h-full ${prj.barColor}`} style={{ width: prj.pct }}></div>
-                </div>
-              </div>
-              <span className={`text-xs font-bold border px-3 py-1 rounded-full ${prj.badgeColor}`}>{prj.status}</span>
-            </div>
+            <span>
+              You have read-only access. To request additional permissions,
+              contact your Admin.
+            </span>
           </div>
+
+          <button
+            type="button"
+            className="w-full shrink-0 rounded-xl border border-slate-200 bg-slate-200/70 px-4 py-2 text-xs font-bold text-slate-700 transition-colors duration-200 hover:bg-slate-300 focus:outline-none focus:ring-2 focus:ring-slate-300 sm:w-auto"
+          >
+            Request Access
+          </button>
+
+        </div>
+      </section>
+
+
+      {/* =====================================================
+          STATISTICS CARDS
+      ===================================================== */}
+      <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+
+        {/* Total Projects */}
+        <div className="min-w-0 rounded-2xl border border-slate-200/80 bg-white p-5 shadow-sm">
+          <div className="mb-2 text-[10px] font-extrabold uppercase tracking-[0.12em] text-slate-400 sm:text-[11px]">
+            Total Projects
+          </div>
+
+          <div className="text-3xl font-black leading-none text-slate-900 sm:text-[30px]">
+            24
+          </div>
+        </div>
+
+
+        {/* Active / In Progress */}
+        <div className="min-w-0 rounded-2xl border border-slate-200/80 bg-white p-5 shadow-sm">
+          <div className="mb-2 text-[10px] font-extrabold uppercase tracking-[0.12em] text-slate-400 sm:text-[11px]">
+            Active / In Progress
+          </div>
+
+          <div className="text-3xl font-black leading-none text-emerald-500 sm:text-[30px]">
+            16
+          </div>
+        </div>
+
+
+        {/* Teams Involved */}
+        <div className="min-w-0 rounded-2xl border border-slate-200/80 bg-white p-5 shadow-sm sm:col-span-2 xl:col-span-1">
+          <div className="mb-2 text-[10px] font-extrabold uppercase tracking-[0.12em] text-slate-400 sm:text-[11px]">
+            Teams Involved
+          </div>
+
+          <div className="text-3xl font-black leading-none text-slate-900 sm:text-[30px]">
+            6
+          </div>
+        </div>
+
+      </section>
+
+
+      {/* =====================================================
+          PROJECT LIST
+      ===================================================== */}
+      <section className="space-y-4">
+
+        {projects.map((project) => (
+          <article
+            key={project.id}
+            className="w-full overflow-hidden rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm transition-all duration-200 hover:shadow-md sm:p-5"
+          >
+
+            {/* =================================================
+                MOBILE / TABLET PROJECT INFORMATION
+            ================================================= */}
+            <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+
+              {/* Project Details */}
+              <div className="min-w-0 flex-1">
+
+                <div className="mb-1 text-[9px] font-extrabold uppercase tracking-[0.12em] text-slate-400 sm:text-[10px]">
+                  {project.id}
+                </div>
+
+                <h3 className="truncate text-[15px] font-extrabold leading-6 text-slate-900 sm:text-[16px]">
+                  {project.name}
+                </h3>
+
+                <p className="mt-0.5 truncate text-xs text-slate-400">
+                  PM: {project.pm}
+                </p>
+
+              </div>
+
+
+              {/* =================================================
+                  PROGRESS + STATUS
+              ================================================= */}
+              <div className="flex w-full flex-col gap-3 sm:flex-row sm:items-center sm:gap-5 xl:w-[420px] xl:shrink-0">
+
+                {/* Progress */}
+                <div className="min-w-0 flex-1">
+
+                  <div className="mb-1.5 flex items-center justify-between text-xs font-bold">
+
+                    <span className="text-slate-400">
+                      {project.sprint}
+                    </span>
+
+                    <span className={project.textColor}>
+                      {project.pct}%
+                    </span>
+
+                  </div>
+
+                  <div className="h-2 w-full overflow-hidden rounded-full bg-slate-100">
+                    <div
+                      className={`h-full rounded-full transition-all duration-500 ${project.barColor}`}
+                      style={{
+                        width: `${project.pct}%`,
+                      }}
+                    />
+                  </div>
+
+                </div>
+
+
+                {/* Status */}
+                <div className="flex shrink-0 sm:justify-end">
+                  <span
+                    className={`inline-flex items-center justify-center rounded-full border px-3 py-1.5 text-[10px] font-bold sm:text-[11px] ${project.badgeColor}`}
+                  >
+                    {project.status}
+                  </span>
+                </div>
+
+              </div>
+
+            </div>
+
+          </article>
         ))}
-      </div>
-    </>
+
+      </section>
+
+    </div>
   );
 };
+
+export default ViewerDashboardView;
