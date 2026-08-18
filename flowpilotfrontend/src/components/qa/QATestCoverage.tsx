@@ -1,127 +1,393 @@
-import React from 'react';
+import React from "react";
 
-export const QATestCoverage: React.FC = () => {
-  const coverage = [
+interface CoverageModule {
+  name: string;
+  cases: number;
+  percentage: number;
+  color: "green" | "orange" | "red";
+}
+
+const QATestCoverage: React.FC = () => {
+  const modules: CoverageModule[] = [
     {
-      name: 'Functional Testing',
+      name: "Authentication & JWT",
+      cases: 12,
       percentage: 92,
-      tests: '46 / 50 tests',
+      color: "green",
     },
     {
-      name: 'UI / UX Testing',
-      percentage: 84,
-      tests: '42 / 50 tests',
-    },
-    {
-      name: 'Integration Testing',
+      name: "Task Management",
+      cases: 18,
       percentage: 78,
-      tests: '39 / 50 tests',
+      color: "orange",
     },
     {
-      name: 'Security Testing',
+      name: "Sprint Board",
+      cases: 14,
+      percentage: 65,
+      color: "orange",
+    },
+    {
+      name: "File Upload / S3",
+      cases: 8,
+      percentage: 55,
+      color: "red",
+    },
+    {
+      name: "Notifications",
+      cases: 10,
+      percentage: 40,
+      color: "red",
+    },
+    {
+      name: "Analytics / Charts",
+      cases: 9,
       percentage: 88,
-      tests: '44 / 50 tests',
+      color: "green",
     },
   ];
 
+  const getProgressColor = (color: CoverageModule["color"]) => {
+    switch (color) {
+      case "green":
+        return "bg-[#5ED6A0]";
+
+      case "orange":
+        return "bg-[#F59E0B]";
+
+      case "red":
+        return "bg-[#F04444]";
+
+      default:
+        return "bg-gray-300";
+    }
+  };
+
+  const getPercentageColor = (color: CoverageModule["color"]) => {
+    switch (color) {
+      case "green":
+        return "text-[#18B968]";
+
+      case "orange":
+        return "text-[#F59E0B]";
+
+      case "red":
+        return "text-[#F04444]";
+
+      default:
+        return "text-gray-500";
+    }
+  };
+
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-slate-900">
-          Test Coverage
-        </h1>
+    <div
+      className="w-full"
+      style={{
+        fontFamily:
+          "Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+      }}
+    >
+      {/* =========================================================
+          SUMMARY CARDS
+          ========================================================= */}
 
-        <p className="text-sm text-slate-400 mt-1">
-          Monitor testing coverage across the application
-        </p>
-      </div>
+      <div
+        className="
+          grid
+          w-full
+          grid-cols-1
+          gap-[13px]
+          sm:grid-cols-2
+          xl:grid-cols-4
+        "
+      >
+        {/* TOTAL TEST CASES */}
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-        <div className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-sm">
-          <div className="text-[11px] font-extrabold text-slate-400 uppercase">
-            Overall Coverage
-          </div>
+        <div
+          className="
+            box-border
+            h-[82px]
+            rounded-[12px]
+            border
+            border-[#E9EDF0]
+            bg-white
+            px-[19px]
+            py-[14px]
+            shadow-[0_2px_8px_rgba(0,0,0,0.035)]
+          "
+        >
+          <p
+            className="
+              m-0
+              text-[9px]
+              font-[600]
+              uppercase
+              leading-[12px]
+              tracking-[0.65px]
+              text-[#9299A3]
+            "
+          >
+            Total Test Cases
+          </p>
 
-          <div className="text-3xl font-black text-slate-900 mt-2">
-            86%
-          </div>
-
-          <div className="text-xs font-bold text-emerald-500 mt-2">
-            Good coverage
-          </div>
+          <p
+            className="
+              m-0
+              mt-[8px]
+              text-[23px]
+              font-[700]
+              leading-[24px]
+              tracking-[-0.4px]
+              text-[#5ED6A0]
+            "
+          >
+            48
+          </p>
         </div>
 
-        <div className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-sm">
-          <div className="text-[11px] font-extrabold text-slate-400 uppercase">
-            Total Tests
-          </div>
+        {/* EXECUTED */}
 
-          <div className="text-3xl font-black text-slate-900 mt-2">
-            200
-          </div>
+        <div
+          className="
+            box-border
+            h-[82px]
+            rounded-[12px]
+            border
+            border-[#E9EDF0]
+            bg-white
+            px-[19px]
+            py-[14px]
+            shadow-[0_2px_8px_rgba(0,0,0,0.035)]
+          "
+        >
+          <p
+            className="
+              m-0
+              text-[9px]
+              font-[600]
+              uppercase
+              leading-[12px]
+              tracking-[0.65px]
+              text-[#9299A3]
+            "
+          >
+            Executed
+          </p>
 
-          <div className="text-xs text-slate-400 mt-2">
-            Test cases
-          </div>
+          <p
+            className="
+              m-0
+              mt-[8px]
+              text-[23px]
+              font-[700]
+              leading-[24px]
+              tracking-[-0.4px]
+              text-[#20B957]
+            "
+          >
+            40
+          </p>
         </div>
 
-        <div className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-sm">
-          <div className="text-[11px] font-extrabold text-slate-400 uppercase">
+        {/* PASSED */}
+
+        <div
+          className="
+            box-border
+            h-[82px]
+            rounded-[12px]
+            border
+            border-[#E9EDF0]
+            bg-white
+            px-[19px]
+            py-[14px]
+            shadow-[0_2px_8px_rgba(0,0,0,0.035)]
+          "
+        >
+          <p
+            className="
+              m-0
+              text-[9px]
+              font-[600]
+              uppercase
+              leading-[12px]
+              tracking-[0.65px]
+              text-[#9299A3]
+            "
+          >
             Passed
-          </div>
+          </p>
 
-          <div className="text-3xl font-black text-slate-900 mt-2">
-            172
-          </div>
-
-          <div className="text-xs font-bold text-emerald-500 mt-2">
-            86% passed
-          </div>
+          <p
+            className="
+              m-0
+              mt-[8px]
+              text-[23px]
+              font-[700]
+              leading-[24px]
+              tracking-[-0.4px]
+              text-[#20B957]
+            "
+          >
+            34
+          </p>
         </div>
 
-        <div className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-sm">
-          <div className="text-[11px] font-extrabold text-slate-400 uppercase">
-            Remaining
-          </div>
+        {/* FAILED / BLOCKED */}
 
-          <div className="text-3xl font-black text-slate-900 mt-2">
-            28
-          </div>
+        <div
+          className="
+            box-border
+            h-[82px]
+            rounded-[12px]
+            border
+            border-[#E9EDF0]
+            bg-white
+            px-[19px]
+            py-[14px]
+            shadow-[0_2px_8px_rgba(0,0,0,0.035)]
+          "
+        >
+          <p
+            className="
+              m-0
+              text-[9px]
+              font-[600]
+              uppercase
+              leading-[12px]
+              tracking-[0.65px]
+              text-[#9299A3]
+            "
+          >
+            Failed / Blocked
+          </p>
 
-          <div className="text-xs text-amber-500 font-bold mt-2">
-            Needs testing
-          </div>
+          <p
+            className="
+              m-0
+              mt-[8px]
+              text-[23px]
+              font-[700]
+              leading-[24px]
+              tracking-[-0.4px]
+              text-[#F04444]
+            "
+          >
+            6
+          </p>
         </div>
       </div>
 
-      <div className="bg-white border border-slate-200/80 rounded-2xl p-6 shadow-sm">
-        <h2 className="text-base font-extrabold text-slate-900 mb-5">
-          Coverage by Test Area
+      {/* =========================================================
+          COVERAGE BY MODULE
+          ========================================================= */}
+
+      <div
+        className="
+          mt-[18px]
+          box-border
+          w-full
+          rounded-[13px]
+          border
+          border-[#E9EDF0]
+          bg-white
+          px-[19px]
+          py-[19px]
+          shadow-[0_2px_8px_rgba(0,0,0,0.035)]
+        "
+      >
+        {/* SECTION TITLE */}
+
+        <h2
+          className="
+            m-0
+            text-[12px]
+            font-[700]
+            leading-[15px]
+            tracking-[-0.05px]
+            text-[#111827]
+          "
+        >
+          Coverage by Module
         </h2>
 
-        <div className="space-y-5">
-          {coverage.map((item) => (
-            <div key={item.name}>
-              <div className="flex items-center justify-between mb-2">
-                <div>
-                  <div className="text-sm font-bold text-slate-900">
-                    {item.name}
-                  </div>
+        {/* MODULE LIST */}
 
-                  <div className="text-[11px] text-slate-400">
-                    {item.tests}
-                  </div>
+        <div className="mt-[14px] space-y-[11px]">
+          {modules.map((module) => (
+            <div key={module.name} className="w-full">
+              {/* TOP ROW */}
+
+              <div
+                className="
+                  mb-[6px]
+                  flex
+                  w-full
+                  items-center
+                  justify-between
+                "
+              >
+                {/* MODULE NAME */}
+
+                <p
+                  className="
+                    m-0
+                    text-[10px]
+                    font-[600]
+                    leading-[13px]
+                    text-[#1F2937]
+                  "
+                >
+                  {module.name}
+                </p>
+
+                {/* CASES + PERCENTAGE */}
+
+                <div className="flex shrink-0 items-center gap-[9px]">
+                  <span
+                    className="
+                      text-[9px]
+                      font-[400]
+                      leading-[12px]
+                      text-[#A1A7AF]
+                    "
+                  >
+                    {module.cases} cases
+                  </span>
+
+                  <span
+                    className={`
+                      text-[10px]
+                      font-[700]
+                      leading-[12px]
+                      ${getPercentageColor(module.color)}
+                    `}
+                  >
+                    {module.percentage}%
+                  </span>
                 </div>
-
-                <span className="text-sm font-bold text-slate-700">
-                  {item.percentage}%
-                </span>
               </div>
 
-              <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
+              {/* PROGRESS BAR */}
+
+              <div
+                className="
+                  h-[6px]
+                  w-full
+                  overflow-hidden
+                  rounded-full
+                  bg-[#F0F1F3]
+                "
+              >
                 <div
-                  className="h-full bg-emerald-500 rounded-full"
-                  style={{ width: `${item.percentage}%` }}
+                  className={`
+                    h-full
+                    rounded-full
+                    ${getProgressColor(module.color)}
+                  `}
+                  style={{
+                    width: `${module.percentage}%`,
+                  }}
                 />
               </div>
             </div>
@@ -131,3 +397,5 @@ export const QATestCoverage: React.FC = () => {
     </div>
   );
 };
+
+export default QATestCoverage;
