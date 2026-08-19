@@ -1,5 +1,3 @@
-
-// Each member has a color theme: avatar bg/text, filled segment, empty segment
 const colorThemes = {
   teal: {
     avatarBg: "bg-teal-100",
@@ -77,7 +75,7 @@ const team = [
 ];
 
 
-function WorkloadBar({ done, assigned, theme }: { done: number; assigned: number; theme: { filled: string; empty: string } }) {
+function TeamWorkloadBar({ done, assigned, theme }: { done: number; assigned: number; theme: { filled: string; empty: string } }) {
   const segments = Array.from({ length: assigned }, (_, i) => i < done);
 
   return (
@@ -94,8 +92,8 @@ function WorkloadBar({ done, assigned, theme }: { done: number; assigned: number
   );
 }
 
-function WorkloadRow({ initials, name, role, done, assigned, theme: themeKey }: { initials: string; name: string; role: string; done: number; assigned: number; theme: "teal" | "violet" | "amber" | "green" | "red" }) {
-  const theme = colorThemes[themeKey];
+function TeamWorkloadRow({ initials, name, role, done, assigned, theme: themeKey }: { initials: string; name: string; role: string; done: number; assigned: number; theme: string }) {
+  const theme = colorThemes[themeKey as keyof typeof colorThemes];
   const percent = Math.round((done / assigned) * 100);
 
   return (
@@ -115,7 +113,7 @@ function WorkloadRow({ initials, name, role, done, assigned, theme: themeKey }: 
 
       {/* Bar + caption */}
       <div className="flex-3">
-        <WorkloadBar done={done} assigned={assigned} theme={theme} />
+        <TeamWorkloadBar done={done} assigned={assigned} theme={theme} />
         <p className="mt-1.5 text-xs text-slate-400">
           {done} done / {assigned} assigned
         </p>
@@ -138,27 +136,21 @@ function TeamWorkloadCard() {
       </h2>
       <div>
         {team.map((member) => (
-          <WorkloadRow key={member.name} {...member} />
+          <TeamWorkloadRow key={member.name} {...member} />
         ))}
       </div>
     </div>
   );
 }
 
-export default function TeamWorkloadPage() {
+export const PMWorkload = () => {
   return (
     <div className="flex min-h-screen w-full flex-col bg-slate-50 lg:flex-row">
-      <div className="lg:sticky lg:top-0 lg:h-screen">
-        <Sidebar />
-      </div>
-
       <div className="flex-1">
-        <Topbar />
-
         <main className="p-4 sm:p-6 lg:p-8">
           <TeamWorkloadCard />
         </main>
       </div>
     </div>
   );
-}
+};
