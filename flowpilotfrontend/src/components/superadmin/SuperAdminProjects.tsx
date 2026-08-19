@@ -1,5 +1,5 @@
-import React, { useMemo, useState } from 'react';
-import { Search } from 'lucide-react';
+import React, { useState } from 'react';
+
 
 interface Project {
   code: string;
@@ -99,7 +99,6 @@ const formatProjectDate = (date: string) => {
 
 export const SuperAdminProjects: React.FC = () => {
   const [projects, setProjects] = useState<Project[]>(initialProjects);
-  const [search, setSearch] = useState('');
   const [showAddProject, setShowAddProject] = useState(false);
 
   const [newProject, setNewProject] = useState({
@@ -113,31 +112,6 @@ export const SuperAdminProjects: React.FC = () => {
     progress: 0,
     health: 'On Track' as Project['health'],
   });
-
-  /*
-    Existing functionality retained:
-    - Search state
-    - Search filtering
-    - Matching by project name
-    - Matching by project code
-    - Matching by manager
-    - Matching by sprint
-  */
-  const filteredProjects = useMemo(() => {
-    const query = search.toLowerCase().trim();
-
-    if (!query) {
-      return projects;
-    }
-
-    return projects.filter(
-      (project) =>
-        project.name.toLowerCase().includes(query) ||
-        project.code.toLowerCase().includes(query) ||
-        project.manager.toLowerCase().includes(query) ||
-        project.sprint.toLowerCase().includes(query)
-    );
-  }, [search, projects]);
 
   return (
     <div className="w-full min-w-0 overflow-x-hidden">
@@ -604,7 +578,7 @@ export const SuperAdminProjects: React.FC = () => {
               </thead>
 
               <tbody>
-                {filteredProjects.map((project) => (
+                {projects.map((project) => (
                   <tr
                     key={project.code}
                     className="
@@ -706,14 +680,14 @@ export const SuperAdminProjects: React.FC = () => {
                   </tr>
                 ))}
 
-                {filteredProjects.length === 0 && (
+                {projects.length === 0 && (
                   <tr>
                     <td colSpan={9} className="py-[55px] text-center">
                       <p className="text-[13px] font-bold text-slate-600">
                         No projects found
                       </p>
                       <p className="mt-1 text-[11px] text-slate-400">
-                        Try another project name, code, manager or sprint.
+                        Add a project to see it here.
                       </p>
                     </td>
                   </tr>
@@ -725,13 +699,13 @@ export const SuperAdminProjects: React.FC = () => {
 
         {/* CARDS — mobile */}
         <div className="md:hidden space-y-3">
-          {filteredProjects.length === 0 ? (
+          {projects.length === 0 ? (
             <div className="rounded-[14px] border border-dashed border-slate-200 bg-white p-8 text-center">
               <p className="text-[13px] font-bold text-slate-600">No projects found</p>
-              <p className="mt-1 text-[11px] text-slate-400">Try another project name, code, manager or sprint.</p>
+              <p className="mt-1 text-[11px] text-slate-400">Add a project to see it here.</p>
             </div>
           ) : (
-            filteredProjects.map((project) => (
+            projects.map((project) => (
               <div key={project.code} className="rounded-[14px] border border-slate-200/80 bg-white p-4 shadow-sm">
                 <div className="flex items-start justify-between gap-2 mb-3">
                   <div className="min-w-0">
