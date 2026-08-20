@@ -80,7 +80,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onOpenDemo }) => {
       <div className="absolute w-16 h-16 top-[28%] right-[5%] rotate-20 bg-white/40 backdrop-blur-md border border-white/80 rounded-2xl shadow-sm pointer-events-none z-10 animate-cube-1"></div>
       <div className="absolute w-12 h-12 bottom-[32%] right-[4%] -rotate-12 bg-white/40 backdrop-blur-md border border-white/80 rounded-2xl shadow-sm pointer-events-none z-10 animate-cube-2"></div>
 
-      <div className="max-w-[1240px] mx-auto px-6 grid grid-cols-1 lg:grid-cols-[1fr_1.35fr] gap-10 items-center relative z-10">
+      <div className="max-w-[1240px] mx-auto px-6 grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-12 items-start relative z-10">
 
         {/* Left Column */}
         <div className="flex flex-col justify-between">
@@ -157,7 +157,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onOpenDemo }) => {
 
         {/* Right Column: Live Workspace Mockup matching Figma Image 1 dimensions */}
         <div className="relative">
-          <div className="bg-white p-3 sm:p-7 rounded-[32px] border border-slate-200/80 shadow-2xl shadow-slate-900/10 min-h-[580px] flex flex-col justify-between">
+          <div className="bg-slate-50/75 p-3 sm:p-7 rounded-[32px] border border-slate-200/80 shadow-2xl shadow-slate-900/10 min-h-[580px] flex flex-col justify-between">
 
             <div>
               <div className="flex items-center justify-between mb-6">
