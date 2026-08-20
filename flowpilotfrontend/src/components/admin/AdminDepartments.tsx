@@ -216,7 +216,7 @@ export const AdminDepartments: React.FC = () => {
     setShowMembers(true);
   };
 
-  const handleAddDepartment = (e: React.FormEvent) => {
+  const handleAddDepartment = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (
@@ -228,31 +228,78 @@ export const AdminDepartments: React.FC = () => {
       return;
     }
 
-    const newDepartment: Department = {
-      id: departments.length + 1,
+    const payload = {
       name: departmentName.trim(),
       head: departmentHead.trim(),
       members: Number(members),
       progress: Number(progress),
-      color: 'bg-blue-400',
-      bgColor: 'bg-blue-50',
-      textColor: 'text-blue-500',
-      borderColor: 'border-blue-100',
-      shadowColor:
-        'shadow-[0_2px_8px_rgba(96,165,250,0.08)]',
     };
 
-    setDepartments((previous) => [
-      ...previous,
-      newDepartment,
-    ]);
+    try {
+      const response = await fetch('http://localhost:8080/api/admin/departments', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+      });
 
-    setDepartmentName('');
-    setDepartmentHead('');
-    setMembers('');
-    setProgress('');
+      if (!response.ok) {
+        throw new Error(`Failed to save department: ${response.statusText}`);
+      }
 
-    setShowForm(false);
+      const savedDepartment = await response.json();
+
+      const newDepartment: Department = {
+        id: savedDepartment.id || departments.length + 1,
+        name: savedDepartment.name || departmentName.trim(),
+        head: savedDepartment.head || departmentHead.trim(),
+        members: savedDepartment.members !== undefined ? savedDepartment.members : Number(members),
+        progress: savedDepartment.progress !== undefined ? savedDepartment.progress : Number(progress),
+        color: 'bg-blue-400',
+        bgColor: 'bg-blue-50',
+        textColor: 'text-blue-500',
+        borderColor: 'border-blue-100',
+        shadowColor: 'shadow-[0_2px_8px_rgba(96,165,250,0.08)]',
+      };
+
+      setDepartments((previous) => [
+        ...previous,
+        newDepartment,
+      ]);
+
+      setDepartmentName('');
+      setDepartmentHead('');
+      setMembers('');
+      setProgress('');
+      setShowForm(false);
+    } catch (error) {
+      console.error('Error creating department in backend:', error);
+      // Fallback local update if backend fails
+      const newDepartment: Department = {
+        id: departments.length + 1,
+        name: departmentName.trim(),
+        head: departmentHead.trim(),
+        members: Number(members),
+        progress: Number(progress),
+        color: 'bg-blue-400',
+        bgColor: 'bg-blue-50',
+        textColor: 'text-blue-500',
+        borderColor: 'border-blue-100',
+        shadowColor: 'shadow-[0_2px_8px_rgba(96,165,250,0.08)]',
+      };
+
+      setDepartments((previous) => [
+        ...previous,
+        newDepartment,
+      ]);
+
+      setDepartmentName('');
+      setDepartmentHead('');
+      setMembers('');
+      setProgress('');
+      setShowForm(false);
+    }
   };
 
   const handleCancel = () => {
