@@ -1,1496 +1,1365 @@
-import React, { useState } from 'react';
-import {
-  Plus,
-  Pencil,
-  Trash2,
-} from 'lucide-react';
+import React, { useEffect, useState } from "react";
 
-interface User {
-  id: string;
+interface SuperAdminUser {
+  employeeId: string;
   name: string;
   email: string;
   role: string;
   department: string;
-  status: 'Active' | 'Inactive';
+  designation: string;
+  password?: string;
+  status: "Active" | "Inactive";
   lastLogin: string;
   initials: string;
-  password?: string;
 }
 
-const initialUsers: User[] = [
-  {
-    id: 'EMP-001',
-    name: 'Rajeev Kumar',
-    email: 'ra.kumar@ipmt.com',
-    role: 'Super Admin',
-    department: 'Leadership',
-    status: 'Active',
-    lastLogin: '2 min ago',
-    initials: 'RK',
-  },
-  {
-    id: 'EMP-002',
-    name: 'Nisha Agarwal',
-    email: 'n.agarwal@ipmt.com',
-    role: 'Admin',
-    department: 'Operations',
-    status: 'Active',
-    lastLogin: '12 min ago',
-    initials: 'NA',
-  },
-  {
-    id: 'EMP-003',
-    name: 'Arjun Shah',
-    email: 'a.shah@ipmt.com',
-    role: 'Project Manager',
-    department: 'Product',
-    status: 'Active',
-    lastLogin: '1h ago',
-    initials: 'AS',
-  },
-  {
-    id: 'EMP-004',
-    name: 'Aryan Kapoor',
-    email: 'a.kapoor@ipmt.com',
-    role: 'Scrum Master',
-    department: 'Engineering',
-    status: 'Active',
-    lastLogin: '30 min ago',
-    initials: 'AK',
-  },
-  {
-    id: 'EMP-005',
-    name: 'Sneha Rao',
-    email: 's.rao@ipmt.com',
-    role: 'Developer',
-    department: 'Engineering',
-    status: 'Active',
-    lastLogin: '5 min ago',
-    initials: 'SR',
-  },
-  {
-    id: 'EMP-006',
-    name: 'Mihir Khatri',
-    email: 'm.khatri@ipmt.com',
-    role: 'Developer',
-    department: 'Engineering',
-    status: 'Active',
-    lastLogin: '20 min ago',
-    initials: 'MK',
-  },
-  {
-    id: 'EMP-007',
-    name: 'Priya Rajan',
-    email: 'p.rajan@ipmt.com',
-    role: 'QA Engineer',
-    department: 'Quality',
-    status: 'Active',
-    lastLogin: '3h ago',
-    initials: 'PR',
-  },
-  {
-    id: 'EMP-008',
-    name: 'Vikram Jain',
-    email: 'v.jain@ipmt.com',
-    role: 'Viewer',
-    department: 'Management',
-    status: 'Active',
-    lastLogin: 'Yesterday',
-    initials: 'VJ',
-  },
-  {
-    id: 'EMP-009',
-    name: 'Divya Mehta',
-    email: 'd.mehta@ipmt.com',
-    role: 'Developer',
-    department: 'Design',
-    status: 'Inactive',
-    lastLogin: '3 days ago',
-    initials: 'DM',
-  },
-  {
-    id: 'EMP-010',
-    name: 'Rohit Varma',
-    email: 'r.varma@ipmt.com',
-    role: 'Business Analyst',
-    department: 'Product',
-    status: 'Active',
-    lastLogin: '2h ago',
-    initials: 'RV',
-  },
-];
+interface UserForm {
+  employeeId: string;
+  name: string;
+  email: string;
+  role: string;
+  department: string;
+  designation: string;
+  password: string;
+}
+
+const API_BASE_URL = "http://localhost:8080";
+
+
+const USERS_API = `${API_BASE_URL}/api/superadmin/users`;
+
+/*
+ * JWT AUTHENTICATION
+ *
+ * Your login page should save the JWT in localStorage.
+ * The fallback keys make this work if your login currently uses
+ * token, jwt, or accessToken.
+ */
+const getToken = (): string | null => {
+  return (
+    localStorage.getItem("token") ||
+    localStorage.getItem("jwt") ||
+    localStorage.getItem("accessToken")
+  );
+};
+
+const getAuthHeaders = (): HeadersInit => {
+  const token = getToken();
+
+  return {
+    "Content-Type": "application/json",
+    ...(token
+      ? {
+          Authorization: `Bearer ${token}`,
+        }
+      : {}),
+  };
+};
 
 const roles = [
-  'Admin',
-  'Project Manager',
-  'Scrum Master',
-  'Developer',
-  'QA Engineer',
-  'Viewer',
+  "Super Admin",
+  "Admin",
+  "Project Manager",
+  "Scrum Master",
+  "Developer",
+  "QA Engineer",
+  "Viewer",
+  "Business Analyst",
 ];
 
 const departments = [
-  'Leadership',
-  'Operations',
-  'Product',
-  'Engineering',
-  'Quality',
-  'Management',
-  'Design',
+  "Leadership",
+  "Operations",
+  "Product",
+  "Engineering",
+  "Quality",
+  "Management",
+  "Design",
 ];
 
 const designations = [
-  'Software Engineer',
-  'Senior Software Engineer',
-  'Project Manager',
-  'Scrum Master',
-  'QA Engineer',
-  'Business Analyst',
-  'UI/UX Designer',
-  'Team Lead',
+  "Director",
+  "Administrator",
+  "Project Manager",
+  "Scrum Master",
+  "Software Developer",
+  "QA Engineer",
+  "Business Analyst",
+  "Viewer",
 ];
 
+const emptyForm: UserForm = {
+  employeeId: "",
+  name: "",
+  email: "",
+  role: "",
+  department: "",
+  designation: "",
+  password: "",
+};
+
 const SuperAdminUsers: React.FC = () => {
-  const [users, setUsers] = useState<User[]>(initialUsers);
-  const [editingUser, setEditingUser] = useState<User | null>(null);
+  const [users, setUsers] = useState<SuperAdminUser[]>([]);
+  const [form, setForm] = useState<UserForm>(emptyForm);
+
   const [showForm, setShowForm] = useState(false);
+  const [editingEmployeeId, setEditingEmployeeId] = useState<string | null>(
+    null
+  );
 
-  const [form, setForm] = useState({
-    name: '',
-    email: '',
-    employeeId: '',
-    role: '',
-    department: '',
-    designation: '',
-    password: '',
-  });
+  const [search, setSearch] = useState("");
 
-  const [errors, setErrors] = useState<Record<string, string>>({});
-  const [touched, setTouched] = useState<Record<string, boolean>>({});
-  const [showSuccessPopup, setShowSuccessPopup] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
 
-  const activeUsers = users.filter(
-    (user) => user.status === 'Active'
-  ).length;
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
 
-  const openAddModal = () => {
-    setEditingUser(null);
+  /*
+   * ============================================================
+   * LOAD USERS
+   * GET /api/superadmin/users
+   * ============================================================
+   */
+  const loadUsers = async () => {
+    try {
+      setLoading(true);
+      setError("");
 
-    setForm({
-      name: '',
-      email: '',
-      employeeId: '',
-      role: '',
-      department: '',
-      designation: '',
-      password: '',
-    });
+      const response = await fetch(USERS_API, {
+        method: "GET",
+        headers: getAuthHeaders(),
+      });
 
-    setShowForm(true);
-    setErrors({});
-    setTouched({});
-  };
-
-  const openEditModal = (user: User) => {
-    setEditingUser(user);
-
-    setForm({
-      name: user.name,
-      email: user.email,
-      employeeId: user.id,
-      role: user.role,
-      department: user.department,
-      designation: '',
-      password: '',
-    });
-
-    setShowForm(true);
-    setErrors({});
-    setTouched({});
-  };
-
-  const closeModal = () => {
-    setShowForm(false);
-    setErrors({});
-    setTouched({});
-    setEditingUser(null);
-
-    setForm({
-      name: '',
-      email: '',
-      employeeId: '',
-      role: '',
-      department: '',
-      designation: '',
-      password: '',
-    });
-  };
-
-  const getInitials = (name: string) => {
-    return name
-      .split(' ')
-      .map((part) => part[0])
-      .join('')
-      .slice(0, 2)
-      .toUpperCase();
-  };
-
-  const validateField = (field: keyof typeof form, value: string): string => {
-    switch (field) {
-      case 'name':
-        if (!value.trim()) return 'Full name is required.';
-        if (!/^[A-Za-z]+(?:[ .'-][A-Za-z]+)*$/.test(value.trim())) return 'Please enter a valid name.';
-        return '';
-      case 'email':
-        if (!value.trim()) return 'Email address is required.';
-        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim())) return 'Please enter a valid email address.';
-        return '';
-      case 'employeeId':
-        if (!value.trim()) return 'Employee ID is required.';
-        if (!/^[A-Za-z0-9-]+$/.test(value.trim())) return 'Please enter a valid employee ID.';
-        return '';
-      case 'role': return value ? '' : 'Please select a role.';
-      case 'department': return value ? '' : 'Please select a department.';
-      case 'designation': return value ? '' : 'Please select a designation.';
-      case 'password':
-        if (editingUser && !value.trim()) return '';
-        if (!value.trim()) return 'Password is required.';
-        if (value.length < 8) {
-          return 'Password must be at least 8 characters.';
+      if (!response.ok) {
+        if (response.status === 401 || response.status === 403) {
+          throw new Error("Unauthorized. Please login again.");
         }
-        if (!/[A-Za-z]/.test(value)) {
-          return 'Password must contain at least one letter.';
-        }
-        if (!/[0-9]/.test(value)) {
-          return 'Password must contain at least one number.';
-        }
-        if (!/[^A-Za-z0-9]/.test(value)) {
-          return 'Password must contain at least one special character.';
-        }
-        return '';
-      default: return '';
+        throw new Error(`Failed to load users (${response.status})`);
+      }
+
+      const data: SuperAdminUser[] = await response.json();
+
+      setUsers(data);
+    } catch (err) {
+      console.error("Load users error:", err);
+
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Unable to connect to backend."
+      );
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleFieldChange = (field: keyof typeof form, value: string) => {
-    setForm((current) => ({ ...current, [field]: value }));
-    if (touched[field]) setErrors((current) => ({ ...current, [field]: validateField(field, value) }));
+  /*
+   * Load users when page opens
+   */
+  useEffect(() => {
+    loadUsers();
+  }, []);
+
+  /*
+   * ============================================================
+   * FORM INPUT
+   * ============================================================
+   */
+  const handleInputChange = (
+    event: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
+  ) => {
+    const { name, value } = event.target;
+
+    setForm((previous) => ({
+      ...previous,
+      [name]: value,
+    }));
   };
 
-  const handleFieldBlur = (field: keyof typeof form) => {
-    setTouched((current) => ({ ...current, [field]: true }));
-    setErrors((current) => ({ ...current, [field]: validateField(field, form[field]) }));
+  /*
+   * ============================================================
+   * OPEN ADD FORM
+   * ============================================================
+   */
+  const handleAddUser = () => {
+    setForm(emptyForm);
+    setEditingEmployeeId(null);
+    setError("");
+    setSuccess("");
+    setShowForm(true);
   };
 
-  const validateForm = () => {
-    const fields = Object.keys(form) as Array<keyof typeof form>;
-    const nextErrors: Record<string, string> = {};
-    fields.forEach((field) => { const error = validateField(field, form[field]); if (error) nextErrors[field] = error; });
-    setErrors(nextErrors);
-    setTouched(fields.reduce((r, f) => ({ ...r, [f]: true }), {}));
-    return Object.keys(nextErrors).length === 0;
+  /*
+   * ============================================================
+   * CANCEL FORM
+   * ============================================================
+   */
+  const handleCancel = () => {
+    setForm(emptyForm);
+    setEditingEmployeeId(null);
+    setShowForm(false);
+    setError("");
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  /*
+   * ============================================================
+   * CREATE USER
+   * POST /api/superadmin/users
+   * ============================================================
+   */
+  const createUser = async () => {
+    try {
+      setSaving(true);
+      setError("");
+      setSuccess("");
 
-    if (!validateForm()) {
+      const response = await fetch(USERS_API, {
+        method: "POST",
+        headers: getAuthHeaders(),
+        body: JSON.stringify({
+          employeeId: form.employeeId.trim(),
+          name: form.name.trim(),
+          email: form.email.trim(),
+          role: form.role,
+          department: form.department,
+          designation: form.designation,
+          password: form.password,
+        }),
+      });
+
+      if (!response.ok) {
+        if (response.status === 401 || response.status === 403) {
+          throw new Error("Unauthorized. Please login again.");
+        }
+
+        let message = "Failed to create user.";
+
+        try {
+          const data = await response.json();
+
+          if (data.message) {
+            message = data.message;
+          } else if (data.error) {
+            message = data.error;
+          }
+        } catch {
+          // Ignore JSON parsing error
+        }
+
+        throw new Error(message);
+      }
+
+      const createdUser: SuperAdminUser = await response.json();
+
+      /*
+       * Add newly-created user immediately to table.
+       */
+      setUsers((previous) => [...previous, createdUser]);
+
+      setSuccess("User created successfully.");
+
+      setForm(emptyForm);
+      setShowForm(false);
+    } catch (err) {
+      console.error("Create user error:", err);
+
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Unable to create user."
+      );
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  /*
+   * ============================================================
+   * UPDATE USER
+   * PUT /api/superadmin/users/{employeeId}
+   * ============================================================
+   */
+  const updateUser = async () => {
+    if (!editingEmployeeId) {
       return;
     }
 
-    if (editingUser) {
-      setUsers((current) =>
-        current.map((user) =>
-          user.id === editingUser.id
-            ? {
-                ...user,
-                name: form.name.trim(),
-                email: form.email.trim(),
-                role: form.role,
-                department: form.department,
-                initials: getInitials(form.name),
-                ...(form.password.trim()
-                  ? { password: form.password }
-                  : {}),
-              }
+    try {
+      setSaving(true);
+      setError("");
+      setSuccess("");
+
+      const response = await fetch(
+        `${USERS_API}/${encodeURIComponent(editingEmployeeId)}`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            employeeId: form.employeeId.trim(),
+            name: form.name.trim(),
+            email: form.email.trim(),
+            role: form.role,
+            department: form.department,
+            designation: form.designation,
+
+            /*
+             * Backend treats password as optional during update.
+             */
+            password: form.password.trim() || null,
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        if (response.status === 401 || response.status === 403) {
+          throw new Error("Unauthorized. Please login again.");
+        }
+
+        let message = "Failed to update user.";
+
+        try {
+          const data = await response.json();
+
+          if (data.message) {
+            message = data.message;
+          } else if (data.error) {
+            message = data.error;
+          }
+        } catch {
+          // Ignore
+        }
+
+        throw new Error(message);
+      }
+
+      const updatedUser: SuperAdminUser = await response.json();
+
+      setUsers((previous) =>
+        previous.map((user) =>
+          user.employeeId === editingEmployeeId
+            ? updatedUser
             : user
         )
       );
-    } else {
-      const newUser: User = {
-        id: form.employeeId.trim(),
-        name: form.name.trim(),
-        email: form.email.trim(),
-        role: form.role,
-        department: form.department,
-        status: 'Active',
-        lastLogin: 'Just now',
-        initials: getInitials(form.name),
-        password: form.password,
-      };
 
-      setUsers((current) => [...current, newUser]);
-      setShowSuccessPopup(true);
+      setSuccess("User updated successfully.");
 
-      setTimeout(() => {
-        setShowSuccessPopup(false);
-      }, 3000);
+      setForm(emptyForm);
+      setEditingEmployeeId(null);
+      setShowForm(false);
+    } catch (err) {
+      console.error("Update user error:", err);
+
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Unable to update user."
+      );
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  /*
+   * ============================================================
+   * CREATE / UPDATE SUBMIT
+   * ============================================================
+   */
+  const handleSubmit = async (
+    event: React.FormEvent<HTMLFormElement>
+  ) => {
+    event.preventDefault();
+
+    setError("");
+    setSuccess("");
+
+    if (!form.employeeId.trim()) {
+      setError("Employee ID is required.");
+      return;
     }
 
-    closeModal();
+    if (!form.name.trim()) {
+      setError("Full name is required.");
+      return;
+    }
+
+    if (!form.email.trim()) {
+      setError("Email address is required.");
+      return;
+    }
+
+    if (!form.role) {
+      setError("Please select a role.");
+      return;
+    }
+
+    if (!form.department) {
+      setError("Please select a department.");
+      return;
+    }
+
+    if (!form.designation) {
+      setError("Please select a designation.");
+      return;
+    }
+
+    /*
+     * Password is mandatory while creating.
+     */
+    if (!editingEmployeeId && !form.password.trim()) {
+      setError("Password is required.");
+      return;
+    }
+
+    if (!editingEmployeeId && form.password.length < 8) {
+      setError("Password must be at least 8 characters.");
+      return;
+    }
+
+    if (editingEmployeeId) {
+      await updateUser();
+    } else {
+      await createUser();
+    }
   };
 
-  const toggleStatus = (id: string) => {
-    setUsers((current) =>
-      current.map((user) =>
-        user.id === id
-          ? {
-              ...user,
-              status:
-                user.status === 'Active'
-                  ? 'Inactive'
-                  : 'Active',
-            }
-          : user
-      )
-    );
-  };
+  /*
+   * ============================================================
+   * EDIT USER
+   * GET /api/superadmin/users/{employeeId}
+   * ============================================================
+   */
+  const handleEdit = async (employeeId: string) => {
+    try {
+      setError("");
+      setSuccess("");
 
-  const deleteUser = (id: string) => {
-    setUsers((current) =>
-      current.filter((user) => user.id !== id)
-    );
-  };
-
-  return (
-    <>
-      <style>{`
-        .users-page {
-          width: 100%;
-          min-height: 100%;
-          background: #f5f6f8;
-          font-family: Inter, -apple-system, BlinkMacSystemFont,
-            "Segoe UI", Roboto, Arial, sans-serif;
-          color: #111827;
-          overflow-x: hidden;
+      const response = await fetch(
+        `${USERS_API}/${encodeURIComponent(employeeId)}`,
+        {
+          method: "GET",
+          headers: getAuthHeaders(),
         }
+      );
 
-        .users-page *,
-        .users-page *::before,
-        .users-page *::after {
+      if (!response.ok) {
+        if (response.status === 401 || response.status === 403) {
+          throw new Error("Unauthorized. Please login again.");
+        }
+        throw new Error("Unable to load user details.");
+      }
+
+      const user: SuperAdminUser = await response.json();
+
+      setForm({
+        employeeId: user.employeeId,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        department: user.department,
+        designation: user.designation,
+        password: "",
+      });
+
+      setEditingEmployeeId(user.employeeId);
+      setShowForm(true);
+    } catch (err) {
+      console.error("Edit user error:", err);
+
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Unable to load user."
+      );
+    }
+  };
+
+  /*
+   * ============================================================
+   * ENABLE / DISABLE
+   * PATCH /api/superadmin/users/{employeeId}/status
+   * ============================================================
+   */
+  const handleToggleStatus = async (
+    employeeId: string
+  ) => {
+    try {
+      setError("");
+      setSuccess("");
+
+      const response = await fetch(
+        `${USERS_API}/${encodeURIComponent(employeeId)}/status`,
+        {
+          method: "PATCH",
+          headers: getAuthHeaders(),
+        }
+      );
+
+      if (!response.ok) {
+        if (response.status === 401 || response.status === 403) {
+          throw new Error("Unauthorized. Please login again.");
+        }
+        throw new Error("Unable to change user status.");
+      }
+
+      const updatedUser: SuperAdminUser = await response.json();
+
+      setUsers((previous) =>
+        previous.map((user) =>
+          user.employeeId === employeeId
+            ? updatedUser
+            : user
+        )
+      );
+
+      setSuccess(
+        updatedUser.status === "Active"
+          ? "User enabled successfully."
+          : "User disabled successfully."
+      );
+    } catch (err) {
+      console.error("Toggle status error:", err);
+
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Unable to change user status."
+      );
+    }
+  };
+
+  /*
+   * ============================================================
+   * DELETE USER
+   * DELETE /api/superadmin/users/{employeeId}
+   * ============================================================
+   */
+  const handleDelete = async (employeeId: string) => {
+    const confirmed = window.confirm(
+      `Are you sure you want to delete ${employeeId}?`
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      setError("");
+      setSuccess("");
+
+      const response = await fetch(
+        `${USERS_API}/${encodeURIComponent(employeeId)}`,
+        {
+          method: "DELETE",
+          headers: getAuthHeaders(),
+        }
+      );
+
+      if (!response.ok) {
+        if (response.status === 401 || response.status === 403) {
+          throw new Error("Unauthorized. Please login again.");
+        }
+        throw new Error("Unable to delete user.");
+      }
+
+      setUsers((previous) =>
+        previous.filter(
+          (user) => user.employeeId !== employeeId
+        )
+      );
+
+      setSuccess("User deleted successfully.");
+    } catch (err) {
+      console.error("Delete user error:", err);
+
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Unable to delete user."
+      );
+    }
+  };
+
+  /*
+   * ============================================================
+   * SEARCH
+   * ============================================================
+   */
+  const query = search.toLowerCase().trim();
+
+  const filteredUsers = users.filter((user) => {
+    if (!query) {
+      return true;
+    }
+
+    return (
+      user.employeeId.toLowerCase().includes(query) ||
+      user.name.toLowerCase().includes(query) ||
+      user.email.toLowerCase().includes(query) ||
+      user.role.toLowerCase().includes(query) ||
+      user.department.toLowerCase().includes(query) ||
+      user.designation.toLowerCase().includes(query)
+    );
+  });
+
+  const activeUsers = users.filter(
+    (user) => user.status === "Active"
+  ).length;
+
+  /*
+   * ============================================================
+   * COMPONENT
+   * ============================================================
+   */
+  return (
+    <div className="super-admin-users-page">
+      <style>{`
+        * {
           box-sizing: border-box;
         }
 
-        /* MAIN CONTENT */
+        .super-admin-users-page {
+          min-height: 100vh;
+          background: #f5f7fb;
+          color: #14213d;
+          font-family: Inter, Arial, sans-serif;
+        }
 
         .users-content {
-          width: 100%;
-          padding: 0;
+          padding: 28px 32px 50px;
         }
 
-        /* SUMMARY + ADD USER */
-
-        .users-toolbar {
-          width: 100%;
-          height: 66px;
+        .users-header {
           display: flex;
-          align-items: center;
           justify-content: space-between;
-          margin-bottom: 14px;
+          align-items: center;
+          margin-bottom: 28px;
+          gap: 20px;
         }
 
-        .member-summary {
-          font-size: 15px;
-          line-height: 20px;
-          font-weight: 500;
-          color: #6c86a6;
+        .users-title {
+          margin: 0;
+          font-size: 28px;
+          font-weight: 800;
+          color: #111827;
         }
 
-        .add-user-button {
-          height: 46px;
-          min-width: 159px;
-          padding: 0 22px;
-          border: none;
-          border-radius: 11px;
-          background: #ff2930;
-          color: #ffffff;
+        .users-date {
+          margin-top: 5px;
+          color: #8aa0bf;
+          font-size: 14px;
+        }
+
+        .header-right {
           display: flex;
           align-items: center;
-          justify-content: center;
-          gap: 8px;
-          font-family: inherit;
+          gap: 14px;
+        }
+
+        .search-box {
+          width: 245px;
+          height: 44px;
+          border: 1px solid #dce4ef;
+          border-radius: 24px;
+          background: white;
+          padding: 0 16px;
+          outline: none;
+          color: #1f2937;
           font-size: 14px;
+        }
+
+        .search-box:focus {
+          border-color: #ff3040;
+        }
+
+        .top-summary {
+          background: #ffffff;
+          border-radius: 12px;
+          padding: 18px 20px;
+          margin-bottom: 18px;
+          border: 1px solid #e5eaf1;
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          gap: 20px;
+        }
+
+        .member-count {
+          color: #6480a4;
+          font-size: 15px;
+          font-weight: 600;
+        }
+
+        .add-button {
+          border: none;
+          background: #ff3040;
+          color: white;
+          height: 48px;
+          padding: 0 27px;
+          border-radius: 10px;
+          font-weight: 700;
+          font-size: 14px;
+          cursor: pointer;
+          box-shadow: 0 5px 12px rgba(255, 48, 64, 0.18);
+        }
+
+        .add-button:hover {
+          background: #e92535;
+        }
+
+        .form-card {
+          background: white;
+          border: 1px solid #e2e8f0;
+          border-radius: 16px;
+          padding: 28px 30px;
+          margin-bottom: 18px;
+        }
+
+        .form-title {
+          margin: 0 0 22px;
+          font-size: 18px;
+          font-weight: 800;
+          color: #152238;
+        }
+
+        .form-grid {
+          display: grid;
+          grid-template-columns: repeat(3, 1fr);
+          gap: 18px 14px;
+        }
+
+        .form-group {
+          display: flex;
+          flex-direction: column;
+          gap: 7px;
+        }
+
+        .form-group label {
+          font-size: 12px;
+          font-weight: 800;
+          color: #355477;
+          text-transform: uppercase;
+        }
+
+        .form-group input,
+        .form-group select {
+          width: 100%;
+          height: 44px;
+          border: 1px solid #d7e0eb;
+          border-radius: 9px;
+          padding: 0 13px;
+          font-size: 14px;
+          color: #243b5a;
+          background: white;
+          outline: none;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus {
+          border-color: #ff3040;
+        }
+
+        .form-actions {
+          display: flex;
+          gap: 10px;
+          margin-top: 20px;
+        }
+
+        .create-button {
+          height: 44px;
+          border: none;
+          background: #ff3040;
+          color: white;
+          border-radius: 9px;
+          padding: 0 22px;
           font-weight: 700;
           cursor: pointer;
-          box-shadow: 0 6px 14px rgba(255, 41, 48, 0.16);
-          transition: all 0.15s ease;
-          flex-shrink: 0;
         }
 
-        .add-user-button:hover {
-          background: #ed2027;
+        .create-button:disabled {
+          opacity: 0.6;
+          cursor: not-allowed;
         }
 
-        .add-user-button svg {
-          width: 18px;
-          height: 18px;
-          stroke-width: 2.6;
+        .cancel-button {
+          height: 44px;
+          border: 1px solid #d7e0eb;
+          background: white;
+          color: #516a88;
+          border-radius: 9px;
+          padding: 0 22px;
+          font-weight: 700;
+          cursor: pointer;
         }
 
-        /* TABLE CONTAINER */
+        .message {
+          padding: 12px 15px;
+          border-radius: 8px;
+          margin-bottom: 16px;
+          font-size: 14px;
+          font-weight: 600;
+        }
 
-        .users-table-container {
-          width: 100%;
-          background: #ffffff;
-          border: 1px solid #e7eaf0;
+        .error-message {
+          color: #b42318;
+          background: #fff1f0;
+          border: 1px solid #ffd4d1;
+        }
+
+        .success-message {
+          color: #087443;
+          background: #edfff6;
+          border: 1px solid #bcefd5;
+        }
+
+        .table-card {
+          background: white;
+          border: 1px solid #e2e8f0;
           border-radius: 16px;
           overflow-x: auto;
-          overflow-y: hidden;
-          -webkit-overflow-scrolling: touch;
-          scrollbar-width: thin;
         }
-
-        /* TABLE */
 
         .users-table {
           width: 100%;
-          min-width: 1100px;
           border-collapse: collapse;
-          table-layout: fixed;
+          min-width: 1050px;
         }
 
         .users-table th {
-          height: 48px;
-          padding: 0 18px;
-          background: #ffffff;
-          border-bottom: 1px solid #edf0f3;
           text-align: left;
-          vertical-align: middle;
-          font-size: 11px;
-          line-height: 14px;
-          font-weight: 700;
-          letter-spacing: 0.02em;
-          color: #7186a0;
-          text-transform: uppercase;
+          padding: 17px 16px;
+          color: #66809f;
+          font-size: 12px;
+          font-weight: 800;
+          border-bottom: 1px solid #e7edf4;
           white-space: nowrap;
         }
 
         .users-table td {
-          height: 58px;
-          padding: 0 18px;
-          border-bottom: 1px solid #edf0f3;
-          vertical-align: middle;
-          font-size: 13px;
-          color: #304d6d;
-        }
-
-        .users-table tbody tr:last-child td {
-          border-bottom: none;
-        }
-
-        .users-table tbody tr:hover {
-          background: #fafbfc;
-        }
-
-        /* COLUMNS */
-
-        .employee-column {
-          width: 11%;
-        }
-
-        .name-column {
-          width: 14%;
-        }
-
-        .email-column {
-          width: 16%;
-        }
-
-        .role-column {
-          width: 13%;
-        }
-
-        .department-column {
-          width: 11%;
-        }
-
-        .status-column {
-          width: 8%;
-        }
-
-        .login-column {
-          width: 10%;
-        }
-
-        .actions-column {
-          width: 17%;
-        }
-
-        /* EMPLOYEE ID */
-
-        .employee-id {
-          color: #7188a4;
-          font-size: 13px;
-          font-weight: 500;
+          padding: 13px 16px;
+          border-bottom: 1px solid #edf1f5;
+          font-size: 14px;
+          color: #294766;
           white-space: nowrap;
         }
 
-        /* NAME */
-
-        .name-wrapper {
-          display: flex;
-          align-items: center;
-          gap: 10px;
-          min-width: 0;
+        .users-table tr:last-child td {
+          border-bottom: none;
         }
 
-        .user-avatar {
-          width: 36px;
-          height: 36px;
-          min-width: 36px;
-          border-radius: 50%;
-          background: #edf2f7;
-          color: #607994;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          font-size: 11px;
+        .employee-id {
+          color: #6280a5;
           font-weight: 700;
         }
 
         .user-name {
-          font-size: 14px;
-          line-height: 18px;
-          font-weight: 700;
-          color: #101828;
-          white-space: nowrap;
-        }
-
-        /* EMAIL */
-
-        .user-email {
-          display: block;
-          max-width: 100%;
-          overflow: hidden;
-          text-overflow: ellipsis;
-          white-space: nowrap;
-          font-size: 13px;
-          color: #3f5f80;
-        }
-
-        /* ROLE */
-
-        .role-badge {
-          display: inline-flex;
-          align-items: center;
-          min-height: 29px;
-          max-width: 115px;
-          padding: 5px 9px;
-          border-radius: 7px;
-          background: #f0f2f4;
-          color: #405a76;
-          font-size: 12px;
-          line-height: 15px;
-          font-weight: 700;
-          white-space: nowrap;
-        }
-
-        /* DEPARTMENT */
-
-        .department {
-          font-size: 13px;
-          color: #304d6d;
-          white-space: nowrap;
-        }
-
-        /* STATUS */
-
-        .status-badge {
-          display: inline-flex;
-          align-items: center;
-          justify-content: center;
-          min-width: 61px;
-          height: 25px;
-          padding: 0 9px;
-          border-radius: 7px;
-          font-size: 12px;
-          line-height: 15px;
-          font-weight: 700;
-          white-space: nowrap;
-        }
-
-        .status-active {
-          background: #def5e8;
-          color: #07934a;
-        }
-
-        .status-inactive {
-          background: #eef0f2;
-          color: #7b8794;
-        }
-
-        /* LAST LOGIN */
-
-        .last-login {
-          color: #7890aa;
-          font-size: 13px;
-          white-space: nowrap;
-        }
-
-        /* ACTIONS */
-
-        .action-buttons {
           display: flex;
           align-items: center;
-          gap: 8px;
-          white-space: nowrap;
-        }
-
-        .action-button {
-          height: 32px;
-          padding: 0 11px;
-          border-radius: 8px;
-          background: #ffffff;
-          display: inline-flex;
-          align-items: center;
-          justify-content: center;
-          gap: 5px;
-          font-family: inherit;
-          font-size: 12px;
-          line-height: 15px;
-          font-weight: 700;
-          cursor: pointer;
-          transition: all 0.15s ease;
-          flex-shrink: 0;
-        }
-
-        .action-button svg {
-          width: 14px;
-          height: 14px;
-          flex-shrink: 0;
-        }
-
-        .edit-button {
-          border: 1px solid #b8ead2;
-          color: #079852;
-        }
-
-        .edit-button:hover {
-          background: #effcf5;
-        }
-
-        .disable-button {
-          border: 1px solid #f5d49d;
-          color: #d77900;
-        }
-
-        .disable-button:hover {
-          background: #fff8ec;
-        }
-
-        .delete-button {
-          border: 1px solid #ffc5c9;
-          color: #ef3038;
-        }
-
-        .delete-button:hover {
-          background: #fff1f2;
-        }
-
-        /* ADD USER FORM */
-
-        .add-user-form-card {
-          width: 100%;
-          background: #ffffff;
-          border: 1px solid #e7eaf0;
-          border-radius: 16px;
-          padding: 26px 28px 22px;
-          margin-bottom: 16px;
-          box-shadow: 0 6px 20px rgba(15, 23, 42, 0.05);
-        }
-
-        .add-user-form-title {
-          margin: 0 0 20px;
-          font-size: 16px;
-          line-height: 20px;
-          font-weight: 750;
-          color: #111827;
-        }
-
-        .add-user-fields {
-          display: grid;
-          grid-template-columns: repeat(3, minmax(0, 1fr));
-          column-gap: 14px;
-          row-gap: 16px;
-        }
-
-        .inline-form-group {
-          min-width: 0;
-        }
-
-        .inline-form-label {
-          display: block;
-          margin-bottom: 7px;
-          font-size: 11px;
-          line-height: 14px;
-          font-weight: 700;
-          letter-spacing: 0.02em;
-          color: #405a76;
-          text-transform: uppercase;
-        }
-
-        .inline-form-input,
-        .inline-form-select {
-          width: 100%;
-          height: 40px;
-          padding: 0 12px;
-          border: 1px solid #dce2e8;
-          border-radius: 9px;
-          background: #ffffff;
-          color: #18283c;
-          outline: none;
-          font-family: inherit;
-          font-size: 14px;
-          line-height: 18px;
-        }
-
-        .inline-form-input::placeholder {
-          color: #98a3b1;
-          opacity: 1;
-        }
-
-        .inline-form-input:focus,
-        .inline-form-select:focus {
-          border-color: #9bbfe0;
-          box-shadow: 0 0 0 2px rgba(123, 185, 239, 0.08);
-        }
-
-        .inline-form-select {
-          cursor: pointer;
-        }
-
-        .inline-form-input.input-error,
-        .inline-form-select.input-error {
-          border-color: #ef4444;
-          box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.08);
-        }
-
-        .inline-form-error {
-          display: block;
-          margin-top: 5px;
-          color: #ef3038;
-          font-size: 11px;
-          line-height: 14px;
-          font-weight: 600;
-        }
-
-        .inline-form-actions {
-          grid-column: 1 / -1;
-          display: flex;
-          align-items: center;
-          gap: 10px;
-          margin-top: -1px;
-        }
-
-        .inline-create-button,
-        .inline-cancel-button {
-          height: 40px;
-          padding: 0 19px;
-          border-radius: 9px;
-          font-family: inherit;
-          font-size: 13px;
-          line-height: 17px;
-          font-weight: 700;
-          cursor: pointer;
-          transition: all 0.15s ease;
-        }
-
-        .inline-create-button {
-          border: 1px solid #ff2930;
-          background: #ff2930;
-          color: #ffffff;
-          box-shadow: 0 5px 12px rgba(255, 41, 48, 0.13);
-        }
-
-        .inline-create-button:hover {
-          background: #ed2027;
-        }
-
-        .inline-cancel-button {
-          border: 1px solid #d7dfe8;
-          background: #ffffff;
-          color: #536b84;
-        }
-
-        .inline-cancel-button:hover {
-          background: #f8fafc;
-        }
-
-        /* SUCCESS POPUP */
-
-        .success-popup {
-          position: fixed;
-          top: 24px;
-          right: 24px;
-          z-index: 9999;
-          min-width: 300px;
-          max-width: calc(100vw - 32px);
-          padding: 15px 18px;
-          border: 1px solid #b8ead2;
-          border-radius: 12px;
-          background: #ffffff;
-          box-shadow: 0 10px 30px rgba(15, 23, 42, 0.14);
-          display: flex;
-          align-items: center;
-          gap: 12px;
-          animation: successPopupIn 0.2s ease-out;
-        }
-
-        .success-popup-icon {
-          width: 30px;
-          height: 30px;
-          min-width: 30px;
-          border-radius: 50%;
-          background: #def5e8;
-          color: #07934a;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          font-size: 17px;
+          gap: 11px;
+          color: #101b2e;
           font-weight: 800;
         }
 
-        .success-popup-title {
-          font-size: 14px;
-          line-height: 18px;
-          font-weight: 700;
-          color: #111827;
-        }
-
-        .success-popup-message {
-          margin-top: 2px;
+        .initials {
+          width: 38px;
+          height: 38px;
+          border-radius: 50%;
+          background: #edf2f7;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          color: #5d7490;
           font-size: 12px;
-          line-height: 16px;
-          color: #607994;
+          font-weight: 800;
         }
 
-        @keyframes successPopupIn {
-          from {
-            opacity: 0;
-            transform: translateY(-8px);
-          }
-
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
+        .role-badge {
+          display: inline-flex;
+          padding: 8px 11px;
+          border-radius: 8px;
+          background: #eef1f4;
+          color: #3e5b7b;
+          font-weight: 700;
+          font-size: 12px;
         }
 
-        /* TABLET */
+        .status-badge {
+          display: inline-flex;
+          padding: 7px 13px;
+          border-radius: 8px;
+          font-size: 12px;
+          font-weight: 800;
+        }
 
-        @media (max-width: 1200px) {
+        .status-active {
+          background: #dff7ea;
+          color: #00864b;
+        }
+
+        .status-inactive {
+          background: #edf0f3;
+          color: #718096;
+        }
+
+        .actions {
+          display: flex;
+          gap: 8px;
+        }
+
+        .action-button {
+          height: 36px;
+          border-radius: 9px;
+          padding: 0 13px;
+          background: white;
+          font-size: 12px;
+          font-weight: 800;
+          cursor: pointer;
+        }
+
+        .edit-button {
+          color: #00a86b;
+          border: 1px solid #a7ead0;
+        }
+
+        .edit-button:hover {
+          background: #effdf7;
+        }
+
+        .disable-button {
+          color: #e88600;
+          border: 1px solid #ffd69a;
+        }
+
+        .enable-button {
+          color: #00a86b;
+          border: 1px solid #a7ead0;
+        }
+
+        .delete-button {
+          color: #ef4444;
+          border: 1px solid #ffc5c5;
+        }
+
+        .loading {
+          text-align: center;
+          padding: 40px;
+          color: #7185a0;
+        }
+
+        .empty {
+          text-align: center;
+          padding: 40px;
+          color: #7185a0;
+        }
+
+        @media (max-width: 900px) {
           .users-content {
-            padding: 18px 24px 25px;
+            padding: 20px;
           }
 
-          .users-table th,
-          .users-table td {
-            padding-left: 12px;
-            padding-right: 12px;
-          }
-
-          .user-avatar {
-            width: 34px;
-            height: 34px;
-            min-width: 34px;
-          }
-
-          .user-name {
-            font-size: 13px;
-          }
-
-          .user-email {
-            font-size: 12px;
-          }
-        }
-
-        /* SMALL TABLET */
-
-        @media (max-width: 950px) {
-          .users-content {
-            padding: 18px 20px 25px;
-          }
-
-          .users-table-container {
-            overflow-x: auto;
-            overflow-y: hidden;
-          }
-
-          .users-table {
-            min-width: 1100px;
-          }
-        }
-
-        /* MOBILE */
-
-        @media (max-width: 768px) {
-          .desktop-users-table {
-            display: none !important;
-          }
-
-          .users-content {
-            padding: 16px 16px 24px;
-          }
-
-          .users-toolbar {
-            height: auto;
-            min-height: 0;
-            margin-bottom: 14px;
-            display: flex;
+          .users-header {
+            align-items: flex-start;
             flex-direction: column;
+          }
+
+          .header-right {
+            width: 100%;
+          }
+
+          .search-box {
+            width: 100%;
+          }
+
+          .top-summary {
             align-items: stretch;
-            justify-content: flex-start;
-            gap: 12px;
+            flex-direction: column;
           }
 
-          .member-summary {
-            font-size: 14px;
-            line-height: 19px;
-          }
-
-          .add-user-button {
+          .add-button {
             width: 100%;
-            height: 44px;
-            min-width: 0;
-            font-size: 14px;
           }
 
-          .users-table-container {
-            border-radius: 13px;
-            width: 100%;
-            overflow-x: auto;
-            overflow-y: hidden;
-            -webkit-overflow-scrolling: touch;
-          }
-
-          .users-table {
-            min-width: 1100px;
-          }
-
-          .users-table th {
-            height: 46px;
-            padding-left: 12px;
-            padding-right: 12px;
-          }
-
-          .users-table td {
-            height: 58px;
-            padding-left: 12px;
-            padding-right: 12px;
+          .form-grid {
+            grid-template-columns: 1fr;
           }
         }
 
-        /* SMALL MOBILE */
-
-        @media (max-width: 480px) {
-          .success-popup {
-            top: 14px;
-            left: 12px;
-            right: 12px;
-            min-width: 0;
-            max-width: none;
-          }
-
+        @media (max-width: 500px) {
           .users-content {
-            padding: 14px 12px 20px;
+            padding: 14px;
           }
 
-          .users-toolbar {
-            gap: 10px;
-            margin-bottom: 12px;
+          .users-title {
+            font-size: 23px;
           }
 
-          .member-summary {
-            font-size: 13px;
-            line-height: 18px;
-          }
-
-          .add-user-button {
-            height: 42px;
-            border-radius: 10px;
-            font-size: 13px;
-          }
-
-          .add-user-form-card {
-            padding: 20px 16px 18px;
-            border-radius: 13px;
-          }
-
-          .add-user-form-title {
-            margin-bottom: 17px;
-            font-size: 15px;
-          }
-
-          .add-user-fields {
-            grid-template-columns: 1fr;
-            row-gap: 14px;
-          }
-
-          .inline-form-actions {
-            grid-column: auto;
-            margin-top: 1px;
-          }
-
-          .inline-create-button,
-          .inline-cancel-button {
-            height: 39px;
-            padding: 0 15px;
-            font-size: 12px;
-          }
-
-          .users-table-container {
-            border-radius: 12px;
+          .form-card {
+            padding: 20px;
           }
         }
       `}</style>
 
-      <div className="users-page">
-
-        {showSuccessPopup && (
-          <div className="success-popup" role="alert">
-            <div className="success-popup-icon">✓</div>
-            <div>
-              <div className="success-popup-title">
-                User added successfully
-              </div>
-              <div className="success-popup-message">
-                The new user has been added to the user list.
-              </div>
+      <main className="users-content">
+        {/* HEADER */}
+        <div className="users-header">
+          <div>
+            <h1 className="users-title">User Management</h1>
+            <div className="users-date">
+              {new Date().toLocaleDateString("en-IN", {
+                weekday: "long",
+                day: "numeric",
+                month: "long",
+                year: "numeric",
+              })}
             </div>
+          </div>
+
+          <div className="header-right">
+            <input
+              className="search-box"
+              type="text"
+              placeholder="Search..."
+              value={search}
+              onChange={(event) =>
+                setSearch(event.target.value)
+              }
+            />
+          </div>
+        </div>
+
+        {/* MESSAGES */}
+        {error && (
+          <div className="message error-message">
+            {error}
           </div>
         )}
 
-        <main className="users-content">
+        {success && (
+          <div className="message success-message">
+            {success}
+          </div>
+        )}
 
-          <div className="users-toolbar">
-
-            <div className="member-summary">
-              {users.length} total members · {activeUsers} active
-            </div>
-
-            <button
-              type="button"
-              className="add-user-button"
-              onClick={openAddModal}
-            >
-              <Plus />
-              Add User
-            </button>
-
+        {/* SUMMARY */}
+        <div className="top-summary">
+          <div className="member-count">
+            {users.length} total members&nbsp; · &nbsp;
+            {activeUsers} active
           </div>
 
-          {showForm && (
-            <form className="add-user-form-card" onSubmit={handleSubmit}>
-              <h2 className="add-user-form-title">
-                {editingUser ? 'Edit User' : 'Add New User'}
-              </h2>
+          <button
+            type="button"
+            className="add-button"
+            onClick={handleAddUser}
+          >
+            +&nbsp; Add User
+          </button>
+        </div>
 
-              <div className="add-user-fields">
+        {/* ADD / EDIT FORM */}
+        {showForm && (
+          <div className="form-card">
+            <h2 className="form-title">
+              {editingEmployeeId
+                ? "Edit User"
+                : "Add New User"}
+            </h2>
 
-                <div className="inline-form-group">
-                  <label className="inline-form-label">Full Name</label>
+            <form onSubmit={handleSubmit}>
+              <div className="form-grid">
+                {/* EMPLOYEE ID */}
+                <div className="form-group">
+                  <label>Employee ID</label>
+
                   <input
                     type="text"
-                    className={`inline-form-input ${touched.name && errors.name ? 'input-error' : ''}`}
-                    placeholder="Full Name"
-                    value={form.name}
-                    onChange={(e) => handleFieldChange('name', e.target.value)}
-                    onBlur={() => handleFieldBlur('name')}
+                    name="employeeId"
+                    value={form.employeeId}
+                    onChange={handleInputChange}
+                    placeholder="Employee ID"
+                    disabled={Boolean(editingEmployeeId)}
                   />
-                  {touched.name && errors.name && (
-                    <span className="inline-form-error">{errors.name}</span>
-                  )}
                 </div>
 
-                <div className="inline-form-group">
-                  <label className="inline-form-label">Email Address</label>
+                {/* NAME */}
+                <div className="form-group">
+                  <label>Full Name</label>
+
+                  <input
+                    type="text"
+                    name="name"
+                    value={form.name}
+                    onChange={handleInputChange}
+                    placeholder="Full Name"
+                  />
+                </div>
+
+                {/* EMAIL */}
+                <div className="form-group">
+                  <label>Email Address</label>
+
                   <input
                     type="email"
-                    className={`inline-form-input ${touched.email && errors.email ? 'input-error' : ''}`}
-                    placeholder="Email Address"
+                    name="email"
                     value={form.email}
-                    onChange={(e) => handleFieldChange('email', e.target.value)}
-                    onBlur={() => handleFieldBlur('email')}
+                    onChange={handleInputChange}
+                    placeholder="Email Address"
                   />
-                  {touched.email && errors.email && (
-                    <span className="inline-form-error">{errors.email}</span>
-                  )}
                 </div>
 
-                <div className="inline-form-group">
-                  <label className="inline-form-label">Employee ID</label>
-                  <input
-                    type="text"
-                    className={`inline-form-input ${touched.employeeId && errors.employeeId ? 'input-error' : ''}`}
-                    placeholder="Employee ID"
-                    value={form.employeeId}
-                    onChange={(e) => handleFieldChange('employeeId', e.target.value)}
-                    onBlur={() => handleFieldBlur('employeeId')}
-                  />
-                  {touched.employeeId && errors.employeeId && (
-                    <span className="inline-form-error">{errors.employeeId}</span>
-                  )}
-                </div>
+                {/* ROLE */}
+                <div className="form-group">
+                  <label>Role</label>
 
-                <div className="inline-form-group">
-                  <label className="inline-form-label">Role</label>
                   <select
-                    className={`inline-form-select ${touched.role && errors.role ? 'input-error' : ''}`}
+                    name="role"
                     value={form.role}
-                    onChange={(e) => handleFieldChange('role', e.target.value)}
-                    onBlur={() => handleFieldBlur('role')}
+                    onChange={handleInputChange}
                   >
-                    <option value="">Select Role</option>
+                    <option value="">
+                      Select Role
+                    </option>
+
                     {roles.map((role) => (
                       <option key={role} value={role}>
                         {role}
                       </option>
                     ))}
                   </select>
-                  {touched.role && errors.role && (
-                    <span className="inline-form-error">{errors.role}</span>
-                  )}
                 </div>
 
-                <div className="inline-form-group">
-                  <label className="inline-form-label">Department</label>
+                {/* DEPARTMENT */}
+                <div className="form-group">
+                  <label>Department</label>
+
                   <select
-                    className={`inline-form-select ${touched.department && errors.department ? 'input-error' : ''}`}
+                    name="department"
                     value={form.department}
-                    onChange={(e) => handleFieldChange('department', e.target.value)}
-                    onBlur={() => handleFieldBlur('department')}
+                    onChange={handleInputChange}
                   >
-                    <option value="">Select Department</option>
+                    <option value="">
+                      Select Department
+                    </option>
+
                     {departments.map((department) => (
-                      <option key={department} value={department}>
+                      <option
+                        key={department}
+                        value={department}
+                      >
                         {department}
                       </option>
                     ))}
                   </select>
-                  {touched.department && errors.department && (
-                    <span className="inline-form-error">{errors.department}</span>
-                  )}
                 </div>
 
-                <div className="inline-form-group">
-                  <label className="inline-form-label">Designation</label>
+                {/* DESIGNATION */}
+                <div className="form-group">
+                  <label>Designation</label>
+
                   <select
-                    className={`inline-form-select ${touched.designation && errors.designation ? 'input-error' : ''}`}
+                    name="designation"
                     value={form.designation}
-                    onChange={(e) => handleFieldChange('designation', e.target.value)}
-                    onBlur={() => handleFieldBlur('designation')}
+                    onChange={handleInputChange}
                   >
-                    <option value="">Select Designation</option>
+                    <option value="">
+                      Select Designation
+                    </option>
+
                     {designations.map((designation) => (
-                      <option key={designation} value={designation}>
+                      <option
+                        key={designation}
+                        value={designation}
+                      >
                         {designation}
                       </option>
                     ))}
                   </select>
-                  {touched.designation && errors.designation && (
-                    <span className="inline-form-error">{errors.designation}</span>
-                  )}
                 </div>
 
-                {/* PASSWORD - ADDED ONLY FOR NEW USER CREATION */}
-                <div className="inline-form-group">
-                  <label className="inline-form-label">Password</label>
+                {/* PASSWORD */}
+                <div className="form-group">
+                  <label>Password</label>
+
                   <input
                     type="password"
-                    className={`inline-form-input ${touched.password && errors.password ? 'input-error' : ''}`}
-                    placeholder="Password"
+                    name="password"
                     value={form.password}
-                    onChange={(e) => handleFieldChange('password', e.target.value)}
-                    onBlur={() => handleFieldBlur('password')}
+                    onChange={handleInputChange}
+                    placeholder={
+                      editingEmployeeId
+                        ? "Leave blank to keep current password"
+                        : "Password"
+                    }
                   />
-                  {touched.password && errors.password && (
-                    <span className="inline-form-error">{errors.password}</span>
-                  )}
                 </div>
+              </div>
 
-                <div className="inline-form-actions">
-                  <button
-                    type="submit"
-                    className="inline-create-button"
-                  >
-                    {editingUser ? 'Save Changes' : 'Create User'}
-                  </button>
+              <div className="form-actions">
+                <button
+                  type="submit"
+                  className="create-button"
+                  disabled={saving}
+                >
+                  {saving
+                    ? "Saving..."
+                    : editingEmployeeId
+                    ? "Update User"
+                    : "Create User"}
+                </button>
 
-                  <button
-                    type="button"
-                    className="inline-cancel-button"
-                    onClick={closeModal}
-                  >
-                    Cancel
-                  </button>
-                </div>
-
+                <button
+                  type="button"
+                  className="cancel-button"
+                  onClick={handleCancel}
+                  disabled={saving}
+                >
+                  Cancel
+                </button>
               </div>
             </form>
-          )}
+          </div>
+        )}
 
-          <div className="users-table-container desktop-users-table">
-
+        {/* USERS TABLE */}
+        <div className="table-card">
+          {loading ? (
+            <div className="loading">
+              Loading users...
+            </div>
+          ) : filteredUsers.length === 0 ? (
+            <div className="empty">
+              {search
+                ? "No users found for your search."
+                : "No users available."}
+            </div>
+          ) : (
             <table className="users-table">
-
-              <colgroup>
-                <col className="employee-column" />
-                <col className="name-column" />
-                <col className="email-column" />
-                <col className="role-column" />
-                <col className="department-column" />
-                <col className="status-column" />
-                <col className="login-column" />
-                <col className="actions-column" />
-              </colgroup>
-
               <thead>
                 <tr>
-                  <th>Employee ID</th>
-                  <th>Name</th>
-                  <th>Email</th>
-                  <th>Role</th>
-                  <th>Department</th>
-                  <th>Status</th>
-                  <th>Last Login</th>
-                  <th>Actions</th>
+                  <th>EMPLOYEE ID</th>
+                  <th>NAME</th>
+                  <th>EMAIL</th>
+                  <th>ROLE</th>
+                  <th>DEPARTMENT</th>
+                  <th>STATUS</th>
+                  <th>LAST LOGIN</th>
+                  <th>ACTIONS</th>
                 </tr>
               </thead>
 
               <tbody>
-
-                {users.map((user) => (
-                  <tr key={user.id}>
-
+                {filteredUsers.map((user) => (
+                  <tr key={user.employeeId}>
+                    {/* EMPLOYEE ID */}
                     <td>
                       <span className="employee-id">
-                        {user.id}
+                        {user.employeeId}
                       </span>
                     </td>
 
+                    {/* NAME */}
                     <td>
-                      <div className="name-wrapper">
-
-                        <div className="user-avatar">
-                          {user.initials}
+                      <div className="user-name">
+                        <div className="initials">
+                          {user.initials ||
+                            user.name
+                              .split(" ")
+                              .map((part) => part[0])
+                              .join("")
+                              .slice(0, 2)
+                              .toUpperCase()}
                         </div>
 
-                        <span className="user-name">
-                          {user.name}
-                        </span>
-
+                        <span>{user.name}</span>
                       </div>
                     </td>
 
-                    <td>
-                      <span className="user-email">
-                        {user.email}
-                      </span>
-                    </td>
+                    {/* EMAIL */}
+                    <td>{user.email}</td>
 
+                    {/* ROLE */}
                     <td>
                       <span className="role-badge">
                         {user.role}
                       </span>
                     </td>
 
-                    <td>
-                      <span className="department">
-                        {user.department}
-                      </span>
-                    </td>
+                    {/* DEPARTMENT */}
+                    <td>{user.department}</td>
 
+                    {/* STATUS */}
                     <td>
                       <span
                         className={`status-badge ${
-                          user.status === 'Active'
-                            ? 'status-active'
-                            : 'status-inactive'
+                          user.status === "Active"
+                            ? "status-active"
+                            : "status-inactive"
                         }`}
                       >
                         {user.status}
                       </span>
                     </td>
 
-                    <td>
-                      <span className="last-login">
-                        {user.lastLogin}
-                      </span>
-                    </td>
+                    {/* LAST LOGIN */}
+                    <td>{user.lastLogin || "Never"}</td>
 
+                    {/* ACTIONS */}
                     <td>
-                      <div className="action-buttons">
-
+                      <div className="actions">
                         <button
                           type="button"
                           className="action-button edit-button"
-                          onClick={() => openEditModal(user)}
+                          onClick={() =>
+                            handleEdit(user.employeeId)
+                          }
                         >
-                          <Pencil />
-                          Edit
+                          ✎ Edit
                         </button>
 
-                        {user.status === 'Active' ? (
+                        <button
+                          type="button"
+                          className={`action-button ${
+                            user.status === "Active"
+                              ? "disable-button"
+                              : "enable-button"
+                          }`}
+                          onClick={() =>
+                            handleToggleStatus(
+                              user.employeeId
+                            )
+                          }
+                        >
+                          {user.status === "Active"
+                            ? "Disable"
+                            : "Enable"}
+                        </button>
+
+                        {user.status === "Inactive" && (
                           <button
                             type="button"
-                            className="action-button disable-button"
-                            onClick={() => toggleStatus(user.id)}
+                            className="action-button delete-button"
+                            onClick={() =>
+                              handleDelete(
+                                user.employeeId
+                              )
+                            }
                           >
-                            Disable
+                            Delete
                           </button>
-                        ) : (
-                          <>
-                            <button
-                              type="button"
-                              className="action-button edit-button"
-                              onClick={() =>
-                                toggleStatus(user.id)
-                              }
-                            >
-                              Enable
-                            </button>
-
-                            <button
-                              type="button"
-                              className="action-button delete-button"
-                              onClick={() =>
-                                deleteUser(user.id)
-                              }
-                            >
-                              <Trash2 />
-                              Delete
-                            </button>
-                          </>
                         )}
-
                       </div>
                     </td>
-
                   </tr>
                 ))}
-
               </tbody>
-
             </table>
-
-          </div>
-
-          {/* Mobile cards */}
-          <div className="md:hidden space-y-3 mt-1">
-            {users.map((user) => (
-              <div
-                key={user.id}
-                className="rounded-[14px] border border-[#e7eaf0] bg-white p-4"
-              >
-                <div className="flex items-start justify-between gap-3 mb-3">
-                  <div className="flex items-center gap-3 min-w-0">
-                    <div className="user-avatar shrink-0">
-                      {user.initials}
-                    </div>
-
-                    <div className="min-w-0">
-                      <div className="text-[13px] font-bold text-[#101828] truncate">
-                        {user.name}
-                      </div>
-
-                      <div className="text-[11px] text-[#3f5f80] truncate">
-                        {user.email}
-                      </div>
-                    </div>
-                  </div>
-
-                  <span
-                    className={`status-badge shrink-0 ${
-                      user.status === 'Active'
-                        ? 'status-active'
-                        : 'status-inactive'
-                    }`}
-                  >
-                    {user.status}
-                  </span>
-                </div>
-
-                <div className="grid grid-cols-2 gap-2 text-[11px] text-[#304d6d] mb-3">
-                  <div>
-                    <span className="text-[#7186a0]">ID: </span>
-                    {user.id}
-                  </div>
-
-                  <div>
-                    <span className="text-[#7186a0]">Role: </span>
-                    {user.role}
-                  </div>
-
-                  <div>
-                    <span className="text-[#7186a0]">Dept: </span>
-                    {user.department}
-                  </div>
-
-                  <div>
-                    <span className="text-[#7186a0]">Login: </span>
-                    {user.lastLogin}
-                  </div>
-                </div>
-
-                <div className="flex gap-2 pt-2 border-t border-[#edf0f3]">
-
-                  <button
-                    type="button"
-                    className="action-button edit-button"
-                    onClick={() => openEditModal(user)}
-                  >
-                    <Pencil />
-                    Edit
-                  </button>
-
-                  {user.status === 'Active' ? (
-                    <button
-                      type="button"
-                      className="action-button disable-button"
-                      onClick={() => toggleStatus(user.id)}
-                    >
-                      Disable
-                    </button>
-                  ) : (
-                    <>
-                      <button
-                        type="button"
-                        className="action-button edit-button"
-                        onClick={() => toggleStatus(user.id)}
-                      >
-                        Enable
-                      </button>
-
-                      <button
-                        type="button"
-                        className="action-button delete-button"
-                        onClick={() => deleteUser(user.id)}
-                      >
-                        <Trash2 />
-                        Delete
-                      </button>
-                    </>
-                  )}
-
-                </div>
-              </div>
-            ))}
-          </div>
-
-        </main>
-
-      </div>
-    </>
+          )}
+        </div>
+      </main>
+    </div>
   );
 };
 
