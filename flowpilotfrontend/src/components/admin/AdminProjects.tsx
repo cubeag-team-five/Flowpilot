@@ -45,78 +45,146 @@ export const AdminProjects: React.FC = () => {
 
       {/* ==================== SUMMARY CARDS ==================== */}
 
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+      <div className="grid grid-cols-3 gap-2 sm:gap-3">
 
         {/* TOTAL PROJECTS */}
-
         <div
           className="
-            rounded-xl
+            min-w-0 rounded-xl
             border border-slate-200/80
             bg-white
-            px-4 py-5
+            px-3 py-3
             shadow-[0_3px_12px_rgba(15,23,42,0.04)]
             transition-shadow
             hover:shadow-[0_4px_16px_rgba(15,23,42,0.06)]
+            sm:rounded-2xl sm:px-4 sm:py-5
           "
         >
-          <p className="text-[12px] font-bold uppercase tracking-wider text-slate-500">
+          <p
+            className="
+              min-h-[30px]
+              text-[9.5px]
+              font-bold
+              uppercase
+              leading-[1.4]
+              tracking-[0.07em]
+              text-slate-500
+              sm:min-h-0
+              sm:text-[12px]
+              sm:tracking-wider
+            "
+          >
             Total Projects
           </p>
 
-          <p className="mt-2 text-[26px] font-extrabold leading-none text-amber-500">
+          <p
+            className="
+              mt-0.5
+              text-[24px]
+              font-extrabold
+              leading-none
+              text-amber-500
+              sm:mt-2
+              sm:text-[26px]
+            "
+          >
             24
           </p>
-        </div>
+      </div>
 
 
         {/* IN PROGRESS */}
-
         <div
           className="
-            rounded-xl
+            min-w-0 rounded-xl
             border border-slate-200/80
             bg-white
-            px-4 py-5
+            px-3 py-3
             shadow-[0_3px_12px_rgba(15,23,42,0.04)]
             transition-shadow
             hover:shadow-[0_4px_16px_rgba(15,23,42,0.06)]
+            sm:rounded-2xl sm:px-4 sm:py-5
           "
         >
-          <p className="text-[12px] font-bold uppercase tracking-wider text-slate-500">
+          <p
+            className="
+              min-h-[30px]
+              text-[9.5px]
+              font-bold
+              uppercase
+              leading-[1.4]
+              tracking-[0.07em]
+              text-slate-500
+              sm:min-h-0
+              sm:text-[12px]
+              sm:tracking-wider
+            "
+          >
             In Progress
           </p>
 
-          <p className="mt-2 text-[26px] font-extrabold leading-none text-emerald-500">
+          <p
+            className="
+              mt-0.5
+              text-[24px]
+              font-extrabold
+              leading-none
+              text-emerald-500
+              sm:mt-2
+              sm:text-[26px]
+            "
+          >
             16
           </p>
         </div>
 
 
         {/* BLOCKED / AT RISK */}
-
         <div
           className="
-            rounded-xl
+            min-w-0 rounded-xl
             border border-slate-200/80
             bg-white
-            px-4 py-5
+            px-3 py-3
             shadow-[0_3px_12px_rgba(15,23,42,0.04)]
             transition-shadow
             hover:shadow-[0_4px_16px_rgba(15,23,42,0.06)]
+            sm:rounded-2xl sm:px-4 sm:py-5
           "
         >
-          <p className="text-[12px] font-bold uppercase tracking-wider text-slate-500">
+          <p
+            className="
+              min-h-[30px]
+              text-[9.5px]
+              font-bold
+              uppercase
+              leading-[1.4]
+              tracking-[0.07em]
+              text-slate-500
+              sm:min-h-0
+              sm:text-[12px]
+              sm:tracking-wider
+            "
+          >
             Blocked / At Risk
           </p>
 
-          <p className="mt-2 text-[26px] font-extrabold leading-none text-rose-500">
+          <p
+            className="
+              mt-0.5
+              text-[24px]
+              font-extrabold
+              leading-none
+              text-rose-500
+              sm:mt-2
+              sm:text-[26px]
+            "
+          >
             5
           </p>
         </div>
 
       </div>
-
 
       {/* ==================== PROJECT LIST ==================== */}
 
@@ -244,10 +312,10 @@ export const AdminProjects: React.FC = () => {
                       font-extrabold
                       ${
                         project.status === 'On Track'
-                        ? 'border-emerald-100 bg-emerald-50 text-emerald-500'
+                        ? 'border-emerald-200 bg-emerald-50 text-emerald-500'
                         : project.status === 'At Risk'
-                        ? 'border-amber-100 bg-amber-50 text-amber-500'
-                        : 'border-rose-100 bg-rose-50 text-rose-500'
+                        ? 'border-amber-200 bg-amber-50 text-amber-500'
+                        : 'border-rose-200 bg-rose-50 text-rose-500'
                       }
                     `}
                   >
@@ -305,18 +373,19 @@ export const AdminProjects: React.FC = () => {
                   className={`
                     shrink-0
                     rounded-md
+                    border
                     px-2.5
                     py-1
                     text-[11px]
                     font-bold
                     ${
                       project.status === 'On Track'
-                        ? 'bg-emerald-50 text-emerald-500'
-                        : project.status === 'At Risk'
-                        ? 'bg-amber-50 text-amber-500'
-                        : 'bg-rose-50 text-rose-500'
+                      ? 'border-emerald-100 bg-emerald-50 text-emerald-500'
+                      : project.status === 'At Risk'
+                      ? 'border-amber-100 bg-amber-50 text-amber-500'
+                      : 'border-rose-100 bg-rose-50 text-rose-500'
                     }
-                  `}
+                 `}
                 >
                   {project.status}
                 </span>
