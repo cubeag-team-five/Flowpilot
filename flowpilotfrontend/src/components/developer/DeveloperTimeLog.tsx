@@ -22,6 +22,22 @@ interface TimeLogHistoryResponse {
   weeklyTotal: number;
 }
 
+const getToken = () => {
+  return (
+    localStorage.getItem("token") ||
+    localStorage.getItem("jwt") ||
+    localStorage.getItem("accessToken")
+  );
+};
+
+const getAuthHeaders = (): HeadersInit => {
+  const token = getToken();
+  return {
+    "Content-Type": "application/json",
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+  };
+};
+
 const DeveloperTimeLog: React.FC = () => {
   const [selectedTask, setSelectedTask] = useState(
     "T-040 — Design system component library"
@@ -45,7 +61,9 @@ const formatDate = (dateString: string) => {
 };
 const fetchTimeLogs = async () => {
   try {
-    const response = await fetch(API_URL);
+    const response = await fetch(API_URL, {
+      headers: getAuthHeaders(),
+    });
 
     if (!response.ok) {
       throw new Error("Failed to load time logs");
@@ -108,11 +126,7 @@ const fetchTimeLogs = async () => {
 
     const response = await fetch(API_URL, {
       method: "POST",
-
-      headers: {
-        "Content-Type": "application/json",
-      },
-
+      headers: getAuthHeaders(),
       body: JSON.stringify({
         task: selectedTask,
         hours: numericHours,
