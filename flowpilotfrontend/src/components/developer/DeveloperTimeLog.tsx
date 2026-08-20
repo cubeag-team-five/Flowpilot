@@ -121,13 +121,25 @@ const fetchTimeLogs = async () => {
     });
 
     if (!response.ok) {
-      const errorData = await response.json();
+  let errorMessage = "Failed to save time log";
 
-      throw new Error(
+  const responseText = await response.text();
+
+  if (responseText) {
+    try {
+      const errorData = JSON.parse(responseText);
+
+      errorMessage =
         errorData.message ||
-        "Failed to save time log"
-      );
+        errorMessage;
+
+    } catch {
+      errorMessage = responseText;
     }
+  }
+
+  throw new Error(errorMessage);
+}
 
     await fetchTimeLogs();
 
