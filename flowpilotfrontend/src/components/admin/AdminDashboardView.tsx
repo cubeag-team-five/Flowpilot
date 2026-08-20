@@ -112,7 +112,7 @@ export const AdminDashboardView: React.FC = () => {
     <div className="w-full space-y-5">
 
       {/* Statistics Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
         {stats.map((stat) => (
           <div
             key={stat.title}
@@ -120,22 +120,21 @@ export const AdminDashboardView: React.FC = () => {
               bg-white
               border border-slate-200/70
               rounded-xl
-              px-5
-              py-4
-              min-h-[105px]
+              px-3 md:px-5
+              py-3 md:py-4
               shadow-[0_4px_18px_rgba(15,23,42,0.05)]
             "
           >
-            <div className="text-[11px] font-bold tracking-[0.04em] text-slate-500 uppercase mb-2">
+            <div className="text-[9px] md:text-[11px] font-bold tracking-[0.04em] text-slate-500 uppercase mb-1 md:mb-2">
               {stat.title}
             </div>
 
-            <div className="text-[28px] leading-none font-bold text-[#111111] mb-2">
+            <div className="text-[22px] md:text-[28px] leading-none font-bold text-[#111111] mb-1 md:mb-2">
               {stat.value}
             </div>
 
             <div
-              className={`text-[11px] leading-none font-semibold ${stat.subtitleColor}`}
+              className={`text-[9px] md:text-[11px] leading-none font-semibold ${stat.subtitleColor}`}
             >
               {stat.subtitle}
             </div>

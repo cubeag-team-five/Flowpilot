@@ -1,398 +1,167 @@
 import React from "react";
 
-interface CoverageModule {
-  name: string;
-  cases: number;
-  percentage: number;
-  color: "green" | "orange" | "red";
-}
-
-const QATestCoverage: React.FC = () => {
-  const modules: CoverageModule[] = [
+export const QATestCoverage: React.FC = () => {
+  const coverageData = [
     {
       name: "Authentication & JWT",
-      cases: 12,
+      cases: "12 cases",
       percentage: 92,
-      color: "green",
+      barColor: "bg-emerald-400",
+      textColor: "text-emerald-500",
     },
     {
       name: "Task Management",
-      cases: 18,
+      cases: "18 cases",
       percentage: 78,
-      color: "orange",
+      barColor: "bg-amber-500",
+      textColor: "text-amber-500",
     },
     {
       name: "Sprint Board",
-      cases: 14,
+      cases: "14 cases",
       percentage: 65,
-      color: "orange",
+      barColor: "bg-orange-500",
+      textColor: "text-orange-500",
     },
     {
       name: "File Upload / S3",
-      cases: 8,
+      cases: "8 cases",
       percentage: 55,
-      color: "red",
+      barColor: "bg-red-500",
+      textColor: "text-red-500",
     },
     {
       name: "Notifications",
-      cases: 10,
+      cases: "10 cases",
       percentage: 40,
-      color: "red",
+      barColor: "bg-red-500",
+      textColor: "text-red-500",
     },
     {
       name: "Analytics / Charts",
-      cases: 9,
+      cases: "9 cases",
       percentage: 88,
-      color: "green",
+      barColor: "bg-emerald-400",
+      textColor: "text-emerald-500",
     },
   ];
 
-  const getProgressColor = (color: CoverageModule["color"]) => {
-    switch (color) {
-      case "green":
-        return "bg-[#5ED6A0]";
-
-      case "orange":
-        return "bg-[#F59E0B]";
-
-      case "red":
-        return "bg-[#F04444]";
-
-      default:
-        return "bg-gray-300";
-    }
-  };
-
-  const getPercentageColor = (color: CoverageModule["color"]) => {
-    switch (color) {
-      case "green":
-        return "text-[#18B968]";
-
-      case "orange":
-        return "text-[#F59E0B]";
-
-      case "red":
-        return "text-[#F04444]";
-
-      default:
-        return "text-gray-500";
-    }
-  };
-
   return (
-    <div
-      className="w-full"
-      style={{
-        fontFamily:
-          "Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
-      }}
-    >
-      {/* =========================================================
-          SUMMARY CARDS
-          ========================================================= */}
+    <div className="w-full min-h-full bg-[#f8fafc] text-slate-800">
+      <div className="w-full max-w-[1400px] mx-auto px-4 sm:px-5 lg:px-6 py-4 sm:py-5">
 
-      <div
-        className="
-          grid
-          w-full
-          grid-cols-1
-          gap-[13px]
-          sm:grid-cols-2
-          xl:grid-cols-4
-        "
-      >
-        {/* TOTAL TEST CASES */}
+        {/* =========================================================
+            COVERAGE SUMMARY
+            Mobile: 2 columns
+            Desktop: 4 columns
+        ========================================================= */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-5">
 
-        <div
-          className="
-            box-border
-            h-[82px]
-            rounded-[12px]
-            border
-            border-[#E9EDF0]
-            bg-white
-            px-[19px]
-            py-[14px]
-            shadow-[0_2px_8px_rgba(0,0,0,0.035)]
-          "
-        >
-          <p
-            className="
-              m-0
-              text-[9px]
-              font-[600]
-              uppercase
-              leading-[12px]
-              tracking-[0.65px]
-              text-[#9299A3]
-            "
-          >
-            Total Test Cases
-          </p>
-
-          <p
-            className="
-              m-0
-              mt-[8px]
-              text-[23px]
-              font-[700]
-              leading-[24px]
-              tracking-[-0.4px]
-              text-[#5ED6A0]
-            "
-          >
-            48
-          </p>
-        </div>
-
-        {/* EXECUTED */}
-
-        <div
-          className="
-            box-border
-            h-[82px]
-            rounded-[12px]
-            border
-            border-[#E9EDF0]
-            bg-white
-            px-[19px]
-            py-[14px]
-            shadow-[0_2px_8px_rgba(0,0,0,0.035)]
-          "
-        >
-          <p
-            className="
-              m-0
-              text-[9px]
-              font-[600]
-              uppercase
-              leading-[12px]
-              tracking-[0.65px]
-              text-[#9299A3]
-            "
-          >
-            Executed
-          </p>
-
-          <p
-            className="
-              m-0
-              mt-[8px]
-              text-[23px]
-              font-[700]
-              leading-[24px]
-              tracking-[-0.4px]
-              text-[#20B957]
-            "
-          >
-            40
-          </p>
-        </div>
-
-        {/* PASSED */}
-
-        <div
-          className="
-            box-border
-            h-[82px]
-            rounded-[12px]
-            border
-            border-[#E9EDF0]
-            bg-white
-            px-[19px]
-            py-[14px]
-            shadow-[0_2px_8px_rgba(0,0,0,0.035)]
-          "
-        >
-          <p
-            className="
-              m-0
-              text-[9px]
-              font-[600]
-              uppercase
-              leading-[12px]
-              tracking-[0.65px]
-              text-[#9299A3]
-            "
-          >
-            Passed
-          </p>
-
-          <p
-            className="
-              m-0
-              mt-[8px]
-              text-[23px]
-              font-[700]
-              leading-[24px]
-              tracking-[-0.4px]
-              text-[#20B957]
-            "
-          >
-            34
-          </p>
-        </div>
-
-        {/* FAILED / BLOCKED */}
-
-        <div
-          className="
-            box-border
-            h-[82px]
-            rounded-[12px]
-            border
-            border-[#E9EDF0]
-            bg-white
-            px-[19px]
-            py-[14px]
-            shadow-[0_2px_8px_rgba(0,0,0,0.035)]
-          "
-        >
-          <p
-            className="
-              m-0
-              text-[9px]
-              font-[600]
-              uppercase
-              leading-[12px]
-              tracking-[0.65px]
-              text-[#9299A3]
-            "
-          >
-            Failed / Blocked
-          </p>
-
-          <p
-            className="
-              m-0
-              mt-[8px]
-              text-[23px]
-              font-[700]
-              leading-[24px]
-              tracking-[-0.4px]
-              text-[#F04444]
-            "
-          >
-            6
-          </p>
-        </div>
-      </div>
-
-      {/* =========================================================
-          COVERAGE BY MODULE
-          ========================================================= */}
-
-      <div
-        className="
-          mt-[18px]
-          box-border
-          w-full
-          rounded-[13px]
-          border
-          border-[#E9EDF0]
-          bg-white
-          px-[19px]
-          py-[19px]
-          shadow-[0_2px_8px_rgba(0,0,0,0.035)]
-        "
-      >
-        {/* SECTION TITLE */}
-
-        <h2
-          className="
-            m-0
-            text-[12px]
-            font-[700]
-            leading-[15px]
-            tracking-[-0.05px]
-            text-[#111827]
-          "
-        >
-          Coverage by Module
-        </h2>
-
-        {/* MODULE LIST */}
-
-        <div className="mt-[14px] space-y-[11px]">
-          {modules.map((module) => (
-            <div key={module.name} className="w-full">
-              {/* TOP ROW */}
-
-              <div
-                className="
-                  mb-[6px]
-                  flex
-                  w-full
-                  items-center
-                  justify-between
-                "
-              >
-                {/* MODULE NAME */}
-
-                <p
-                  className="
-                    m-0
-                    text-[10px]
-                    font-[600]
-                    leading-[13px]
-                    text-[#1F2937]
-                  "
-                >
-                  {module.name}
-                </p>
-
-                {/* CASES + PERCENTAGE */}
-
-                <div className="flex shrink-0 items-center gap-[9px]">
-                  <span
-                    className="
-                      text-[9px]
-                      font-[400]
-                      leading-[12px]
-                      text-[#A1A7AF]
-                    "
-                  >
-                    {module.cases} cases
-                  </span>
-
-                  <span
-                    className={`
-                      text-[10px]
-                      font-[700]
-                      leading-[12px]
-                      ${getPercentageColor(module.color)}
-                    `}
-                  >
-                    {module.percentage}%
-                  </span>
-                </div>
-              </div>
-
-              {/* PROGRESS BAR */}
-
-              <div
-                className="
-                  h-[6px]
-                  w-full
-                  overflow-hidden
-                  rounded-full
-                  bg-[#F0F1F3]
-                "
-              >
-                <div
-                  className={`
-                    h-full
-                    rounded-full
-                    ${getProgressColor(module.color)}
-                  `}
-                  style={{
-                    width: `${module.percentage}%`,
-                  }}
-                />
-              </div>
+          {/* Total Test Cases */}
+          <div className="bg-white border border-slate-200 rounded-xl p-4 sm:p-5 shadow-sm min-w-0">
+            <div className="text-[9px] sm:text-[10px] font-medium tracking-[0.08em] text-slate-400 uppercase">
+              Total Test Cases
             </div>
-          ))}
+
+            <div className="mt-2 text-2xl sm:text-3xl font-bold text-emerald-500">
+              48
+            </div>
+          </div>
+
+          {/* Executed */}
+          <div className="bg-white border border-slate-200 rounded-xl p-4 sm:p-5 shadow-sm min-w-0">
+            <div className="text-[9px] sm:text-[10px] font-medium tracking-[0.08em] text-slate-400 uppercase">
+              Executed
+            </div>
+
+            <div className="mt-2 text-2xl sm:text-3xl font-bold text-green-600">
+              40
+            </div>
+          </div>
+
+          {/* Passed */}
+          <div className="bg-white border border-slate-200 rounded-xl p-4 sm:p-5 shadow-sm min-w-0">
+            <div className="text-[9px] sm:text-[10px] font-medium tracking-[0.08em] text-slate-400 uppercase">
+              Passed
+            </div>
+
+            <div className="mt-2 text-2xl sm:text-3xl font-bold text-green-600">
+              34
+            </div>
+          </div>
+
+          {/* Failed / Blocked */}
+          <div className="bg-white border border-slate-200 rounded-xl p-4 sm:p-5 shadow-sm min-w-0">
+            <div className="text-[9px] sm:text-[10px] font-medium tracking-[0.08em] text-slate-400 uppercase">
+              Failed / Blocked
+            </div>
+
+            <div className="mt-2 text-2xl sm:text-3xl font-bold text-red-500">
+              6
+            </div>
+          </div>
+
         </div>
+
+        {/* =========================================================
+            COVERAGE BY MODULE
+        ========================================================= */}
+        <div className="bg-white border border-slate-200 rounded-xl shadow-sm p-4 sm:p-5">
+
+          {/* Heading */}
+          <div className="mb-4">
+            <h2 className="text-sm sm:text-[15px] font-semibold text-slate-900">
+              Coverage by Module
+            </h2>
+          </div>
+
+          {/* Module list */}
+          <div className="space-y-4">
+
+            {coverageData.map((item) => (
+              <div key={item.name} className="w-full">
+
+                {/* Module information */}
+                <div className="flex items-center justify-between gap-3 mb-1.5">
+
+                  {/* Left side */}
+                  <div className="flex items-center min-w-0 flex-1">
+                    <span className="text-[11px] sm:text-xs font-medium text-slate-700 truncate">
+                      {item.name}
+                    </span>
+                  </div>
+
+                  {/* Right side */}
+                  <div className="flex items-center gap-2 shrink-0">
+                    <span className="text-[9px] sm:text-[10px] text-slate-400">
+                      {item.cases}
+                    </span>
+
+                    <span
+                      className={`text-[10px] sm:text-[11px] font-semibold ${item.textColor}`}
+                    >
+                      {item.percentage}%
+                    </span>
+                  </div>
+
+                </div>
+
+                {/* Progress bar */}
+                <div className="w-full h-[5px] sm:h-[6px] bg-slate-100 rounded-full overflow-hidden">
+                  <div
+                    className={`h-full rounded-full ${item.barColor}`}
+                    style={{
+                      width: `${item.percentage}%`,
+                    }}
+                  />
+                </div>
+
+              </div>
+            ))}
+
+          </div>
+        </div>
+
       </div>
     </div>
   );

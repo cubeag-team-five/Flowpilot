@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useState } from "react";
 
 interface TimeEntry {
   id: number;
@@ -7,44 +7,36 @@ interface TimeEntry {
   hours: number;
   notes: string;
 }
+const API_URL = "http://localhost:8080/api/developer/time-logs";
 
-const initialEntries: TimeEntry[] = [
-  {
-    id: 1,
-    date: "Aug 4, 2026",
-    task: "T-040 — Design system component library",
-    hours: 4.5,
-    notes: "Built Button, Input, and Card components",
-  },
-  {
-    id: 2,
-    date: "Aug 4, 2026",
-    task: "T-044 — Mobile responsive layout",
-    hours: 2,
-    notes: "Navbar responsive fixes",
-  },
-  {
-    id: 3,
-    date: "Aug 3, 2026",
-    task: "T-046 — JWT token refresh logic",
-    hours: 3,
-    notes: "Completed refresh handler and tests",
-  },
-  {
-    id: 4,
-    date: "Aug 2, 2026",
-    task: "T-040 — Design system component library",
-    hours: 5,
-    notes: "Started typography and spacing tokens",
-  },
-  {
-    id: 5,
-    date: "Aug 1, 2026",
-    task: "T-044 — Mobile responsive layout",
-    hours: 3.5,
-    notes: "Dashboard layout breakpoints",
-  },
-];
+interface BackendTimeEntry {
+  id: number;
+  task: string;
+  hours: number;
+  notes: string;
+  logDate: string;
+}
+
+interface TimeLogHistoryResponse {
+  entries: BackendTimeEntry[];
+  weeklyTotal: number;
+}
+
+const getToken = () => {
+  return (
+    localStorage.getItem("token") ||
+    localStorage.getItem("jwt") ||
+    localStorage.getItem("accessToken")
+  );
+};
+
+const getAuthHeaders = (): HeadersInit => {
+  const token = getToken();
+  return {
+    "Content-Type": "application/json",
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+  };
+};
 
 const DeveloperTimeLog: React.FC = () => {
   const [selectedTask, setSelectedTask] = useState(
@@ -54,51 +46,142 @@ const DeveloperTimeLog: React.FC = () => {
   const [hours, setHours] = useState("2.5");
   const [notes, setNotes] = useState("");
 
-  const [entries, setEntries] = useState<TimeEntry[]>(initialEntries);
-  const [success, setSuccess] = useState("");
+  const [entries, setEntries] = useState<TimeEntry[]>([]);
+const [weeklyTotal, setWeeklyTotal] = useState(0);
+const [success, setSuccess] = useState("");
+const [loading, setLoading] = useState(false);
+const formatDate = (dateString: string) => {
+  const date = new Date(`${dateString}T00:00:00`);
 
-  const totalHours = useMemo(() => {
-    return entries.reduce((sum, entry) => sum + entry.hours, 0);
-  }, [entries]);
+  return date.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+};
+const fetchTimeLogs = async () => {
+  try {
+    const response = await fetch(API_URL, {
+      headers: getAuthHeaders(),
+    });
 
-  const handleLogTime = (event: React.FormEvent) => {
-    event.preventDefault();
-
-    const numericHours = Number(hours);
-
-    if (!selectedTask) {
-      setSuccess("Please select a task.");
-      return;
+    if (!response.ok) {
+      throw new Error("Failed to load time logs");
     }
 
-    if (!numericHours || numericHours <= 0) {
-      setSuccess("Please enter valid hours.");
-      return;
+    const data: TimeLogHistoryResponse =
+      await response.json();
+
+    const formattedEntries: TimeEntry[] =
+      data.entries.map((entry) => ({
+        id: entry.id,
+        date: formatDate(entry.logDate),
+        task: entry.task,
+        hours: Number(entry.hours),
+        notes: entry.notes,
+      }));
+
+    setEntries(formattedEntries);
+
+    setWeeklyTotal(
+      Number(data.weeklyTotal)
+    );
+
+  } catch (error) {
+    console.error(
+      "Error loading time logs:",
+      error
+    );
+
+    setSuccess(
+      "Failed to load time log history."
+    );
+  }
+};
+  const handleLogTime = async (
+  event: React.FormEvent
+) => {
+  event.preventDefault();
+
+  const numericHours = Number(hours);
+
+  if (!selectedTask) {
+    setSuccess("Please select a task.");
+    return;
+  }
+
+  if (!numericHours || numericHours <= 0) {
+    setSuccess("Please enter valid hours.");
+    return;
+  }
+
+  if (!notes.trim()) {
+    setSuccess("Please enter notes.");
+    return;
+  }
+
+  try {
+    setLoading(true);
+    setSuccess("");
+
+    const response = await fetch(API_URL, {
+      method: "POST",
+      headers: getAuthHeaders(),
+      body: JSON.stringify({
+        task: selectedTask,
+        hours: numericHours,
+        notes: notes.trim(),
+      }),
+    });
+
+    if (!response.ok) {
+  let errorMessage = "Failed to save time log";
+
+  const responseText = await response.text();
+
+  if (responseText) {
+    try {
+      const errorData = JSON.parse(responseText);
+
+      errorMessage =
+        errorData.message ||
+        errorMessage;
+
+    } catch {
+      errorMessage = responseText;
     }
+  }
 
-    if (!notes.trim()) {
-      setSuccess("Please enter notes.");
-      return;
-    }
+  throw new Error(errorMessage);
+}
 
-    const newEntry: TimeEntry = {
-      id: Date.now(),
-      date: "Aug 12, 2026",
-      task: selectedTask,
-      hours: numericHours,
-      notes: notes.trim(),
-    };
+    await fetchTimeLogs();
 
-    setEntries((prev) => [newEntry, ...prev]);
     setNotes("");
     setHours("2.5");
+
     setSuccess("Time logged successfully.");
 
     setTimeout(() => {
       setSuccess("");
     }, 2500);
-  };
 
+  } catch (error: any) {
+
+    console.error(
+      "Error saving time log:",
+      error
+    );
+
+    setSuccess(
+      error.message ||
+      "Failed to save time log."
+    );
+
+  } finally {
+    setLoading(false);
+  }
+};
   return (
     <div className="w-full space-y-1">
       {/* Log Time Card */}
@@ -165,13 +248,13 @@ const DeveloperTimeLog: React.FC = () => {
 
           {/* Bottom */}
           <div className="mt-4 flex flex-wrap items-center gap-3">
-            <button
-              type="submit"
-              className="rounded-xl bg-gradient-to-r from-cyan-400 to-emerald-400 px-5 py-2 text-sm font-semibold text-white shadow-lg shadow-emerald-100 transition hover:-translate-y-[1px] hover:shadow-xl"
-            >
-              Log Time
-            </button>
-
+       <button
+  type="submit"
+  disabled={loading}
+  className="rounded-xl bg-gradient-to-r from-cyan-400 to-emerald-400 px-5 py-2 text-sm font-semibold text-white shadow-lg shadow-emerald-100 transition hover:-translate-y-[1px] hover:shadow-xl disabled:cursor-not-allowed disabled:opacity-60"
+>
+  {loading ? "Saving..." : "Log Time"}
+</button>
             {success && (
               <span
                 className={`text-sm ${
@@ -195,11 +278,12 @@ const DeveloperTimeLog: React.FC = () => {
           </h2>
 
           <span className="text-sm font-bold text-teal-400">
-            {totalHours}h this week
+            {weeklyTotal}h this week
           </span>
         </div>
 
-        <div className="overflow-x-auto">
+        {/* History table — desktop */}
+        <div className="hidden md:block overflow-x-auto">
           <table className="min-w-[850px] w-full">
             <thead>
               <tr className="border-b border-gray-100 bg-gray-50/60 text-left">
@@ -243,6 +327,20 @@ const DeveloperTimeLog: React.FC = () => {
               ))}
             </tbody>
           </table>
+        </div>
+
+        {/* History cards — mobile */}
+        <div className="md:hidden divide-y divide-gray-100">
+          {entries.map((entry) => (
+            <div key={entry.id} className="px-4 py-3">
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-xs font-semibold text-teal-400">{entry.hours}h</span>
+                <span className="text-xs text-gray-400">{entry.date}</span>
+              </div>
+              <p className="text-sm text-gray-600 mb-1">{entry.task}</p>
+              <p className="text-xs text-gray-400">{entry.notes}</p>
+            </div>
+          ))}
         </div>
       </div>
     </div>

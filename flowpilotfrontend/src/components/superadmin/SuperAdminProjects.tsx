@@ -1,5 +1,5 @@
-import React, { useMemo, useState } from 'react';
-import { Search } from 'lucide-react';
+import React, { useState } from 'react';
+
 
 interface Project {
   code: string;
@@ -84,9 +84,21 @@ const healthClasses: Record<Project['health'], string> = {
   'On Hold': 'border border-slate-200 bg-slate-50 text-slate-500',
 };
 
+const formatProjectDate = (date: string) => {
+  if (!date) return '';
+
+  const [year, month, day] = date.split('-').map(Number);
+  if (!year || !month || !day) return date;
+
+  return new Date(year, month - 1, day).toLocaleDateString('en-GB', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+  });
+};
+
 export const SuperAdminProjects: React.FC = () => {
   const [projects, setProjects] = useState<Project[]>(initialProjects);
-  const [search, setSearch] = useState('');
   const [showAddProject, setShowAddProject] = useState(false);
 
   const [newProject, setNewProject] = useState({
@@ -100,31 +112,6 @@ export const SuperAdminProjects: React.FC = () => {
     progress: 0,
     health: 'On Track' as Project['health'],
   });
-
-  /*
-    Existing functionality retained:
-    - Search state
-    - Search filtering
-    - Matching by project name
-    - Matching by project code
-    - Matching by manager
-    - Matching by sprint
-  */
-  const filteredProjects = useMemo(() => {
-    const query = search.toLowerCase().trim();
-
-    if (!query) {
-      return projects;
-    }
-
-    return projects.filter(
-      (project) =>
-        project.name.toLowerCase().includes(query) ||
-        project.code.toLowerCase().includes(query) ||
-        project.manager.toLowerCase().includes(query) ||
-        project.sprint.toLowerCase().includes(query)
-    );
-  }, [search, projects]);
 
   return (
     <div className="w-full min-w-0 overflow-x-hidden">
@@ -149,77 +136,13 @@ export const SuperAdminProjects: React.FC = () => {
         }
       `}</style>
 
-      <div
-        className="
-          w-full
-          px-[28px]
-          pt-[14px]
-          pb-[30px]
-          max-lg:px-[22px]
-          max-md:px-[16px]
-          max-sm:px-[10px]
-          max-sm:pt-[22px]
-        "
-      >
-        {/* SEARCH - same page format, functionality restored */}
-        <div className="mb-[14px] flex items-center justify-center gap-[10px] max-sm:flex-col">
-          <div className="relative w-[290px] max-sm:w-full">
-            <Search
-              size={16}
-              strokeWidth={2}
-              className="
-                pointer-events-none
-                absolute
-                left-[14px]
-                top-1/2
-                -translate-y-1/2
-                text-slate-400
-              "
-            />
-
-            <input
-              type="text"
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-              placeholder="Search projects..."
-              className="
-                h-[42px]
-                w-full
-                rounded-[10px]
-                border
-                border-slate-200
-                bg-white
-                pl-[40px]
-                pr-[14px]
-                text-[12px]
-                font-medium
-                text-slate-700
-                outline-none
-                placeholder:text-slate-400
-                focus:border-slate-300
-                focus:ring-2
-                focus:ring-slate-100
-              "
-            />
-          </div>
-
+      <div className="w-full">
+        {/* ADD PROJECT */}
+        <div className="mb-[14px] flex items-center justify-center">
           <button
             type="button"
             onClick={() => setShowAddProject(true)}
-            className="
-              h-[42px]
-              rounded-[10px]
-              bg-red-500
-              px-[18px]
-              text-[12px]
-              font-bold
-              text-white
-              shadow-sm
-              transition
-              hover:bg-red-600
-              active:scale-[0.98]
-              whitespace-nowrap
-            "
+            className="h-[42px] rounded-[10px] bg-red-500 px-[18px] text-[12px] font-bold text-white shadow-sm transition hover:bg-red-600 active:scale-[0.98] whitespace-nowrap"
           >
             + Add Project
           </button>
@@ -421,6 +344,7 @@ export const SuperAdminProjects: React.FC = () => {
                   </span>
                   <input
                     required
+                    type="date"
                     value={newProject.startDate}
                     onChange={(event) =>
                       setNewProject((current) => ({
@@ -428,7 +352,7 @@ export const SuperAdminProjects: React.FC = () => {
                         startDate: event.target.value,
                       }))
                     }
-                    placeholder="01 Jan 2026"
+                    onKeyDown={(event) => event.preventDefault()}
                     className="
                       h-[40px]
                       w-full
@@ -437,8 +361,10 @@ export const SuperAdminProjects: React.FC = () => {
                       border-slate-200
                       px-[12px]
                       text-[12px]
+                      text-slate-600
                       outline-none
                       focus:border-slate-300
+                      cursor-pointer
                     "
                   />
                 </label>
@@ -449,6 +375,7 @@ export const SuperAdminProjects: React.FC = () => {
                   </span>
                   <input
                     required
+                    type="date"
                     value={newProject.endDate}
                     onChange={(event) =>
                       setNewProject((current) => ({
@@ -456,7 +383,7 @@ export const SuperAdminProjects: React.FC = () => {
                         endDate: event.target.value,
                       }))
                     }
-                    placeholder="30 Jun 2026"
+                    onKeyDown={(event) => event.preventDefault()}
                     className="
                       h-[40px]
                       w-full
@@ -465,8 +392,10 @@ export const SuperAdminProjects: React.FC = () => {
                       border-slate-200
                       px-[12px]
                       text-[12px]
+                      text-slate-600
                       outline-none
                       focus:border-slate-300
+                      cursor-pointer
                     "
                   />
                 </label>
@@ -598,18 +527,8 @@ export const SuperAdminProjects: React.FC = () => {
           </div>
         )}
 
-        {/* SAME TABLE FORMAT */}
-        <div
-          className="
-            w-full
-            overflow-hidden
-            rounded-[16px]
-            border
-            border-slate-200/80
-            bg-white
-            shadow-[0_2px_7px_rgba(15,23,42,0.04)]
-          "
-        >
+        {/* TABLE — desktop */}
+        <div className="hidden md:block w-full overflow-hidden rounded-[16px] border border-slate-200/80 bg-white shadow-[0_2px_7px_rgba(15,23,42,0.04)]">
           <div className="projects-scroll w-full overflow-x-auto">
             <table className="w-full min-w-[1260px] border-collapse">
               <colgroup>
@@ -659,7 +578,7 @@ export const SuperAdminProjects: React.FC = () => {
               </thead>
 
               <tbody>
-                {filteredProjects.map((project) => (
+                {projects.map((project) => (
                   <tr
                     key={project.code}
                     className="
@@ -706,11 +625,11 @@ export const SuperAdminProjects: React.FC = () => {
                     </td>
 
                     <td className="h-[61px] px-[20px] align-middle text-[13px] font-medium text-slate-400 whitespace-nowrap max-md:px-[16px]">
-                      {project.startDate}
+                      {formatProjectDate(project.startDate)}
                     </td>
 
                     <td className="h-[61px] px-[20px] align-middle text-[13px] font-medium text-slate-400 whitespace-nowrap max-md:px-[16px]">
-                      {project.endDate}
+                      {formatProjectDate(project.endDate)}
                     </td>
 
                     {/* EXISTING PROGRESS FUNCTIONALITY */}
@@ -761,14 +680,14 @@ export const SuperAdminProjects: React.FC = () => {
                   </tr>
                 ))}
 
-                {filteredProjects.length === 0 && (
+                {projects.length === 0 && (
                   <tr>
                     <td colSpan={9} className="py-[55px] text-center">
                       <p className="text-[13px] font-bold text-slate-600">
                         No projects found
                       </p>
                       <p className="mt-1 text-[11px] text-slate-400">
-                        Try another project name, code, manager or sprint.
+                        Add a project to see it here.
                       </p>
                     </td>
                   </tr>
@@ -776,6 +695,49 @@ export const SuperAdminProjects: React.FC = () => {
               </tbody>
             </table>
           </div>
+        </div>
+
+        {/* CARDS — mobile */}
+        <div className="md:hidden space-y-3">
+          {projects.length === 0 ? (
+            <div className="rounded-[14px] border border-dashed border-slate-200 bg-white p-8 text-center">
+              <p className="text-[13px] font-bold text-slate-600">No projects found</p>
+              <p className="mt-1 text-[11px] text-slate-400">Add a project to see it here.</p>
+            </div>
+          ) : (
+            projects.map((project) => (
+              <div key={project.code} className="rounded-[14px] border border-slate-200/80 bg-white p-4 shadow-sm">
+                <div className="flex items-start justify-between gap-2 mb-3">
+                  <div className="min-w-0">
+                    <p className="text-[10px] text-slate-400 font-mono mb-0.5">{project.code}</p>
+                    <p className="text-[13px] font-bold text-slate-900 leading-tight">{project.name}</p>
+                    <p className="text-[11px] text-slate-500 mt-0.5">{project.manager}</p>
+                  </div>
+                  <span className={`shrink-0 inline-flex items-center rounded-[8px] px-[10px] py-[4px] text-[10px] font-bold whitespace-nowrap ${healthClasses[project.health]}`}>
+                    {project.health}
+                  </span>
+                </div>
+                <div className="grid grid-cols-2 gap-2 text-[11px] text-slate-500 mb-3">
+                  <div><span className="text-slate-400">Sprint: </span>{project.sprint}</div>
+                  <div><span className="text-slate-400">Status: </span>{project.status}</div>
+                  <div><span className="text-slate-400">Start: </span>{formatProjectDate(project.startDate)}</div>
+                  <div><span className="text-slate-400">End: </span>{formatProjectDate(project.endDate)}</div>
+                </div>
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-[10px] text-slate-400">Progress</span>
+                    <span className="text-[10px] font-semibold text-slate-600">{project.progress}%</span>
+                  </div>
+                  <div className="h-[5px] w-full overflow-hidden rounded-full bg-slate-100">
+                    <div
+                      className={`h-full rounded-full ${project.health === 'At Risk' ? 'bg-amber-500' : project.health === 'Delayed' ? 'bg-rose-500' : 'bg-emerald-500'}`}
+                      style={{ width: `${project.progress}%` }}
+                    />
+                  </div>
+                </div>
+              </div>
+            ))
+          )}
         </div>
       </div>
     </div>
