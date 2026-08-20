@@ -47,7 +47,7 @@ const columns: Column[] = [
       { id: "T-046", title: "JWT token refresh logic", owner: "Sneha", priority: "High", points: 2 },
     ],
   },
-];
+] as const;
 
 function FilterTabs({ active, onChange }: { active: string; onChange: (label: string) => void }) {
   return (
