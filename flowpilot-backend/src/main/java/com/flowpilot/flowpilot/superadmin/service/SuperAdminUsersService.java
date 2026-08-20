@@ -127,9 +127,16 @@ public class SuperAdminUsersService {
                                 )
                         )
 
-                        .status(
-                                SuperAdminUser.UserStatus.ACTIVE
-                        )
+                        /*
+                         * Status is stored as String in the model.
+                         */
+                        .status("ACTIVE")
+
+                        /*
+                         * Database column "active" is NOT NULL.
+                         * Always explicitly set it for new users.
+                         */
+                        .active(true)
 
                         .lastLogin(null)
 
@@ -184,7 +191,6 @@ public class SuperAdminUsersService {
 
         /*
          * Employee ID is the primary key.
-         *
          * It must not be changed.
          */
 
@@ -226,6 +232,25 @@ public class SuperAdminUsersService {
         }
 
 
+        /*
+         * Safety check for the database NOT NULL constraint.
+         */
+        if (user.getActive() == null) {
+
+            user.setActive(true);
+        }
+
+
+        /*
+         * Safety check for status.
+         */
+        if (user.getStatus() == null ||
+                user.getStatus().isBlank()) {
+
+            user.setStatus("ACTIVE");
+        }
+
+
         SuperAdminUser updatedUser =
                 userRepository.save(user);
 
@@ -251,18 +276,28 @@ public class SuperAdminUsersService {
                         );
 
 
-        if (user.getStatus() ==
-                SuperAdminUser.UserStatus.ACTIVE) {
+        /*
+         * Status is a String, not an enum.
+         */
 
-            user.setStatus(
-                    SuperAdminUser.UserStatus.INACTIVE
-            );
+        if ("ACTIVE".equalsIgnoreCase(
+                user.getStatus()
+        )) {
+
+            user.setStatus("INACTIVE");
 
         } else {
 
-            user.setStatus(
-                    SuperAdminUser.UserStatus.ACTIVE
-            );
+            user.setStatus("ACTIVE");
+        }
+
+
+        /*
+         * Database requires active to be NOT NULL.
+         */
+        if (user.getActive() == null) {
+
+            user.setActive(true);
         }
 
 
@@ -287,6 +322,7 @@ public class SuperAdminUsersService {
             );
         }
 
+
         userRepository.deleteById(employeeId);
     }
 
@@ -307,6 +343,7 @@ public class SuperAdminUsersService {
             );
         }
 
+
         if (dto.getName() == null ||
                 dto.getName().isBlank()) {
 
@@ -314,6 +351,7 @@ public class SuperAdminUsersService {
                     "Name is required"
             );
         }
+
 
         if (dto.getEmail() == null ||
                 dto.getEmail().isBlank()) {
@@ -323,6 +361,7 @@ public class SuperAdminUsersService {
             );
         }
 
+
         if (dto.getRole() == null ||
                 dto.getRole().isBlank()) {
 
@@ -331,6 +370,7 @@ public class SuperAdminUsersService {
             );
         }
 
+
         if (dto.getDepartment() == null ||
                 dto.getDepartment().isBlank()) {
 
@@ -338,6 +378,7 @@ public class SuperAdminUsersService {
                     "Department is required"
             );
         }
+
 
         if (dto.getDesignation() == null ||
                 dto.getDesignation().isBlank()) {
@@ -365,6 +406,7 @@ public class SuperAdminUsersService {
             );
         }
 
+
         if (dto.getEmail() == null ||
                 dto.getEmail().isBlank()) {
 
@@ -372,6 +414,7 @@ public class SuperAdminUsersService {
                     "Email is required"
             );
         }
+
 
         if (dto.getRole() == null ||
                 dto.getRole().isBlank()) {
@@ -381,6 +424,7 @@ public class SuperAdminUsersService {
             );
         }
 
+
         if (dto.getDepartment() == null ||
                 dto.getDepartment().isBlank()) {
 
@@ -388,6 +432,7 @@ public class SuperAdminUsersService {
                     "Department is required"
             );
         }
+
 
         if (dto.getDesignation() == null ||
                 dto.getDesignation().isBlank()) {
@@ -414,6 +459,7 @@ public class SuperAdminUsersService {
             );
         }
 
+
         if (!password.matches(
                 ".*[A-Za-z].*"
         )) {
@@ -423,6 +469,7 @@ public class SuperAdminUsersService {
             );
         }
 
+
         if (!password.matches(
                 ".*[0-9].*"
         )) {
@@ -431,6 +478,7 @@ public class SuperAdminUsersService {
                     "Password must contain at least one number"
             );
         }
+
 
         if (!password.matches(
                 ".*[^A-Za-z0-9].*"
@@ -454,39 +502,53 @@ public class SuperAdminUsersService {
         SuperAdminUserDto dto =
                 new SuperAdminUserDto();
 
+
         dto.setEmployeeId(
                 user.getEmployeeId()
         );
+
 
         dto.setName(
                 user.getName()
         );
 
+
         dto.setEmail(
                 user.getEmail()
         );
+
 
         dto.setRole(
                 user.getRole()
         );
 
+
         dto.setDepartment(
                 user.getDepartment()
         );
+
 
         dto.setDesignation(
                 user.getDesignation()
         );
 
-        /*
-         * Never return password.
-         */
 
+        /*
+         * Never return password to frontend.
+         */
         dto.setPassword(null);
 
+
+        /*
+         * Status is String in SuperAdminUser.
+         *
+         * DO NOT use:
+         * user.getStatus().name()
+         */
         dto.setStatus(
-                user.getStatus().name()
+                user.getStatus()
         );
+
 
         if (user.getLastLogin() != null) {
 
@@ -499,11 +561,13 @@ public class SuperAdminUsersService {
             dto.setLastLogin("Never");
         }
 
+
         dto.setInitials(
                 generateInitials(
                         user.getName()
                 )
         );
+
 
         return dto;
     }
@@ -523,11 +587,14 @@ public class SuperAdminUsersService {
             return "";
         }
 
+
         String[] parts =
                 name.trim().split("\\s+");
 
+
         StringBuilder initials =
                 new StringBuilder();
+
 
         for (String part : parts) {
 
@@ -541,8 +608,10 @@ public class SuperAdminUsersService {
             }
         }
 
+
         String result =
                 initials.toString();
+
 
         return result.substring(
                 0,
