@@ -157,7 +157,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onOpenDemo }) => {
 
         {/* Right Column: Live Workspace Mockup matching Figma Image 1 dimensions */}
         <div className="relative">
-          <div className="bg-white p-7 rounded-[32px] border border-slate-200/80 shadow-2xl shadow-slate-900/10 min-h-[580px] flex flex-col justify-between">
+          <div className="bg-white p-3 sm:p-7 rounded-[32px] border border-slate-200/80 shadow-2xl shadow-slate-900/10 min-h-[580px] flex flex-col justify-between">
 
             <div>
               <div className="flex items-center justify-between mb-6">
@@ -209,16 +209,16 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onOpenDemo }) => {
               </div>
 
               {/* Kanban Columns */}
-              <div className="grid grid-cols-4 gap-3 bg-slate-50 p-4 rounded-2xl mb-6">
-                <div className="flex flex-col">
-                  <div className="flex items-center justify-between text-[10px] font-black text-slate-500 mb-2.5 uppercase">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-3 bg-slate-50 p-3 sm:p-4 rounded-2xl mb-6">
+                <div className="flex min-w-0 flex-col">
+                  <div className="flex min-h-7 items-start justify-between gap-1 text-[9px] sm:text-[10px] font-black text-slate-500 mb-2.5 uppercase leading-tight">
                     <span>BACKLOG</span>
                     <span className="bg-slate-200 text-slate-600 px-1.5 py-0.5 rounded-md">12</span>
                   </div>
                   <div className="flex flex-col gap-2">
                     {tasks.filter(t => t.col === 'backlog').map(t => (
-                      <div key={t.id} onClick={() => moveTask(t.id)} className="bg-white border border-slate-200/80 rounded-xl p-2.5 cursor-pointer hover:-translate-y-0.5 transition-transform shadow-xs">
-                        <div className="text-xs font-bold text-slate-800 mb-1">{t.title}</div>
+                      <div key={t.id} onClick={() => moveTask(t.id)} className="bg-white border border-slate-200/80 rounded-xl p-2.5 min-h-[68px] cursor-pointer hover:-translate-y-0.5 transition-transform shadow-xs">
+                        <div className="text-xs font-bold text-slate-800 mb-1 leading-tight">{t.title}</div>
                         <div className="flex items-center justify-between">
                           <span className="text-[10px] text-slate-400">{t.sp}</span>
                           <span className="w-4.5 h-4.5 rounded-full text-white text-[8px] font-bold flex items-center justify-center" style={{ background: t.color }}>{t.user}</span>
@@ -228,15 +228,15 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onOpenDemo }) => {
                   </div>
                 </div>
 
-                <div className="flex flex-col">
-                  <div className="flex items-center justify-between text-[10px] font-black text-slate-500 mb-2.5 uppercase">
+                <div className="flex min-w-0 flex-col">
+                  <div className="flex min-h-7 items-start justify-between gap-1 text-[9px] sm:text-[10px] font-black text-slate-500 mb-2.5 uppercase leading-tight">
                     <span>IN PROGRESS</span>
                     <span className="bg-purple-100 text-purple-600 px-1.5 py-0.5 rounded-md">6</span>
                   </div>
                   <div className="flex flex-col gap-2">
                     {tasks.filter(t => t.col === 'inProgress').map(t => (
-                      <div key={t.id} onClick={() => moveTask(t.id)} className="bg-white border border-slate-200/80 rounded-xl p-2.5 cursor-pointer hover:-translate-y-0.5 transition-transform shadow-xs">
-                        <div className="text-xs font-bold text-slate-800 mb-1">{t.title}</div>
+                      <div key={t.id} onClick={() => moveTask(t.id)} className="bg-white border border-slate-200/80 rounded-xl p-2.5 min-h-[68px] cursor-pointer hover:-translate-y-0.5 transition-transform shadow-xs">
+                        <div className="text-xs font-bold text-slate-800 mb-1 leading-tight">{t.title}</div>
                         <div className="flex items-center justify-between">
                           <span className="text-[10px] text-slate-400">{t.sp}</span>
                           <span className="w-4.5 h-4.5 rounded-full text-white text-[8px] font-bold flex items-center justify-center bg-emerald-600">{t.user}</span>
@@ -246,15 +246,15 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onOpenDemo }) => {
                   </div>
                 </div>
 
-                <div className="flex flex-col">
-                  <div className="flex items-center justify-between text-[10px] font-black text-slate-500 mb-2.5 uppercase">
+                <div className="flex min-w-0 flex-col">
+                  <div className="flex min-h-7 items-start justify-between gap-1 text-[9px] sm:text-[10px] font-black text-slate-500 mb-2.5 uppercase leading-tight">
                     <span>REVIEW</span>
                     <span className="bg-amber-100 text-amber-600 px-1.5 py-0.5 rounded-md">4</span>
                   </div>
                   <div className="flex flex-col gap-2">
                     {tasks.filter(t => t.col === 'review').map(t => (
-                      <div key={t.id} onClick={() => moveTask(t.id)} className="bg-white border border-slate-200/80 rounded-xl p-2.5 cursor-pointer hover:-translate-y-0.5 transition-transform shadow-xs">
-                        <div className="text-xs font-bold text-slate-800 mb-1">{t.title}</div>
+                      <div key={t.id} onClick={() => moveTask(t.id)} className="bg-white border border-slate-200/80 rounded-xl p-2.5 min-h-[68px] cursor-pointer hover:-translate-y-0.5 transition-transform shadow-xs">
+                        <div className="text-xs font-bold text-slate-800 mb-1 leading-tight">{t.title}</div>
                         <div className="flex items-center justify-between">
                           <span className="text-[10px] text-slate-400">{t.sp}</span>
                           <span className="w-4.5 h-4.5 rounded-full text-white text-[8px] font-bold flex items-center justify-center bg-teal-600">{t.user}</span>
@@ -264,15 +264,15 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onOpenDemo }) => {
                   </div>
                 </div>
 
-                <div className="flex flex-col">
-                  <div className="flex items-center justify-between text-[10px] font-black text-slate-500 mb-2.5 uppercase">
+                <div className="flex min-w-0 flex-col">
+                  <div className="flex min-h-7 items-start justify-between gap-1 text-[9px] sm:text-[10px] font-black text-slate-500 mb-2.5 uppercase leading-tight">
                     <span>DONE</span>
                     <span className="bg-emerald-100 text-emerald-600 px-1.5 py-0.5 rounded-md">42</span>
                   </div>
                   <div className="flex flex-col gap-2">
                     {tasks.filter(t => t.col === 'done').map(t => (
-                      <div key={t.id} onClick={() => moveTask(t.id)} className="bg-white border border-slate-200/80 rounded-xl p-2.5 cursor-pointer hover:-translate-y-0.5 transition-transform shadow-xs">
-                        <div className="text-xs font-bold text-slate-800 mb-1">{t.title}</div>
+                      <div key={t.id} onClick={() => moveTask(t.id)} className="bg-white border border-slate-200/80 rounded-xl p-2.5 min-h-[68px] cursor-pointer hover:-translate-y-0.5 transition-transform shadow-xs">
+                        <div className="text-xs font-bold text-slate-800 mb-1 leading-tight">{t.title}</div>
                         <div className="flex items-center justify-between">
                           <span className="text-[10px] text-slate-400">{t.sp}</span>
                           <span className="w-4.5 h-4.5 rounded-full text-white text-[8px] font-bold flex items-center justify-center bg-emerald-500">{t.user}</span>
