@@ -69,7 +69,7 @@ function ActiveSprintCard() {
 
 function BacklogRow({ title, tag, points, priority }: { title: string; tag: string; points: number; priority: keyof typeof priorityStyles }) {
   return (
-    <div className="flex flex-col gap-2 border-b border-slate-100 py-3 last:border-none sm:flex-row sm:items-center sm:justify-between">
+    <div className="flex flex-col-2 gap-2 border-b border-slate-100 py-3 last:border-none sm:flex-row sm:items-center sm:justify-between">
       <div className="min-w-0">
         <p className="truncate text-xs font-semibold text-slate-900 sm:text-sm">
           {title}

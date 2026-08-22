@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Plus } from 'lucide-react';
 
 interface Department {
@@ -22,174 +22,33 @@ interface Member {
   designation: string;
 }
 
-const initialDepartments: Department[] = [
-  {
-    id: 1,
-    name: 'Engineering',
-    head: 'Karan Mehta',
-    members: 18,
-    progress: 40,
-    color: 'bg-[#69E8D0]',
-    bgColor: 'bg-[#F4FEFC]',
-    textColor: 'text-[#5DD9C3]',
-    borderColor: 'border-[#D8F5EF]',
-    shadowColor: 'shadow-[0_2px_8px_rgba(45,212,191,0.08)]',
-  },
-  {
-    id: 2,
-    name: 'Product',
-    head: 'Arjun Shah',
-    members: 6,
-    progress: 14,
-    color: 'bg-purple-400',
-    bgColor: 'bg-purple-50',
-    textColor: 'text-purple-500',
-    borderColor: 'border-purple-100',
-    shadowColor: 'shadow-[0_2px_8px_rgba(192,132,252,0.08)]',
-  },
-  {
-    id: 3,
-    name: 'Quality Assurance',
-    head: 'Sana Sheikh',
-    members: 7,
-    progress: 16,
-    color: 'bg-emerald-400',
-    bgColor: 'bg-emerald-50',
-    textColor: 'text-emerald-500',
-    borderColor: 'border-emerald-100',
-    shadowColor: 'shadow-[0_2px_8px_rgba(52,211,153,0.08)]',
-  },
-  {
-    id: 4,
-    name: 'Design',
-    head: 'Divya Mehta',
-    members: 5,
-    progress: 11,
-    color: 'bg-amber-400',
-    bgColor: 'bg-amber-50',
-    textColor: 'text-amber-500',
-    borderColor: 'border-amber-100',
-    shadowColor: 'shadow-[0_2px_8px_rgba(251,191,36,0.08)]',
-  },
-  {
-    id: 5,
-    name: 'Operations',
-    head: 'Nisha Agarwal',
-    members: 8,
-    progress: 20,
-    color: 'bg-rose-400',
-    bgColor: 'bg-rose-50',
-    textColor: 'text-rose-500',
-    borderColor: 'border-rose-100',
-    shadowColor: 'shadow-[0_2px_8px_rgba(251,113,133,0.08)]',
-  },
-  {
-    id: 6,
-    name: 'Leadership',
-    head: 'Rajeev Kumar',
-    members: 3,
-    progress: 8,
-    color: 'bg-slate-400',
-    bgColor: 'bg-slate-50',
-    textColor: 'text-slate-500',
-    borderColor: 'border-slate-100',
-    shadowColor: 'shadow-[0_2px_8px_rgba(100,116,139,0.06)]',
-  },
-];
+interface DepartmentFormErrors {
+  departmentName?: string;
+  departmentHead?: string;
+  members?: string;
+  progress?: string;
+}
 
-const initialMembers: Record<number, Member[]> = {
-  1: [
-    {
-      id: 1,
-      fullName: 'Karan Mehta',
-      email: 'karan.mehta@ipmt.com',
-      employeeId: 'EMP001',
-      designation: 'Head of Engineering',
-    },
-    {
-      id: 2,
-      fullName: 'Rohit Varma',
-      email: 'rohit.varma@ipmt.com',
-      employeeId: 'EMP002',
-      designation: 'Senior Developer',
-    },
-    {
-      id: 3,
-      fullName: 'Amit Sharma',
-      email: 'amit.sharma@ipmt.com',
-      employeeId: 'EMP003',
-      designation: 'Software Developer',
-    },
-  ],
-
-  2: [
-    {
-      id: 4,
-      fullName: 'Arjun Shah',
-      email: 'arjun.shah@ipmt.com',
-      employeeId: 'EMP004',
-      designation: 'Head of Product',
-    },
-    {
-      id: 5,
-      fullName: 'Priya Joshi',
-      email: 'priya.joshi@ipmt.com',
-      employeeId: 'EMP005',
-      designation: 'Product Manager',
-    },
-  ],
-
-  3: [
-    {
-      id: 6,
-      fullName: 'Sana Sheikh',
-      email: 'sana.sheikh@ipmt.com',
-      employeeId: 'EMP006',
-      designation: 'QA Lead',
-    },
-  ],
-
-  4: [
-    {
-      id: 7,
-      fullName: 'Divya Mehta',
-      email: 'divya.mehta@ipmt.com',
-      employeeId: 'EMP007',
-      designation: 'Design Lead',
-    },
-  ],
-
-  5: [
-    {
-      id: 8,
-      fullName: 'Nisha Agarwal',
-      email: 'nisha.agarwal@ipmt.com',
-      employeeId: 'EMP008',
-      designation: 'Operations Head',
-    },
-  ],
-
-  6: [
-    {
-      id: 9,
-      fullName: 'Rajeev Kumar',
-      email: 'rajeev.kumar@ipmt.com',
-      employeeId: 'EMP009',
-      designation: 'Leadership',
-    },
-  ],
-};
+interface MemberFormErrors {
+  fullName?: string;
+  email?: string;
+  designation?: string;
+}
 
 export const AdminDepartments: React.FC = () => {
   const [departments, setDepartments] =
-    useState<Department[]>(initialDepartments);
+    useState<Department[]>([]);
+
+  const [toastMessage, setToastMessage] = useState('');
 
   const [selectedDepartment, setSelectedDepartment] =
     useState<Department | null>(null);
 
-  const [showMembers, setShowMembers] = useState(false);
+  const [showMembers, setShowMembers] =
+    useState(false);
 
-  const [showMemberForm, setShowMemberForm] = useState(false);
+  const [showMemberForm, setShowMemberForm] =
+    useState(false);
 
   const [editingMember, setEditingMember] =
     useState<Member | null>(null);
@@ -197,34 +56,231 @@ export const AdminDepartments: React.FC = () => {
   const [memberForm, setMemberForm] = useState({
     fullName: '',
     email: '',
-    employeeId: '',
     designation: '',
   });
 
   const [departmentMembers, setDepartmentMembers] =
-    useState<Record<number, Member[]>>(initialMembers);
+    useState<Record<number, Member[]>>({});
 
-  const [showForm, setShowForm] = useState(false);
+  const [showForm, setShowForm] =
+    useState(false);
 
-  const [departmentName, setDepartmentName] = useState('');
-  const [departmentHead, setDepartmentHead] = useState('');
-  const [members, setMembers] = useState('');
-  const [progress, setProgress] = useState('');
+  const [departmentName, setDepartmentName] =
+    useState('');
 
-  const handleViewMembers = (department: Department) => {
-    setSelectedDepartment(department);
-    setShowMembers(true);
+  const [departmentHead, setDepartmentHead] =
+    useState('');
+
+  const [members, setMembers] =
+    useState('');
+
+  const [progress, setProgress] =
+    useState('');
+
+  const [departmentErrors, setDepartmentErrors] =
+    useState<DepartmentFormErrors>({});
+
+  const [memberErrors, setMemberErrors] =
+    useState<MemberFormErrors>({});
+
+  // ============================================================
+  // HELPERS
+  // ============================================================
+
+  const showToast = (message: string) => {
+    setToastMessage(message);
+
+    setTimeout(() => {
+      setToastMessage('');
+    }, 3000);
   };
 
-  const handleAddDepartment = async (e: React.FormEvent) => {
+  const isValidName = (value: string) => {
+    return /^[A-Za-z]+(?:[ '-][A-Za-z]+)*$/.test(
+      value.trim()
+    );
+  };
+
+  const isValidEmail = (value: string) => {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(
+      value.trim()
+    );
+  };
+
+  // ============================================================
+  // FETCH DEPARTMENTS
+  // ============================================================
+
+  useEffect(() => {
+    const fetchDepartments = async () => {
+      try {
+        const token = localStorage.getItem('token');
+
+        if (!token) {
+          throw new Error(
+            'Authentication token not found. Please login again.'
+          );
+        }
+
+        const response = await fetch(
+          'http://localhost:8080/api/admin/departments',
+          {
+            method: 'GET',
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
+
+        if (!response.ok) {
+          throw new Error(
+            `Failed to fetch departments: ${response.statusText}`
+          );
+        }
+
+        const data = await response.json();
+
+        const formattedDepartments: Department[] =
+          data.map(
+            (department: any, index: number) => ({
+              id: department.id,
+              name: department.name,
+              head: department.head,
+              members: department.members ?? 0,
+              progress: department.progress ?? 0,
+
+              color: [
+                'bg-[#69E8D0]',
+                'bg-purple-400',
+                'bg-emerald-400',
+                'bg-amber-400',
+                'bg-rose-400',
+                'bg-slate-400',
+              ][index % 6],
+
+              bgColor: [
+                'bg-[#F4FEFC]',
+                'bg-purple-50',
+                'bg-emerald-50',
+                'bg-amber-50',
+                'bg-rose-50',
+                'bg-slate-50',
+              ][index % 6],
+
+              textColor: [
+                'text-[#5DD9C3]',
+                'text-purple-500',
+                'text-emerald-500',
+                'text-amber-500',
+                'text-rose-500',
+                'text-slate-500',
+              ][index % 6],
+
+              borderColor: [
+                'border-[#D8F5EF]',
+                'border-purple-100',
+                'border-emerald-100',
+                'border-amber-100',
+                'border-rose-100',
+                'border-slate-100',
+              ][index % 6],
+
+              shadowColor:
+                'shadow-[0_2px_8px_rgba(15,23,42,0.06)]',
+            })
+          );
+
+        // IMPORTANT:
+        // Do not add initialDepartments again.
+        // Backend is now the source of truth.
+        setDepartments(formattedDepartments);
+      } catch (error) {
+        console.error(
+          'Error fetching departments:',
+          error
+        );
+      } 
+    };
+
+    fetchDepartments();
+  }, []);
+
+  // ============================================================
+  // DEPARTMENT VALIDATION
+  // ============================================================
+
+  const validateDepartmentForm = () => {
+    const errors: DepartmentFormErrors = {};
+
+    const trimmedName = departmentName.trim();
+    const trimmedHead = departmentHead.trim();
+
+    if (!trimmedName) {
+      errors.departmentName =
+        'Department name is required.';
+    } else if (trimmedName.length < 2) {
+      errors.departmentName =
+        'Department name must contain at least 2 characters.';
+    } else if (!isValidName(trimmedName)) {
+      errors.departmentName =
+        'Department name can contain only letters, spaces, apostrophes or hyphens.';
+    }
+
+    if (!trimmedHead) {
+      errors.departmentHead =
+        'Department head is required.';
+    } else if (trimmedHead.length < 2) {
+      errors.departmentHead =
+        'Department head must contain at least 2 characters.';
+    } else if (!isValidName(trimmedHead)) {
+      errors.departmentHead =
+        'Department head can contain only letters, spaces, apostrophes or hyphens.';
+    }
+
+    if (!members.trim()) {
+      errors.members =
+        'Members field is required.';
+    } else if (
+      !/^\d+$/.test(members.trim())
+    ) {
+      errors.members =
+        'Members must be a whole number.';
+    } else if (Number(members) < 0) {
+      errors.members =
+        'Members cannot be negative.';
+    }
+
+    if (!progress.trim()) {
+      errors.progress =
+        'Progress is required.';
+    } else if (
+      !/^\d+$/.test(progress.trim())
+    ) {
+      errors.progress =
+        'Progress must be a whole number.';
+    } else if (
+      Number(progress) < 0 ||
+      Number(progress) > 100
+    ) {
+      errors.progress =
+        'Progress must be between 0 and 100.';
+    }
+
+    setDepartmentErrors(errors);
+
+    return Object.keys(errors).length === 0;
+  };
+
+  // ============================================================
+  // ADD DEPARTMENT
+  // ============================================================
+
+  const handleAddDepartment = async (
+    e: React.FormEvent
+  ) => {
     e.preventDefault();
 
-    if (
-      !departmentName.trim() ||
-      !departmentHead.trim() ||
-      !members ||
-      !progress
-    ) {
+    if (!validateDepartmentForm()) {
       return;
     }
 
@@ -236,31 +292,103 @@ export const AdminDepartments: React.FC = () => {
     };
 
     try {
-      const response = await fetch('http://localhost:8080/api/admin/departments', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(payload),
-      });
+      const token = localStorage.getItem('token');
 
-      if (!response.ok) {
-        throw new Error(`Failed to save department: ${response.statusText}`);
+      if (!token) {
+        throw new Error(
+          'Authentication token not found. Please login again.'
+        );
       }
 
-      const savedDepartment = await response.json();
+      const response = await fetch(
+        'http://localhost:8080/api/admin/departments',
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify(payload),
+        }
+      );
+
+      if (!response.ok) {
+        let errorMessage =
+          'Failed to create department.';
+
+        try {
+          const errorData =
+            await response.json();
+
+          if (
+            errorData?.message
+              ?.toLowerCase()
+              .includes('already exists')
+          ) {
+            errorMessage =
+              'Department already exists!';
+          } else if (errorData?.message) {
+            errorMessage = errorData.message;
+          }
+        } catch {
+          // Ignore JSON parsing error
+        }
+
+        throw new Error(errorMessage);
+      }
+
+      const savedDepartment =
+        await response.json();
+
+      const departmentIndex =
+        departments.length % 6;
 
       const newDepartment: Department = {
-        id: savedDepartment.id || departments.length + 1,
-        name: savedDepartment.name || departmentName.trim(),
-        head: savedDepartment.head || departmentHead.trim(),
-        members: savedDepartment.members !== undefined ? savedDepartment.members : Number(members),
-        progress: savedDepartment.progress !== undefined ? savedDepartment.progress : Number(progress),
-        color: 'bg-blue-400',
-        bgColor: 'bg-blue-50',
-        textColor: 'text-blue-500',
-        borderColor: 'border-blue-100',
-        shadowColor: 'shadow-[0_2px_8px_rgba(96,165,250,0.08)]',
+        id: savedDepartment.id,
+        name: savedDepartment.name,
+        head: savedDepartment.head,
+        members: savedDepartment.members ?? 0,
+        progress:
+          savedDepartment.progress ?? 0,
+
+        color: [
+          'bg-[#69E8D0]',
+          'bg-purple-400',
+          'bg-emerald-400',
+          'bg-amber-400',
+          'bg-rose-400',
+          'bg-slate-400',
+        ][departmentIndex],
+
+        bgColor: [
+          'bg-[#F4FEFC]',
+          'bg-purple-50',
+          'bg-emerald-50',
+          'bg-amber-50',
+          'bg-rose-50',
+          'bg-slate-50',
+        ][departmentIndex],
+
+        textColor: [
+          'text-[#5DD9C3]',
+          'text-purple-500',
+          'text-emerald-500',
+          'text-amber-500',
+          'text-rose-500',
+          'text-slate-500',
+        ][departmentIndex],
+
+        borderColor: [
+          'border-[#D8F5EF]',
+          'border-purple-100',
+          'border-emerald-100',
+          'border-amber-100',
+          'border-rose-100',
+          'border-slate-100',
+        ][departmentIndex],
+
+        shadowColor:
+          'shadow-[0_2px_8px_rgba(15,23,42,0.06)]',
       };
 
       setDepartments((previous) => [
@@ -272,33 +400,79 @@ export const AdminDepartments: React.FC = () => {
       setDepartmentHead('');
       setMembers('');
       setProgress('');
+      setDepartmentErrors({});
       setShowForm(false);
+
+      showToast(
+        'Department added successfully.'
+      );
     } catch (error) {
-      console.error('Error creating department in backend:', error);
-      // Fallback local update if backend fails
-      const newDepartment: Department = {
-        id: departments.length + 1,
-        name: departmentName.trim(),
-        head: departmentHead.trim(),
-        members: Number(members),
-        progress: Number(progress),
-        color: 'bg-blue-400',
-        bgColor: 'bg-blue-50',
-        textColor: 'text-blue-500',
-        borderColor: 'border-blue-100',
-        shadowColor: 'shadow-[0_2px_8px_rgba(96,165,250,0.08)]',
-      };
+      console.error(
+        'Error creating department in backend:',
+        error
+      );
 
-      setDepartments((previous) => [
+      showToast(
+        error instanceof Error
+          ? error.message
+          : 'Failed to create department. Please try again.'
+      );
+    }
+  };
+
+  // ============================================================
+  // DEPARTMENT INPUT HANDLERS
+  // ============================================================
+
+  const handleDepartmentNameChange = (
+    value: string
+  ) => {
+    setDepartmentName(value);
+
+    if (departmentErrors.departmentName) {
+      setDepartmentErrors((previous) => ({
         ...previous,
-        newDepartment,
-      ]);
+        departmentName: undefined,
+      }));
+    }
+  };
 
-      setDepartmentName('');
-      setDepartmentHead('');
-      setMembers('');
-      setProgress('');
-      setShowForm(false);
+  const handleDepartmentHeadChange = (
+    value: string
+  ) => {
+    setDepartmentHead(value);
+
+    if (departmentErrors.departmentHead) {
+      setDepartmentErrors((previous) => ({
+        ...previous,
+        departmentHead: undefined,
+      }));
+    }
+  };
+
+  const handleMembersChange = (
+    value: string
+  ) => {
+    setMembers(value);
+
+    if (departmentErrors.members) {
+      setDepartmentErrors((previous) => ({
+        ...previous,
+        members: undefined,
+      }));
+    }
+  };
+
+  const handleProgressChange = (
+    value: string
+  ) => {
+    setProgress(value);
+
+    if (departmentErrors.progress) {
+      setDepartmentErrors((previous) => ({
+        ...previous,
+        progress: undefined,
+      }));
     }
   };
 
@@ -307,8 +481,141 @@ export const AdminDepartments: React.FC = () => {
     setDepartmentHead('');
     setMembers('');
     setProgress('');
+    setDepartmentErrors({});
     setShowForm(false);
   };
+
+  // ============================================================
+  // FETCH MEMBERS
+  // ============================================================
+
+  const handleViewMembers = async (
+    department: Department
+  ) => {
+    setSelectedDepartment(department);
+    setShowMembers(true);
+
+    try {
+      const token = localStorage.getItem('token');
+
+      if (!token) {
+        throw new Error(
+          'Authentication token not found. Please login again.'
+        );
+      }
+
+      const response = await fetch(
+        `http://localhost:8080/api/admin/departments/${department.id}/members`,
+        {
+          method: 'GET',
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(
+          'Failed to fetch department members.'
+        );
+      }
+
+      const data: Member[] =
+        await response.json();
+
+      setDepartmentMembers((previous) => ({
+        ...previous,
+        [department.id]: data,
+      }));
+
+      // Update card count from actual backend records
+      setDepartments((previous) =>
+        previous.map((item) =>
+          item.id === department.id
+            ? {
+                ...item,
+                members: data.length,
+              }
+            : item
+        )
+      );
+
+      setSelectedDepartment((previous) =>
+        previous
+          ? {
+              ...previous,
+              members: data.length,
+            }
+          : previous
+      );
+    } catch (error) {
+      console.error(
+        'Error fetching members:',
+        error
+      );
+
+      showToast(
+        error instanceof Error
+          ? error.message
+          : 'Failed to fetch members.'
+      );
+    }
+  };
+
+  // ============================================================
+  // MEMBER VALIDATION
+  // ============================================================
+
+  const validateMemberForm = () => {
+    const errors: MemberFormErrors = {};
+
+    const trimmedName =
+      memberForm.fullName.trim();
+
+    const trimmedEmail =
+      memberForm.email.trim();
+
+    const trimmedDesignation =
+      memberForm.designation.trim();
+
+    if (!trimmedName) {
+      errors.fullName =
+        'Full name is required.';
+    } else if (trimmedName.length < 2) {
+      errors.fullName =
+        'Full name must contain at least 2 characters.';
+    } else if (!isValidName(trimmedName)) {
+      errors.fullName =
+        'Full name can contain only letters, spaces, apostrophes or hyphens.';
+    }
+
+    if (!trimmedEmail) {
+      errors.email =
+        'Email address is required.';
+    } else if (!isValidEmail(trimmedEmail)) {
+      errors.email =
+        'Please enter a valid email address.';
+    }
+
+    if (!trimmedDesignation) {
+      errors.designation =
+        'Designation is required.';
+    } else if (trimmedDesignation.length < 2) {
+      errors.designation =
+        'Designation must contain at least 2 characters.';
+    } else if (!isValidName(trimmedDesignation)) {
+      errors.designation =
+        'Designation can contain only letters, spaces, apostrophes or hyphens.';
+    }
+
+    setMemberErrors(errors);
+
+    return Object.keys(errors).length === 0;
+  };
+
+  // ============================================================
+  // MEMBER INPUT
+  // ============================================================
 
   const handleMemberInputChange = (
     e: React.ChangeEvent<HTMLInputElement>
@@ -319,75 +626,193 @@ export const AdminDepartments: React.FC = () => {
       ...previous,
       [name]: value,
     }));
+
+    setMemberErrors((previous) => ({
+      ...previous,
+      [name]: undefined,
+    }));
   };
 
-  const handleAddOrEditMember = (
+  // ============================================================
+  // ADD / EDIT MEMBER
+  // ============================================================
+
+  const handleAddOrEditMember = async (
     e: React.FormEvent
   ) => {
     e.preventDefault();
 
-    if (
-      !memberForm.fullName.trim() ||
-      !memberForm.email.trim() ||
-      !memberForm.employeeId.trim() ||
-      !memberForm.designation.trim() ||
-      !selectedDepartment
-    ) {
+    if (!selectedDepartment) {
       return;
     }
 
-    if (editingMember) {
-      setDepartmentMembers((previous) => ({
-        ...previous,
-        [selectedDepartment.id]: (
-          previous[selectedDepartment.id] || []
-        ).map((member) =>
-          member.id === editingMember.id
-            ? {
-                ...member,
-                ...memberForm,
-              }
-            : member
-        ),
-      }));
-    } else {
-      const newMember: Member = {
-        id: Date.now(),
-        ...memberForm,
-      };
-
-      setDepartmentMembers((previous) => ({
-        ...previous,
-        [selectedDepartment.id]: [
-          ...(previous[selectedDepartment.id] || []),
-          newMember,
-        ],
-      }));
+    if (!validateMemberForm()) {
+      return;
     }
 
-    setMemberForm({
-      fullName: '',
-      email: '',
-      employeeId: '',
-      designation: '',
-    });
+    try {
+      const token =
+        localStorage.getItem('token');
 
-    setEditingMember(null);
-    setShowMemberForm(false);
+      if (!token) {
+        throw new Error(
+          'Authentication token not found. Please login again.'
+        );
+      }
+
+      const url = editingMember
+        ? `http://localhost:8080/api/admin/departments/${selectedDepartment.id}/members/${editingMember.id}`
+        : `http://localhost:8080/api/admin/departments/${selectedDepartment.id}/members`;
+
+      const response = await fetch(url, {
+        method: editingMember
+          ? 'PUT'
+          : 'POST',
+
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+
+        body: JSON.stringify({
+          fullName:
+            memberForm.fullName.trim(),
+
+          email:
+            memberForm.email.trim(),
+
+          designation:
+            memberForm.designation.trim(),
+        }),
+      });
+
+      if (!response.ok) {
+        let errorMessage =
+          'Something went wrong';
+
+        try {
+          const errorData =
+            await response.json();
+
+          if (errorData?.message) {
+            errorMessage =
+              errorData.message;
+          }
+        } catch {
+          // Ignore JSON parsing error
+        }
+
+        throw new Error(errorMessage);
+      }
+
+      const savedMember: Member =
+        await response.json();
+
+      setDepartmentMembers((previous) => {
+        const existingMembers =
+          previous[selectedDepartment.id] ||
+          [];
+
+        if (editingMember) {
+          return {
+            ...previous,
+            [selectedDepartment.id]:
+              existingMembers.map(
+                (member) =>
+                  member.id ===
+                  editingMember.id
+                    ? savedMember
+                    : member
+              ),
+          };
+        }
+
+        return {
+          ...previous,
+          [selectedDepartment.id]: [
+            ...existingMembers,
+            savedMember,
+          ],
+        };
+      });
+
+      // Update card count using actual member records
+      setDepartments((previous) =>
+        previous.map((department) =>
+          department.id ===
+          selectedDepartment.id
+            ? {
+                ...department,
+                members: editingMember
+                  ? department.members
+                  : department.members + 1,
+              }
+            : department
+        )
+      );
+
+      setSelectedDepartment((previous) =>
+        previous
+          ? {
+              ...previous,
+              members: editingMember
+                ? previous.members
+                : previous.members + 1,
+            }
+          : previous
+      );
+
+      setMemberForm({
+        fullName: '',
+        email: '',
+        designation: '',
+      });
+
+      setMemberErrors({});
+      setEditingMember(null);
+      setShowMemberForm(false);
+
+      showToast(
+        editingMember
+          ? 'Member updated successfully.'
+          : 'Member added successfully.'
+      );
+    } catch (error) {
+      console.error(
+        'Error saving member:',
+        error
+      );
+
+      showToast(
+        error instanceof Error
+          ? error.message
+          : 'Something went wrong'
+      );
+    }
   };
 
-  const handleEditMember = (member: Member) => {
+  // ============================================================
+  // EDIT MEMBER
+  // ============================================================
+
+  const handleEditMember = (
+    member: Member
+  ) => {
     setEditingMember(member);
 
     setMemberForm({
       fullName: member.fullName,
       email: member.email,
-      employeeId: member.employeeId,
       designation: member.designation,
     });
 
+    setMemberErrors({});
     setShowMemberForm(true);
   };
+
+  // ============================================================
+  // OPEN ADD MEMBER
+  // ============================================================
 
   const handleOpenAddMember = () => {
     setEditingMember(null);
@@ -395,15 +820,44 @@ export const AdminDepartments: React.FC = () => {
     setMemberForm({
       fullName: '',
       email: '',
-      employeeId: '',
       designation: '',
     });
 
+    setMemberErrors({});
     setShowMemberForm(true);
   };
 
+  // ============================================================
+  // RENDER
+  // ============================================================
+
   return (
     <div className="w-full">
+
+      {/* SUCCESS / BACKEND TOAST */}
+
+      {toastMessage && (
+        <div
+          className="
+            fixed
+            right-5
+            top-5
+            z-[100]
+            rounded-lg
+            border
+            border-red-100
+            bg-white
+            px-4
+            py-3
+            text-[13px]
+            font-semibold
+            text-red-500
+            shadow-[0_8px_24px_rgba(15,23,42,0.12)]
+          "
+        >
+          {toastMessage}
+        </div>
+      )}
 
       {/* =====================================================
           ADD DEPARTMENT BUTTON
@@ -412,7 +866,10 @@ export const AdminDepartments: React.FC = () => {
       <div className="mb-4 flex justify-end">
         <button
           type="button"
-          onClick={() => setShowForm(true)}
+          onClick={() => {
+            setDepartmentErrors({});
+            setShowForm(true);
+          }}
           className="
             inline-flex
             items-center
@@ -429,11 +886,13 @@ export const AdminDepartments: React.FC = () => {
             hover:bg-slate-800
           "
         >
-          <Plus size={16} strokeWidth={2.5} />
+          <Plus
+            size={16}
+            strokeWidth={2.5}
+          />
           <span>Department</span>
         </button>
       </div>
-
 
       {/* =====================================================
           DEPARTMENT GRID
@@ -448,138 +907,140 @@ export const AdminDepartments: React.FC = () => {
           lg:grid-cols-3
         "
       >
-        {departments.map((department) => (
-          <div
-            key={department.id}
-            className={`
-              w-full
-              min-h-[96px]
-              rounded-xl
-              border
-              ${department.borderColor}
-              bg-white
-              px-5
-              py-5
-              ${department.shadowColor}
-              transition-all
-              duration-200
-              hover:-translate-y-0.5
-            `}
-          >
-
-            {/* TOP SECTION */}
-
-            <div className="flex items-start justify-between gap-3">
-
-              <div className="min-w-0">
-
-                <h2
-                  className="
-                    text-[16px]
-                    font-extrabold
-                    leading-4
-                    tracking-tight
-                    text-slate-900
-                  "
-                >
-                  {department.name}
-                </h2>
-
-                <p
-                  className="
-                    mt-2
-                    text-[12.5px]
-                    font-medium
-                    leading-3.5
-                    text-slate-500
-                  "
-                >
-                  Head: {department.head}
-                </p>
-
-              </div>
-
-              <div
-                className={`
-                  flex
-                  h-9.5
-                  min-w-9.5
-                  shrink-0
-                  items-center
-                  justify-center
-                  rounded-xl
-                  px-1.5
-                  text-[13px]
-                  font-extrabold
-                  ${department.bgColor}
-                  ${department.textColor}
-                `}
-              >
-                {department.members}
-              </div>
-
-            </div>
-
-
-            {/* PROGRESS BAR */}
-
-            <div className="mt-4">
-
-              <div
-                className="
-                  h-[4px]
-                  w-full
-                  overflow-hidden
-                  rounded-full
-                  bg-slate-100
-                "
-              >
-                <div
-                  className={`
-                    h-full
-                    rounded-full
-                    ${department.color}
-                  `}
-                  style={{
-                    width: `${department.progress}%`,
-                  }}
-                />
-              </div>
-
-            </div>
-
-
-            {/* VIEW MEMBERS BUTTON */}
-
-            <button
-              type="button"
-              onClick={() => handleViewMembers(department)}
+        {departments.map(
+          (department) => (
+            <div
+              key={`${department.id}-${department.name}-${department.head}`}
               className={`
-                mt-2
-                flex
-                h-8.5
                 w-full
-                items-center
-                justify-center
-                rounded-md
+                min-h-[96px]
+                rounded-xl
                 border
                 ${department.borderColor}
-                ${department.bgColor}
-                ${department.textColor}
-                text-[12px]
-                font-bold
+                bg-white
+                px-5
+                py-5
+                ${department.shadowColor}
                 transition-all
                 duration-200
-                hover:brightness-95
+                hover:-translate-y-0.5
               `}
             >
-              View Members
-            </button>
+              {/* TOP SECTION */}
 
-          </div>
-        ))}
+              <div className="flex items-start justify-between gap-3">
+
+                <div className="min-w-0">
+
+                  <h2
+                    className="
+                      text-[16px]
+                      font-extrabold
+                      leading-4
+                      tracking-tight
+                      text-slate-900
+                    "
+                  >
+                    {department.name}
+                  </h2>
+
+                  <p
+                    className="
+                      mt-2
+                      text-[12.5px]
+                      font-medium
+                      leading-3.5
+                      text-slate-500
+                    "
+                  >
+                    Head: {department.head}
+                  </p>
+
+                </div>
+
+                <div
+                  className={`
+                    flex
+                    h-9.5
+                    min-w-9.5
+                    shrink-0
+                    items-center
+                    justify-center
+                    rounded-xl
+                    px-1.5
+                    text-[13px]
+                    font-extrabold
+                    ${department.bgColor}
+                    ${department.textColor}
+                  `}
+                >
+                  {department.members}
+                </div>
+
+              </div>
+
+              {/* PROGRESS BAR */}
+
+              <div className="mt-4">
+
+                <div
+                  className="
+                    h-[4px]
+                    w-full
+                    overflow-hidden
+                    rounded-full
+                    bg-slate-100
+                  "
+                >
+                  <div
+                    className={`
+                      h-full
+                      rounded-full
+                      ${department.color}
+                    `}
+                    style={{
+                      width: `${department.progress}%`,
+                    }}
+                  />
+                </div>
+
+              </div>
+
+              {/* VIEW MEMBERS */}
+
+              <button
+                type="button"
+                onClick={() =>
+                  handleViewMembers(
+                    department
+                  )
+                }
+                className={`
+                  mt-2
+                  flex
+                  h-8.5
+                  w-full
+                  items-center
+                  justify-center
+                  rounded-md
+                  border
+                  ${department.borderColor}
+                  ${department.bgColor}
+                  ${department.textColor}
+                  text-[12px]
+                  font-bold
+                  transition-all
+                  duration-200
+                  hover:brightness-95
+                `}
+              >
+                View Members
+              </button>
+
+            </div>
+          )
+        )}
       </div>
-
 
       {/* =====================================================
           ADD DEPARTMENT POPUP
@@ -599,7 +1060,6 @@ export const AdminDepartments: React.FC = () => {
             backdrop-blur-[2px]
           "
         >
-
           <div
             className="
               w-full
@@ -639,7 +1099,6 @@ export const AdminDepartments: React.FC = () => {
 
             </div>
 
-
             <form
               onSubmit={handleAddDepartment}
               className="space-y-4"
@@ -665,15 +1124,21 @@ export const AdminDepartments: React.FC = () => {
                   type="text"
                   value={departmentName}
                   onChange={(e) =>
-                    setDepartmentName(e.target.value)
+                    handleDepartmentNameChange(
+                      e.target.value
+                    )
                   }
                   placeholder="Enter department name"
-                  className="
+                  className={`
                     h-10
                     w-full
                     rounded-md
                     border
-                    border-slate-200
+                    ${
+                      departmentErrors.departmentName
+                        ? 'border-red-300'
+                        : 'border-slate-200'
+                    }
                     bg-white
                     px-3
                     text-[13px]
@@ -685,11 +1150,16 @@ export const AdminDepartments: React.FC = () => {
                     focus:border-slate-400
                     focus:ring-2
                     focus:ring-slate-100
-                  "
+                  `}
                 />
 
-              </div>
+                {departmentErrors.departmentName && (
+                  <p className="mt-1.5 text-[11px] font-medium text-red-500">
+                    {departmentErrors.departmentName}
+                  </p>
+                )}
 
+              </div>
 
               {/* DEPARTMENT HEAD */}
 
@@ -711,15 +1181,21 @@ export const AdminDepartments: React.FC = () => {
                   type="text"
                   value={departmentHead}
                   onChange={(e) =>
-                    setDepartmentHead(e.target.value)
+                    handleDepartmentHeadChange(
+                      e.target.value
+                    )
                   }
                   placeholder="Enter department head"
-                  className="
+                  className={`
                     h-10
                     w-full
                     rounded-md
                     border
-                    border-slate-200
+                    ${
+                      departmentErrors.departmentHead
+                        ? 'border-red-300'
+                        : 'border-slate-200'
+                    }
                     bg-white
                     px-3
                     text-[13px]
@@ -731,21 +1207,29 @@ export const AdminDepartments: React.FC = () => {
                     focus:border-slate-400
                     focus:ring-2
                     focus:ring-slate-100
-                  "
+                  `}
                 />
 
-              </div>
+                {departmentErrors.departmentHead && (
+                  <p className="mt-1.5 text-[11px] font-medium text-red-500">
+                    {departmentErrors.departmentHead}
+                  </p>
+                )}
 
+              </div>
 
               {/* MEMBERS + PROGRESS */}
 
               <div
                 className="
                   grid
-                  grid-cols-2
+                  grid-cols-1
                   gap-3
+                  sm:grid-cols-2
                 "
               >
+
+                {/* MEMBERS */}
 
                 <div>
 
@@ -766,15 +1250,21 @@ export const AdminDepartments: React.FC = () => {
                     min="0"
                     value={members}
                     onChange={(e) =>
-                      setMembers(e.target.value)
+                      handleMembersChange(
+                        e.target.value
+                      )
                     }
                     placeholder="0"
-                    className="
+                    className={`
                       h-10
                       w-full
                       rounded-md
                       border
-                      border-slate-200
+                      ${
+                        departmentErrors.members
+                          ? 'border-red-300'
+                          : 'border-slate-200'
+                      }
                       bg-white
                       px-3
                       text-[13px]
@@ -786,11 +1276,18 @@ export const AdminDepartments: React.FC = () => {
                       focus:border-slate-400
                       focus:ring-2
                       focus:ring-slate-100
-                    "
+                    `}
                   />
+
+                  {departmentErrors.members && (
+                    <p className="mt-1.5 text-[11px] font-medium text-red-500">
+                      {departmentErrors.members}
+                    </p>
+                  )}
 
                 </div>
 
+                {/* PROGRESS */}
 
                 <div>
 
@@ -812,15 +1309,21 @@ export const AdminDepartments: React.FC = () => {
                     max="100"
                     value={progress}
                     onChange={(e) =>
-                      setProgress(e.target.value)
+                      handleProgressChange(
+                        e.target.value
+                      )
                     }
                     placeholder="0"
-                    className="
+                    className={`
                       h-10
                       w-full
                       rounded-md
                       border
-                      border-slate-200
+                      ${
+                        departmentErrors.progress
+                          ? 'border-red-300'
+                          : 'border-slate-200'
+                      }
                       bg-white
                       px-3
                       text-[13px]
@@ -832,13 +1335,18 @@ export const AdminDepartments: React.FC = () => {
                       focus:border-slate-400
                       focus:ring-2
                       focus:ring-slate-100
-                    "
+                    `}
                   />
+
+                  {departmentErrors.progress && (
+                    <p className="mt-1.5 text-[11px] font-medium text-red-500">
+                      {departmentErrors.progress}
+                    </p>
+                  )}
 
                 </div>
 
               </div>
-
 
               {/* FORM BUTTONS */}
 
@@ -900,184 +1408,199 @@ export const AdminDepartments: React.FC = () => {
         </div>
       )}
 
-
       {/* =====================================================
           VIEW MEMBERS POPUP
       ====================================================== */}
 
-      {showMembers && selectedDepartment && (
-        <div
-          className="
-            fixed
-            inset-0
-            z-50
-            flex
-            items-center
-            justify-center
-            bg-slate-900/30
-            px-4
-            backdrop-blur-[2px]
-          "
-        >
-
+      {showMembers &&
+        selectedDepartment && (
           <div
             className="
-              w-full
-              max-w-[760px]
-              max-h-[85vh]
-              overflow-hidden
-              rounded-xl
-              border
-              border-slate-200
-              bg-white
-              shadow-[0_12px_40px_rgba(15,23,42,0.15)]
+              fixed
+              inset-0
+              z-50
+              flex
+              items-center
+              justify-center
+              bg-slate-900/30
+              px-4
+              backdrop-blur-[2px]
             "
           >
 
-            {/* HEADER */}
-
             <div
               className="
-                flex
-                items-center
-                justify-between
-                border-b
-                border-slate-100
-                px-5
-                py-4
+                w-full
+                max-w-[760px]
+                max-h-[85vh]
+                overflow-hidden
+                rounded-xl
+                border
+                border-slate-200
+                bg-white
+                shadow-[0_12px_40px_rgba(15,23,42,0.15)]
               "
             >
 
-              <div>
+              {/* HEADER */}
 
-                <h2
-                  className="
-                    text-[17px]
-                    font-extrabold
-                    text-slate-900
-                  "
-                >
-                  {selectedDepartment.name} Members
-                </h2>
+              <div
+                className="
+                  flex
+                  items-center
+                  justify-between
+                  border-b
+                  border-slate-100
+                  px-5
+                  py-4
+                "
+              >
 
-                <p
+                <div>
+
+                  <h2
+                    className="
+                      text-[17px]
+                      font-extrabold
+                      text-slate-900
+                    "
+                  >
+                    {selectedDepartment.name}{' '}
+                    Members
+                  </h2>
+
+                  <p
+                    className="
+                      mt-1
+                      text-[12px]
+                      font-medium
+                      text-slate-500
+                    "
+                  >
+                    Department Head:{' '}
+                    {selectedDepartment.head}
+                  </p>
+
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() =>
+                    setShowMembers(false)
+                  }
                   className="
-                    mt-1
-                    text-[12px]
-                    font-medium
+                    flex
+                    h-8
+                    w-8
+                    items-center
+                    justify-center
+                    rounded-md
+                    text-[18px]
+                    font-bold
                     text-slate-500
+                    hover:bg-slate-100
                   "
                 >
-                  Department Head: {selectedDepartment.head}
-                </p>
+                  ×
+                </button>
 
               </div>
 
-              <button
-                type="button"
-                onClick={() => setShowMembers(false)}
+              {/* ACTION BUTTON */}
+
+              <div
                 className="
                   flex
-                  h-8
-                  w-8
-                  items-center
-                  justify-center
-                  rounded-md
-                  text-[18px]
-                  font-bold
-                  text-slate-500
-                  hover:bg-slate-100
+                  justify-end
+                  gap-2
+                  border-b
+                  border-slate-100
+                  px-5
+                  py-3
                 "
               >
-                ×
-              </button>
 
-            </div>
+                <button
+                  type="button"
+                  onClick={
+                    handleOpenAddMember
+                  }
+                  className="
+                    inline-flex
+                    items-center
+                    gap-1.5
+                    rounded-md
+                    bg-slate-900
+                    px-3
+                    py-2
+                    text-[12px]
+                    font-bold
+                    text-white
+                    hover:bg-slate-800
+                  "
+                >
+                  <Plus
+                    size={14}
+                    strokeWidth={2.5}
+                  />
+                  Add Member
+                </button>
 
+              </div>
 
-            {/* ACTION BUTTON */}
+              {/* TABLE */}
 
-            <div
-              className="
-                flex
-                justify-end
-                gap-2
-                border-b
-                border-slate-100
-                px-5
-                py-3
-              "
-            >
-
-              <button
-                type="button"
-                onClick={handleOpenAddMember}
+              <div
                 className="
-                  inline-flex
-                  items-center
-                  gap-1.5
-                  rounded-md
-                  bg-slate-900
-                  px-3
-                  py-2
-                  text-[12px]
-                  font-bold
-                  text-white
-                  hover:bg-slate-800
+                  max-h-[55vh]
+                  overflow-x-auto
+                  overflow-y-auto
                 "
               >
-                <Plus size={14} strokeWidth={2.5} />
-                Add Member
-              </button>
 
-            </div>
+                <table className="w-full min-w-[650px]">
 
+                  <thead className="sticky top-0 bg-slate-50">
 
-            {/* TABLE */}
+                    <tr
+                      className="
+                        border-b
+                        border-slate-200
+                        text-left
+                      "
+                    >
 
-            <div className="max-h-[55vh] overflow-auto">
+                      <th className="px-5 py-3 text-[11px] font-extrabold uppercase tracking-wide text-slate-500">
+                        Member Name
+                      </th>
 
-              <table className="w-full min-w-[650px]">
+                      <th className="px-4 py-3 text-[11px] font-extrabold uppercase tracking-wide text-slate-500">
+                        Employee ID
+                      </th>
 
-                <thead className="sticky top-0 bg-slate-50">
+                      <th className="px-4 py-3 text-[11px] font-extrabold uppercase tracking-wide text-slate-500">
+                        Designation
+                      </th>
 
-                  <tr
-                    className="
-                      border-b
-                      border-slate-200
-                      text-left
-                    "
-                  >
+                      <th className="px-4 py-3 text-[11px] font-extrabold uppercase tracking-wide text-slate-500">
+                        Email
+                      </th>
 
-                    <th className="px-5 py-3 text-[11px] font-extrabold uppercase tracking-wide text-slate-500">
-                      Member Name
-                    </th>
+                      <th className="px-5 py-3 text-[11px] font-extrabold uppercase tracking-wide text-slate-500">
+                        Edit
+                      </th>
 
-                    <th className="px-4 py-3 text-[11px] font-extrabold uppercase tracking-wide text-slate-500">
-                      Employee ID
-                    </th>
+                    </tr>
 
-                    <th className="px-4 py-3 text-[11px] font-extrabold uppercase tracking-wide text-slate-500">
-                      Designation
-                    </th>
+                  </thead>
 
-                    <th className="px-4 py-3 text-[11px] font-extrabold uppercase tracking-wide text-slate-500">
-                      Email
-                    </th>
+                  <tbody>
 
-                    <th className="px-5 py-3 text-[11px] font-extrabold uppercase tracking-wide text-slate-500">
-                      Edit
-                    </th>
-
-                  </tr>
-
-                </thead>
-
-
-                <tbody>
-
-                  {(departmentMembers[selectedDepartment.id] || []).map(
-                    (member) => (
+                    {(
+                      departmentMembers[
+                        selectedDepartment.id
+                      ] || []
+                    ).map((member) => (
 
                       <tr
                         key={member.id}
@@ -1096,7 +1619,6 @@ export const AdminDepartments: React.FC = () => {
 
                         </td>
 
-
                         <td className="px-4 py-3.5">
 
                           <span className="text-[12px] font-semibold text-slate-600">
@@ -1104,7 +1626,6 @@ export const AdminDepartments: React.FC = () => {
                           </span>
 
                         </td>
-
 
                         <td className="px-4 py-3.5">
 
@@ -1114,7 +1635,6 @@ export const AdminDepartments: React.FC = () => {
 
                         </td>
 
-
                         <td className="px-4 py-3.5">
 
                           <span className="text-[12px] font-medium text-slate-500">
@@ -1123,13 +1643,14 @@ export const AdminDepartments: React.FC = () => {
 
                         </td>
 
-
                         <td className="px-5 py-3.5">
 
                           <button
                             type="button"
                             onClick={() =>
-                              handleEditMember(member)
+                              handleEditMember(
+                                member
+                              )
                             }
                             className="
                               rounded-md
@@ -1151,55 +1672,54 @@ export const AdminDepartments: React.FC = () => {
 
                       </tr>
 
-                    )
-                  )}
+                    ))}
 
-                </tbody>
+                  </tbody>
 
-              </table>
+                </table>
 
-            </div>
+              </div>
 
+              {/* CLOSE */}
 
-            {/* CLOSE */}
-
-            <div
-              className="
-                flex
-                justify-end
-                border-t
-                border-slate-100
-                px-5
-                py-3
-              "
-            >
-
-              <button
-                type="button"
-                onClick={() => setShowMembers(false)}
+              <div
                 className="
-                  rounded-md
-                  border
-                  border-slate-200
-                  bg-white
-                  px-4
-                  py-2
-                  text-[12px]
-                  font-bold
-                  text-slate-600
-                  hover:bg-slate-50
+                  flex
+                  justify-end
+                  border-t
+                  border-slate-100
+                  px-5
+                  py-3
                 "
               >
-                Close
-              </button>
+
+                <button
+                  type="button"
+                  onClick={() =>
+                    setShowMembers(false)
+                  }
+                  className="
+                    rounded-md
+                    border
+                    border-slate-200
+                    bg-white
+                    px-4
+                    py-2
+                    text-[12px]
+                    font-bold
+                    text-slate-600
+                    hover:bg-slate-50
+                  "
+                >
+                  Close
+                </button>
+
+              </div>
 
             </div>
 
           </div>
-
-        </div>
-      )}
-
+        )}
 
       {/* =====================================================
           ADD / EDIT MEMBER POPUP
@@ -1224,6 +1744,8 @@ export const AdminDepartments: React.FC = () => {
             className="
               w-full
               max-w-[460px]
+              max-h-[90vh]
+              overflow-y-auto
               rounded-xl
               border
               border-slate-200
@@ -1245,7 +1767,9 @@ export const AdminDepartments: React.FC = () => {
                   text-slate-900
                 "
               >
-                {editingMember ? 'Edit Member' : 'Add Member'}
+                {editingMember
+                  ? 'Edit Member'
+                  : 'Add Member'}
               </h2>
 
               <p
@@ -1263,11 +1787,12 @@ export const AdminDepartments: React.FC = () => {
 
             </div>
 
-
             {/* FORM */}
 
             <form
-              onSubmit={handleAddOrEditMember}
+              onSubmit={
+                handleAddOrEditMember
+              }
               className="space-y-4"
             >
 
@@ -1275,7 +1800,15 @@ export const AdminDepartments: React.FC = () => {
 
               <div>
 
-                <label className="mb-1.5 block text-[12px] font-bold text-slate-700">
+                <label
+                  className="
+                    mb-1.5
+                    block
+                    text-[12px]
+                    font-bold
+                    text-slate-700
+                  "
+                >
                   Full Name
                 </label>
 
@@ -1283,14 +1816,20 @@ export const AdminDepartments: React.FC = () => {
                   type="text"
                   name="fullName"
                   value={memberForm.fullName}
-                  onChange={handleMemberInputChange}
+                  onChange={
+                    handleMemberInputChange
+                  }
                   placeholder="Enter full name"
-                  className="
+                  className={`
                     h-10
                     w-full
                     rounded-md
                     border
-                    border-slate-200
+                    ${
+                      memberErrors.fullName
+                        ? 'border-red-300'
+                        : 'border-slate-200'
+                    }
                     px-3
                     text-[13px]
                     font-medium
@@ -1299,17 +1838,30 @@ export const AdminDepartments: React.FC = () => {
                     focus:border-slate-400
                     focus:ring-2
                     focus:ring-slate-100
-                  "
+                  `}
                 />
 
-              </div>
+                {memberErrors.fullName && (
+                  <p className="mt-1.5 text-[11px] font-medium text-red-500">
+                    {memberErrors.fullName}
+                  </p>
+                )}
 
+              </div>
 
               {/* EMAIL */}
 
               <div>
 
-                <label className="mb-1.5 block text-[12px] font-bold text-slate-700">
+                <label
+                  className="
+                    mb-1.5
+                    block
+                    text-[12px]
+                    font-bold
+                    text-slate-700
+                  "
+                >
                   Email Address
                 </label>
 
@@ -1317,14 +1869,20 @@ export const AdminDepartments: React.FC = () => {
                   type="email"
                   name="email"
                   value={memberForm.email}
-                  onChange={handleMemberInputChange}
+                  onChange={
+                    handleMemberInputChange
+                  }
                   placeholder="Enter email address"
-                  className="
+                  className={`
                     h-10
                     w-full
                     rounded-md
                     border
-                    border-slate-200
+                    ${
+                      memberErrors.email
+                        ? 'border-red-300'
+                        : 'border-slate-200'
+                    }
                     px-3
                     text-[13px]
                     font-medium
@@ -1333,66 +1891,55 @@ export const AdminDepartments: React.FC = () => {
                     focus:border-slate-400
                     focus:ring-2
                     focus:ring-slate-100
-                  "
+                  `}
                 />
+
+                {memberErrors.email && (
+                  <p className="mt-1.5 text-[11px] font-medium text-red-500">
+                    {memberErrors.email}
+                  </p>
+                )}
 
               </div>
 
-
-              {/* EMPLOYEE ID */}
-
-              <div>
-
-                <label className="mb-1.5 block text-[12px] font-bold text-slate-700">
-                  Employee ID
-                </label>
-
-                <input
-                  type="text"
-                  name="employeeId"
-                  value={memberForm.employeeId}
-                  onChange={handleMemberInputChange}
-                  placeholder="Enter employee ID"
-                  className="
-                    h-10
-                    w-full
-                    rounded-md
-                    border
-                    border-slate-200
-                    px-3
-                    text-[13px]
-                    font-medium
-                    text-slate-800
-                    outline-none
-                    focus:border-slate-400
-                    focus:ring-2
-                    focus:ring-slate-100
-                  "
-                />
-
-              </div>
-
+              {/* EMPLOYEE ID IS INTENTIONALLY NOT HERE */}
 
               {/* DESIGNATION */}
 
               <div>
 
-                <label className="mb-1.5 block text-[12px] font-bold text-slate-700">
+                <label
+                  className="
+                    mb-1.5
+                    block
+                    text-[12px]
+                    font-bold
+                    text-slate-700
+                  "
+                >
                   Designation
                 </label>
 
                 <input
                   type="text"
                   name="designation"
-                  value={memberForm.designation}
-                  onChange={handleMemberInputChange}
+                  value={
+                    memberForm.designation
+                  }
+                  onChange={
+                    handleMemberInputChange
+                  }
                   placeholder="Enter designation"
-                  className="
+                  className={`
                     h-10
                     w-full
                     rounded-md
                     border
-                    border-slate-200
+                    ${
+                      memberErrors.designation
+                        ? 'border-red-300'
+                        : 'border-slate-200'
+                    }
                     px-3
                     text-[13px]
                     font-medium
@@ -1401,11 +1948,16 @@ export const AdminDepartments: React.FC = () => {
                     focus:border-slate-400
                     focus:ring-2
                     focus:ring-slate-100
-                  "
+                  `}
                 />
 
-              </div>
+                {memberErrors.designation && (
+                  <p className="mt-1.5 text-[11px] font-medium text-red-500">
+                    {memberErrors.designation}
+                  </p>
+                )}
 
+              </div>
 
               {/* BUTTONS */}
 
@@ -1427,6 +1979,7 @@ export const AdminDepartments: React.FC = () => {
                   onClick={() => {
                     setShowMemberForm(false);
                     setEditingMember(null);
+                    setMemberErrors({});
                   }}
                   className="
                     h-9
@@ -1443,7 +1996,6 @@ export const AdminDepartments: React.FC = () => {
                 >
                   Cancel
                 </button>
-
 
                 <button
                   type="submit"

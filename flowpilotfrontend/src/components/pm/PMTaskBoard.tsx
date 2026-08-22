@@ -99,7 +99,7 @@ function TaskCard({ id, title, owner, priority, points }: { id: string; title: s
 function BoardColumn({ title, tasks }: { title: keyof typeof columnStyles; tasks: { id: string; title: string; owner: string; priority: keyof typeof priorityStyles; points: number }[] }) {
   const style = columnStyles[title];
   return (
-    <div className="flex w-full shrink-0 flex-col gap-3 rounded-2xl bg-slate-100/60 p-3 sm:w-72 lg:w-auto">
+    <div className="flex w-50 shrink-0 flex-col gap-3 rounded-2xl bg-slate-100/60 p-3 sm:w-72 lg:w-full">
       <div className="flex items-center justify-between px-1">
         <h3 className={`text-sm font-bold ${style.headerText}`}>{title}</h3>
         <span
