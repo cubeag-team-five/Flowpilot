@@ -1,16 +1,6 @@
-import React, { useEffect, useState } from "react";
-import {
-  Bug,
-  Plus,
-  X,
-  Search,
-  ChevronDown,
-  CheckCircle2,
-  Clock3,
-  CircleAlert,
-} from "lucide-react";
+import React, { useEffect, useMemo, useState } from "react";
 
-interface BugReport {
+type BugReport = {
   id?: number;
   bugId: string;
   title: string;
@@ -21,335 +11,295 @@ interface BugReport {
   stepsToReproduce: string;
   status?: string;
   createdAt?: string;
-  filedAt?: string;
-}
+  filedDate?: string;
+};
 
-interface BugForm {
+type BugForm = {
   bugId: string;
-  title: string;
+  bugTitle: string;
   linkedTaskId: string;
   environment: string;
   severity: string;
   assignedTo: string;
   stepsToReproduce: string;
-}
+};
 
 const API_URL = "http://localhost:8080/api/qa/bugs";
 
 const emptyForm: BugForm = {
   bugId: "",
-  title: "",
+  bugTitle: "",
   linkedTaskId: "",
-  environment: "",
-  severity: "Critical",
+  environment: "Dev",
+  severity: "Medium",
   assignedTo: "",
   stepsToReproduce: "",
 };
 
-/*
- * ============================================================
- * AUTHORIZATION HEADER
- * ============================================================
- *
- * Gets the JWT token already stored by Flowpilot login.
- *
- * We are NOT changing SecurityConfig or JwtAuthenticationFilter.
- * The QA frontend simply sends the existing token with its
- * QA API requests.
- */
-
-const getAuthHeaders = (): Record<string, string> => {
-  const token =
-    localStorage.getItem("token") ||
-    localStorage.getItem("jwt") ||
-    localStorage.getItem("accessToken");
-
-  return {
-    "Content-Type": "application/json",
-    ...(token
-      ? {
-          Authorization: `Bearer ${token}`,
-        }
-      : {}),
-  };
-};
-
 const QABugReports: React.FC = () => {
   const [bugs, setBugs] = useState<BugReport[]>([]);
+  const [form, setForm] = useState<BugForm>(emptyForm);
 
   const [showForm, setShowForm] = useState(false);
-
   const [loading, setLoading] = useState(false);
-
   const [saving, setSaving] = useState(false);
 
-  const [formData, setFormData] =
-    useState<BugForm>(emptyForm);
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
 
-  const [searchTerm, setSearchTerm] = useState("");
-
-  const [errorMessage, setErrorMessage] = useState("");
-
-  const [successMessage, setSuccessMessage] = useState("");
+  const [globalSearch, setGlobalSearch] = useState("");
 
   /*
-   * ============================================================
-   * LOAD BUGS
-   * ============================================================
-   *
-   * This runs whenever the QA Bug Reports page opens.
-   *
-   * Therefore, after browser refresh:
-   *
-   * PostgreSQL
-   *     ↓
-   * Spring Boot
-   *     ↓
-   * GET /api/qa/bugs
-   *     ↓
-   * React
-   *     ↓
-   * Bug table
+   * Receive search text from the TOP QA search bar.
    */
-
   useEffect(() => {
-    loadBugs();
+    const handleGlobalSearch = (event: Event) => {
+      const customEvent = event as CustomEvent<string>;
+      setGlobalSearch(customEvent.detail || "");
+    };
+
+    window.addEventListener("qa-global-search", handleGlobalSearch);
+
+    return () => {
+      window.removeEventListener(
+        "qa-global-search",
+        handleGlobalSearch
+      );
+    };
   }, []);
 
+  /*
+   * Automatically remove success toast
+   * after 4 seconds.
+   */
+  useEffect(() => {
+    if (!success) {
+      return;
+    }
+
+    const timer = window.setTimeout(() => {
+      setSuccess("");
+    }, 4000);
+
+    return () => {
+      window.clearTimeout(timer);
+    };
+  }, [success]);
+
+  /*
+   * Get authentication token.
+   */
+  const getToken = () => {
+    return (
+      localStorage.getItem("token") ||
+      localStorage.getItem("accessToken") ||
+      localStorage.getItem("jwt") ||
+      ""
+    );
+  };
+
+  /*
+   * Common headers for backend requests.
+   */
+  const getHeaders = () => {
+    const token = getToken();
+
+    return {
+      "Content-Type": "application/json",
+      ...(token
+        ? {
+            Authorization: `Bearer ${token}`,
+          }
+        : {}),
+    };
+  };
+
+  /*
+   * Load bugs from backend.
+   */
   const loadBugs = async () => {
     try {
       setLoading(true);
-      setErrorMessage("");
+      setError("");
 
       const response = await fetch(API_URL, {
         method: "GET",
-        headers: getAuthHeaders(),
+        headers: getHeaders(),
       });
 
       if (!response.ok) {
-        if (response.status === 401) {
-          throw new Error(
-            "Your login session has expired. Please log in again."
-          );
-        }
-
-        if (response.status === 403) {
-          throw new Error(
-            "You do not have permission to access QA bug reports."
-          );
-        }
+        const errorText = await response.text();
 
         throw new Error(
-          `Failed to load bug reports (${response.status})`
+          errorText ||
+            `Failed to load bug reports (${response.status})`
         );
       }
 
-      const data: BugReport[] = await response.json();
+      const result = await response.json();
 
       /*
-       * Newest bugs should appear first.
+       * Supports:
        *
-       * The backend normally returns the records in database order,
-       * so we reverse the returned list here.
+       * [
+       *   {...}
+       * ]
+       *
+       * and:
+       *
+       * {
+       *   success: true,
+       *   data: [...]
+       * }
        */
+      const data = Array.isArray(result)
+        ? result
+        : Array.isArray(result?.data)
+        ? result.data
+        : [];
 
-      const sortedBugs = [...data].reverse();
+      setBugs(data);
+    } catch (err) {
+      console.error("Error loading bugs:", err);
 
-      setBugs(sortedBugs);
-    } catch (error) {
-      console.error("Error loading QA bugs:", error);
-
-      setErrorMessage(
-        error instanceof Error
-          ? error.message
-          : "Unable to load bug reports."
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Failed to load bug reports"
       );
     } finally {
       setLoading(false);
     }
   };
 
-  /*
-   * ============================================================
-   * INPUT CHANGE
-   * ============================================================
-   */
+  useEffect(() => {
+    loadBugs();
+  }, []);
 
-  const handleInputChange = (
-    e: React.ChangeEvent<
+  /*
+   * Update form fields.
+   */
+  const handleChange = (
+    event: React.ChangeEvent<
       HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
     >
   ) => {
-    const { name, value } = e.target;
+    const { name, value } = event.target;
 
-    setFormData((previous) => ({
+    setForm((previous) => ({
       ...previous,
       [name]: value,
     }));
   };
 
   /*
-   * ============================================================
-   * SUBMIT BUG
-   * ============================================================
-   *
-   * React
-   *   ↓
-   * POST /api/qa/bugs
-   *   ↓
-   * Spring Boot
-   *   ↓
-   * QA Service
-   *   ↓
-   * QA Repository
-   *   ↓
-   * PostgreSQL
+   * Open bug form.
    */
+  const openForm = () => {
+    setError("");
+    setSuccess("");
 
-  const handleSubmitBug = async (
-    e: React.FormEvent
+    setForm({
+      ...emptyForm,
+      bugId: `BUG-${String(bugs.length + 1).padStart(3, "0")}`,
+    });
+
+    setShowForm(true);
+  };
+
+  /*
+   * Close bug form.
+   */
+  const closeForm = () => {
+    setShowForm(false);
+    setForm(emptyForm);
+    setError("");
+  };
+
+  /*
+   * Submit bug to backend.
+   */
+  const handleSubmit = async (
+    event: React.FormEvent<HTMLFormElement>
   ) => {
-    e.preventDefault();
+    event.preventDefault();
 
-    setErrorMessage("");
-    setSuccessMessage("");
+    setError("");
+    setSuccess("");
 
-    /*
-     * Validation
-     */
-
-    if (!formData.bugId.trim()) {
-      setErrorMessage("Please enter Bug ID.");
-      return;
-    }
-
-    if (!formData.title.trim()) {
-      setErrorMessage("Please enter Bug Title.");
-      return;
-    }
-
-    if (!formData.linkedTaskId.trim()) {
-      setErrorMessage("Please enter Linked Task ID.");
-      return;
-    }
-
-    if (!formData.environment.trim()) {
-      setErrorMessage("Please select Environment.");
-      return;
-    }
-
-    if (!formData.assignedTo.trim()) {
-      setErrorMessage("Please enter Assignee.");
-      return;
-    }
-
-    if (!formData.stepsToReproduce.trim()) {
-      setErrorMessage(
-        "Please enter Steps to Reproduce."
-      );
+    if (
+      !form.bugId.trim() ||
+      !form.bugTitle.trim() ||
+      !form.linkedTaskId.trim() ||
+      !form.assignedTo.trim() ||
+      !form.stepsToReproduce.trim()
+    ) {
+      setError("Please fill all required fields.");
       return;
     }
 
     try {
       setSaving(true);
 
+      /*
+       * IMPORTANT:
+       *
+       * Backend entity uses "title", NOT "bugTitle".
+       *
+       * Therefore we send:
+       *
+       * title: form.bugTitle.trim()
+       */
       const response = await fetch(API_URL, {
         method: "POST",
-
-        /*
-         * IMPORTANT:
-         * The JWT token is included here.
-         */
-
-        headers: getAuthHeaders(),
-
+        headers: getHeaders(),
         body: JSON.stringify({
-          bugId: formData.bugId.trim(),
-          title: formData.title.trim(),
-          linkedTaskId:
-            formData.linkedTaskId.trim(),
-          environment:
-            formData.environment.trim(),
-          severity: formData.severity,
-          assignedTo:
-            formData.assignedTo.trim(),
-          stepsToReproduce:
-            formData.stepsToReproduce.trim(),
+          bugId: form.bugId.trim(),
+
+          // CORRECT BACKEND FIELD
+          title: form.bugTitle.trim(),
+
+          linkedTaskId: form.linkedTaskId.trim(),
+          environment: form.environment,
+          severity: form.severity,
+          assignedTo: form.assignedTo.trim(),
+          stepsToReproduce: form.stepsToReproduce.trim(),
+
+          status: "Open",
         }),
       });
 
       if (!response.ok) {
-        if (response.status === 401) {
-          throw new Error(
-            "Your login session has expired. Please log in again."
-          );
-        }
-
-        if (response.status === 403) {
-          throw new Error(
-            "You do not have permission to create a QA bug."
-          );
-        }
-
         const errorText = await response.text();
 
         throw new Error(
           errorText ||
-            `Failed to save bug (${response.status})`
+            `Failed to save bug report (${response.status})`
         );
       }
 
       /*
-       * Get the bug returned by the backend.
+       * Show success toast.
        *
-       * This is the actual saved database record.
+       * It will automatically disappear
+       * after 4 seconds.
        */
-
-      const savedBug: BugReport =
-        await response.json();
-
-      /*
-       * Put the newly saved bug at the TOP.
-       */
-
-      setBugs((previousBugs) => [
-        {
-          ...savedBug,
-          status:
-            savedBug.status || "Open",
-        },
-        ...previousBugs,
-      ]);
-
-      /*
-       * Reset form
-       */
-
-      setFormData(emptyForm);
-
-      /*
-       * Close form
-       */
+      setSuccess("Bug successfully added.");
 
       setShowForm(false);
+      setForm(emptyForm);
 
-      setSuccessMessage(
-        "Bug report submitted successfully."
-      );
+      /*
+       * Reload bugs from backend.
+       */
+      await loadBugs();
+    } catch (err) {
+      console.error("Error saving bug:", err);
 
-      setTimeout(() => {
-        setSuccessMessage("");
-      }, 3000);
-    } catch (error) {
-      console.error(
-        "Error submitting QA bug:",
-        error
-      );
-
-      setErrorMessage(
-        error instanceof Error
-          ? error.message
-          : "Failed to submit bug report."
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Failed to save bug report"
       );
     } finally {
       setSaving(false);
@@ -357,874 +307,483 @@ const QABugReports: React.FC = () => {
   };
 
   /*
-   * ============================================================
-   * CANCEL
-   * ============================================================
+   * Search/filter using TOP search bar.
    */
+ const filteredBugs = useMemo(() => {
+  const search = globalSearch.trim().toLowerCase();
 
-  const handleCancel = () => {
-    setFormData(emptyForm);
-    setErrorMessage("");
-    setShowForm(false);
-  };
+  if (!search) {
+    return bugs;
+  }
 
-  /*
-   * ============================================================
-   * SEARCH
-   * ============================================================
-   */
+  return bugs.filter((bug) => {
+    const values = [
+      bug.bugId,
+      bug.title,
+      bug.linkedTaskId,
+      bug.environment,
+      bug.severity,
+      bug.assignedTo,
+      bug.status,
+      bug.stepsToReproduce,
+    ];
 
-  const filteredBugs = bugs.filter((bug) => {
-    const search =
-      searchTerm.toLowerCase();
-
-    return (
-      bug.bugId
-        ?.toLowerCase()
-        .includes(search) ||
-      bug.title
-        ?.toLowerCase()
-        .includes(search) ||
-      bug.linkedTaskId
-        ?.toLowerCase()
-        .includes(search) ||
-      bug.environment
-        ?.toLowerCase()
-        .includes(search) ||
-      bug.severity
-        ?.toLowerCase()
-        .includes(search) ||
-      bug.assignedTo
-        ?.toLowerCase()
-        .includes(search) ||
-      bug.status
-        ?.toLowerCase()
+    return values.some((value) =>
+      String(value ?? "")
+        .toLowerCase()
         .includes(search)
     );
   });
+}, [bugs, globalSearch]);
+
+
+  const openCount = bugs.filter(
+    (bug) => (bug.status || "Open").toLowerCase() === "open"
+  ).length;
+
+  const fixedCount = bugs.filter(
+    (bug) => (bug.status || "").toLowerCase() === "fixed"
+  ).length;
+
+  const closedCount = bugs.filter(
+    (bug) => (bug.status || "").toLowerCase() === "closed"
+  ).length;
 
   /*
-   * ============================================================
-   * SEVERITY
-   * ============================================================
+   * Format created date + time.
+   *
+   * Example:
+   * Aug 21, 2026, 11:07 AM
    */
+  const formatDateTime = (bug: BugReport) => {
+    const value = bug.createdAt || bug.filedDate;
 
-  const getSeverityClass = (
-    severity?: string
-  ) => {
-    switch (
-      severity?.toLowerCase()
-    ) {
-      case "critical":
-        return "bg-red-50 text-red-600 border border-red-100";
-
-      case "high":
-        return "bg-red-50 text-red-500 border border-red-100";
-
-      case "medium":
-        return "bg-orange-50 text-orange-500 border border-orange-100";
-
-      case "low":
-        return "bg-emerald-50 text-emerald-500 border border-emerald-100";
-
-      default:
-        return "bg-slate-50 text-slate-500 border border-slate-100";
+    if (!value) {
+      return "—";
     }
+
+    const date = new Date(value);
+
+    if (Number.isNaN(date.getTime())) {
+      return value;
+    }
+
+    return date.toLocaleString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+    });
   };
-
-  /*
-   * ============================================================
-   * STATUS
-   * ============================================================
-   */
-
-  const getStatusClass = (
-    status?: string
-  ) => {
-    switch (
-      status?.toLowerCase()
-    ) {
-      case "closed":
-        return "bg-emerald-50 text-emerald-600";
-
-      case "in fix":
-        return "bg-orange-50 text-orange-500";
-
-      case "open":
-      default:
-        return "bg-red-50 text-red-500";
-    }
-  };
-
-  /*
-   * ============================================================
-   * DATE
-   * ============================================================
-   */
-
-  const formatDate = (
-    date?: string
-  ) => {
-    if (!date) {
-      return "-";
-    }
-
-    try {
-      return new Date(
-        date
-      ).toLocaleDateString(
-        "en-US",
-        {
-          month: "short",
-          day: "numeric",
-          year: "numeric",
-        }
-      );
-    } catch {
-      return date;
-    }
-  };
-
-  /*
-   * ============================================================
-   * UI
-   * ============================================================
-   */
 
   return (
-    <div className="min-h-full w-full bg-[#f8fafc] text-slate-800">
+    <div className="w-full">
 
-      {/* ======================================================
-          HEADER
-      ====================================================== */}
-
-      <div className="border-b border-slate-200 bg-white px-4 py-4 sm:px-6 lg:px-8">
-
-        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-
-          <div>
-            <h1 className="text-xl font-semibold tracking-tight text-slate-900 sm:text-2xl">
-              Bug Reports
-            </h1>
-
-            <p className="mt-1 text-xs text-slate-400 sm:text-sm">
-              Report, track and manage QA bugs
-            </p>
-          </div>
-
-          <div className="flex w-full items-center gap-2 md:w-auto">
-
-            {/* SEARCH */}
-
-            <div className="relative flex-1 md:w-64 md:flex-none">
-
-              <Search
-                size={16}
-                className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
-              />
-
-              <input
-                type="text"
-                placeholder="Search..."
-                value={searchTerm}
-                onChange={(e) =>
-                  setSearchTerm(
-                    e.target.value
-                  )
-                }
-                className="h-10 w-full rounded-xl border border-slate-200 bg-white pl-9 pr-3 text-sm outline-none transition focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100"
-              />
-
-            </div>
-
-            {/* FILE BUG */}
-
-            <button
-              type="button"
-              onClick={() => {
-                setShowForm(true);
-                setErrorMessage("");
-                setSuccessMessage("");
-              }}
-              className="flex h-10 shrink-0 items-center gap-2 rounded-lg bg-red-500 px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-red-600 active:scale-95"
-            >
-              <Plus size={17} />
-
-              <span className="hidden sm:inline">
-                File Bug
-              </span>
-            </button>
-
-          </div>
-        </div>
+      {/* File Bug button */}
+      <div className="flex justify-center mb-6">
+        <button
+          type="button"
+          onClick={openForm}
+          className="bg-red-500 hover:bg-red-600 text-white px-5 py-3 rounded-lg font-medium transition-colors"
+        >
+          + File Bug
+        </button>
       </div>
 
-      {/* ======================================================
-          CONTENT
-      ====================================================== */}
-
-      <main className="mx-auto w-full max-w-[1400px] px-4 py-6 sm:px-6 lg:px-8">
-
-        {/* SUCCESS */}
-
-        {successMessage && (
-          <div className="mb-4 flex items-center gap-2 rounded-lg border border-emerald-100 bg-emerald-50 px-4 py-3 text-sm text-emerald-600">
-
-            <CheckCircle2 size={17} />
-
-            {successMessage}
-
-          </div>
-        )}
-
-        {/* ERROR */}
-
-        {errorMessage && (
-          <div className="mb-4 flex items-center gap-2 rounded-lg border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-600">
-
-            <CircleAlert size={17} />
-
-            {errorMessage}
-
-          </div>
-        )}
-
-        {/* ====================================================
-            NEW BUG FORM
-        ==================================================== */}
-
-        {showForm && (
-          <div className="mb-6 rounded-xl border border-red-200 bg-white p-4 shadow-sm sm:p-5 lg:p-6">
-
-            <div className="mb-5 flex items-center justify-between">
-
-              <div>
-                <h2 className="text-base font-semibold text-slate-900">
-                  New Bug Report
-                </h2>
-
-                <p className="mt-1 text-xs text-slate-400">
-                  Enter the details of the bug
-                </p>
-              </div>
-
-              <button
-                type="button"
-                onClick={handleCancel}
-                className="rounded-lg p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
-              >
-                <X size={20} />
-              </button>
-
-            </div>
-
-            <form
-              onSubmit={handleSubmitBug}
-            >
-
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-
-                {/* BUG ID */}
-
-                <div>
-                  <label className="mb-1.5 block text-[10px] font-semibold uppercase tracking-wide text-slate-500">
-                    Bug ID
-                  </label>
-
-                  <input
-                    type="text"
-                    name="bugId"
-                    value={formData.bugId}
-                    onChange={
-                      handleInputChange
-                    }
-                    placeholder="BUG-090"
-                    className="h-10 w-full rounded-lg border border-slate-200 px-3 text-sm outline-none transition focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100"
-                  />
-                </div>
-
-                {/* TITLE */}
-
-                <div>
-                  <label className="mb-1.5 block text-[10px] font-semibold uppercase tracking-wide text-slate-500">
-                    Bug Title
-                  </label>
-
-                  <input
-                    type="text"
-                    name="title"
-                    value={formData.title}
-                    onChange={
-                      handleInputChange
-                    }
-                    placeholder="Bug Title"
-                    className="h-10 w-full rounded-lg border border-slate-200 px-3 text-sm outline-none transition focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100"
-                  />
-                </div>
-
-                {/* TASK */}
-
-                <div>
-                  <label className="mb-1.5 block text-[10px] font-semibold uppercase tracking-wide text-slate-500">
-                    Linked Task ID
-                  </label>
-
-                  <input
-                    type="text"
-                    name="linkedTaskId"
-                    value={
-                      formData.linkedTaskId
-                    }
-                    onChange={
-                      handleInputChange
-                    }
-                    placeholder="T-044"
-                    className="h-10 w-full rounded-lg border border-slate-200 px-3 text-sm outline-none transition focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100"
-                  />
-                </div>
-
-                {/* ENVIRONMENT */}
-
-                <div>
-                  <label className="mb-1.5 block text-[10px] font-semibold uppercase tracking-wide text-slate-500">
-                    Environment
-                  </label>
-
-                  <select
-                    name="environment"
-                    value={
-                      formData.environment
-                    }
-                    onChange={
-                      handleInputChange
-                    }
-                    className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100"
-                  >
-                    <option value="">
-                      Select Environment
-                    </option>
-
-                    <option value="Dev">
-                      Dev
-                    </option>
-
-                    <option value="Staging">
-                      Staging
-                    </option>
-
-                    <option value="Production">
-                      Production
-                    </option>
-                  </select>
-                </div>
-
-                {/* SEVERITY */}
-
-                <div>
-                  <label className="mb-1.5 block text-[10px] font-semibold uppercase tracking-wide text-slate-500">
-                    Severity
-                  </label>
-
-                  <div className="relative">
-
-                    <select
-                      name="severity"
-                      value={
-                        formData.severity
-                      }
-                      onChange={
-                        handleInputChange
-                      }
-                      className="h-10 w-full appearance-none rounded-lg border border-slate-200 bg-white px-3 pr-9 text-sm outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100"
-                    >
-                      <option value="Critical">
-                        Critical
-                      </option>
-
-                      <option value="High">
-                        High
-                      </option>
-
-                      <option value="Medium">
-                        Medium
-                      </option>
-
-                      <option value="Low">
-                        Low
-                      </option>
-                    </select>
-
-                    <ChevronDown
-                      size={15}
-                      className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-slate-400"
-                    />
-
-                  </div>
-                </div>
-
-                {/* ASSIGNEE */}
-
-                <div>
-                  <label className="mb-1.5 block text-[10px] font-semibold uppercase tracking-wide text-slate-500">
-                    Assign To
-                  </label>
-
-                  <input
-                    type="text"
-                    name="assignedTo"
-                    value={
-                      formData.assignedTo
-                    }
-                    onChange={
-                      handleInputChange
-                    }
-                    placeholder="Enter name"
-                    className="h-10 w-full rounded-lg border border-slate-200 px-3 text-sm outline-none transition focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100"
-                  />
-                </div>
-              </div>
-
-              {/* STEPS */}
-
-              <div className="mt-4">
-
-                <label className="mb-1.5 block text-[10px] font-semibold uppercase tracking-wide text-slate-500">
-                  Steps to Reproduce
-                </label>
-
-                <textarea
-                  name="stepsToReproduce"
-                  value={
-                    formData.stepsToReproduce
-                  }
-                  onChange={
-                    handleInputChange
-                  }
-                  rows={4}
-                  placeholder="1. Navigate to... 2. Click on... 3. Observe..."
-                  className="w-full resize-none rounded-lg border border-slate-200 px-3 py-3 text-sm outline-none transition focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100"
-                />
-
-              </div>
-
-              {/* BUTTONS */}
-
-              <div className="mt-5 flex flex-wrap gap-2">
-
-                <button
-                  type="submit"
-                  disabled={saving}
-                  className="flex h-10 items-center justify-center rounded-lg bg-red-500 px-5 text-sm font-semibold text-white transition hover:bg-red-600 disabled:cursor-not-allowed disabled:opacity-60"
-                >
-                  {saving
-                    ? "Submitting..."
-                    : "Submit Bug Report"}
-                </button>
-
-                <button
-                  type="button"
-                  onClick={handleCancel}
-                  className="h-10 rounded-lg border border-slate-200 bg-white px-5 text-sm font-medium text-slate-600 transition hover:bg-slate-50"
-                >
-                  Cancel
-                </button>
-
-              </div>
-
-            </form>
-          </div>
-        )}
-
-        {/* ====================================================
-            SUMMARY
-        ==================================================== */}
-
-        <div className="mb-3 flex items-center justify-between">
-
-          <div className="text-xs text-slate-400">
-
-            {
-              bugs.filter(
-                (bug) =>
-                  bug.status?.toLowerCase() ===
-                  "open"
-              ).length
-            }{" "}
-            open ·{" "}
-
-            {
-              bugs.filter(
-                (bug) =>
-                  bug.status?.toLowerCase() ===
-                  "in fix"
-              ).length
-            }{" "}
-            in fix ·{" "}
-
-            {
-              bugs.filter(
-                (bug) =>
-                  bug.status?.toLowerCase() ===
-                  "closed"
-              ).length
-            }{" "}
-            closed
-
+      {/* =====================================================
+          SUCCESS TOAST
+          Appears above the table and disappears after 4 seconds
+          ===================================================== */}
+      {success && (
+        <div className="mb-4 flex items-center justify-between rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700 shadow-sm">
+          <div className="flex items-center gap-2">
+            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-green-500 text-white text-xs">
+              ✓
+            </span>
+
+            <span>{success}</span>
           </div>
 
           <button
             type="button"
-            onClick={loadBugs}
-            disabled={loading}
-            className="text-xs font-medium text-slate-400 hover:text-slate-600 disabled:opacity-50"
+            onClick={() => setSuccess("")}
+            className="text-green-500 hover:text-green-700 text-lg leading-none"
           >
-            Refresh
+            ×
           </button>
-
         </div>
+      )}
 
-        {/* ====================================================
-            TABLE
-        ==================================================== */}
+      {/* Error message */}
+      {error && (
+        <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
+          {error}
+        </div>
+      )}
 
-        <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+      {/* New Bug Form */}
+      {showForm && (
+        <div className="mb-6 rounded-xl border border-red-200 bg-white p-5 shadow-sm">
 
-          {/* LOADING */}
+          <div className="flex items-start justify-between mb-5">
 
-          {loading ? (
-            <div className="flex min-h-[250px] items-center justify-center">
+            <div>
+              <h2 className="text-lg font-semibold text-slate-900">
+                New Bug Report
+              </h2>
 
-              <div className="flex items-center gap-2 text-sm text-slate-400">
-
-                <Clock3
-                  size={17}
-                  className="animate-spin"
-                />
-
-                Loading bug reports...
-
-              </div>
-            </div>
-          ) : filteredBugs.length === 0 ? (
-
-            /* EMPTY */
-
-            <div className="flex min-h-[250px] flex-col items-center justify-center px-4 text-center">
-
-              <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-slate-100">
-
-                <Bug
-                  size={22}
-                  className="text-slate-400"
-                />
-
-              </div>
-
-              <h3 className="text-sm font-semibold text-slate-700">
-                No bug reports found
-              </h3>
-
-              <p className="mt-1 text-xs text-slate-400">
-                Click "File Bug" to create a new bug report.
+              <p className="mt-1 text-sm text-slate-400">
+                Enter the details of the bug
               </p>
+            </div>
+
+            <button
+              type="button"
+              onClick={closeForm}
+              className="text-slate-400 hover:text-slate-600 text-2xl leading-none"
+            >
+              ×
+            </button>
+
+          </div>
+
+          <form onSubmit={handleSubmit}>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+
+              {/* Bug ID */}
+              <div>
+                <label className="block mb-2 text-xs font-medium text-slate-600">
+                  BUG ID
+                </label>
+
+                <input
+                  name="bugId"
+                  value={form.bugId}
+                  onChange={handleChange}
+                  className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-red-400"
+                  placeholder="BUG-090"
+                />
+              </div>
+
+              {/* Bug Title */}
+              <div>
+                <label className="block mb-2 text-xs font-medium text-slate-600">
+                  BUG TITLE
+                </label>
+
+                <input
+                  name="bugTitle"
+                  value={form.bugTitle}
+                  onChange={handleChange}
+                  className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-red-400"
+                  placeholder="Bug title"
+                />
+              </div>
+
+              {/* Linked Task */}
+              <div>
+                <label className="block mb-2 text-xs font-medium text-slate-600">
+                  LINKED TASK ID
+                </label>
+
+                <input
+                  name="linkedTaskId"
+                  value={form.linkedTaskId}
+                  onChange={handleChange}
+                  className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-red-400"
+                  placeholder="T-044"
+                />
+              </div>
+
+              {/* Environment */}
+              <div>
+                <label className="block mb-2 text-xs font-medium text-slate-600">
+                  ENVIRONMENT
+                </label>
+
+                <select
+                  name="environment"
+                  value={form.environment}
+                  onChange={handleChange}
+                  className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-red-400 bg-white"
+                >
+                  <option value="Dev">Dev</option>
+                  <option value="Staging">Staging</option>
+                  <option value="Production">Production</option>
+                </select>
+              </div>
+
+              {/* Severity */}
+              <div>
+                <label className="block mb-2 text-xs font-medium text-slate-600">
+                  SEVERITY
+                </label>
+
+                <select
+                  name="severity"
+                  value={form.severity}
+                  onChange={handleChange}
+                  className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-red-400 bg-white"
+                >
+                  <option value="Low">Low</option>
+                  <option value="Medium">Medium</option>
+                  <option value="High">High</option>
+                  <option value="Critical">Critical</option>
+                </select>
+              </div>
+
+              {/* Assigned To */}
+              <div>
+                <label className="block mb-2 text-xs font-medium text-slate-600">
+                  ASSIGN TO
+                </label>
+
+                <input
+                  name="assignedTo"
+                  value={form.assignedTo}
+                  onChange={handleChange}
+                  className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-red-400"
+                  placeholder="Sneha"
+                />
+              </div>
 
             </div>
 
-          ) : (
+            {/* Steps */}
+            <div className="mt-4">
 
-            <>
-              {/* ==================================================
-                  DESKTOP TABLE
-              ================================================== */}
+              <label className="block mb-2 text-xs font-medium text-slate-600">
+                STEPS TO REPRODUCE
+              </label>
 
-              <div className="hidden overflow-x-auto md:block">
+              <textarea
+                name="stepsToReproduce"
+                value={form.stepsToReproduce}
+                onChange={handleChange}
+                rows={4}
+                className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm outline-none resize-none focus:border-red-400"
+                placeholder="Enter steps to reproduce the bug..."
+              />
 
-                <table className="w-full min-w-[950px] border-collapse">
+            </div>
 
-                  <thead>
+            {/* Buttons */}
+            <div className="flex gap-2 mt-5">
 
-                    <tr className="border-b border-slate-100 bg-white">
+              <button
+                type="submit"
+                disabled={saving}
+                className="bg-red-500 hover:bg-red-600 disabled:opacity-60 text-white px-5 py-2.5 rounded-lg text-sm font-medium"
+              >
+                {saving ? "Saving..." : "Submit Bug Report"}
+              </button>
 
-                      <th className="px-3 py-3 text-left text-[10px] font-semibold uppercase tracking-wide text-slate-500">
-                        Bug ID
-                      </th>
+              <button
+                type="button"
+                onClick={closeForm}
+                className="border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 px-5 py-2.5 rounded-lg text-sm"
+              >
+                Cancel
+              </button>
 
-                      <th className="px-3 py-3 text-left text-[10px] font-semibold uppercase tracking-wide text-slate-500">
-                        Title
-                      </th>
+            </div>
 
-                      <th className="px-3 py-3 text-left text-[10px] font-semibold uppercase tracking-wide text-slate-500">
-                        Severity
-                      </th>
+          </form>
+        </div>
+      )}
 
-                      <th className="px-3 py-3 text-left text-[10px] font-semibold uppercase tracking-wide text-slate-500">
-                        Status
-                      </th>
+      {/* Count row */}
+      <div className="flex items-center justify-between mb-3 text-xs text-slate-400">
 
-                      <th className="px-3 py-3 text-left text-[10px] font-semibold uppercase tracking-wide text-slate-500">
-                        Linked Task
-                      </th>
+        <span>
+          {openCount} open · {fixedCount} in fix · {closedCount} closed
+        </span>
 
-                      <th className="px-3 py-3 text-left text-[10px] font-semibold uppercase tracking-wide text-slate-500">
-                        Assignee
-                      </th>
+        <button
+          type="button"
+          onClick={loadBugs}
+          className="hover:text-slate-600"
+        >
+          Refresh
+        </button>
 
-                      <th className="px-3 py-3 text-left text-[10px] font-semibold uppercase tracking-wide text-slate-500">
-                        Environment
-                      </th>
+      </div>
 
-                      <th className="px-3 py-3 text-left text-[10px] font-semibold uppercase tracking-wide text-slate-500">
-                        Filed
-                      </th>
+      {/* =====================================================
+          TABLE
+          ===================================================== */}
+      <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm">
 
-                    </tr>
+        {loading ? (
 
-                  </thead>
+          <div className="py-16 text-center text-sm text-slate-400">
+            Loading bug reports...
+          </div>
 
-                  <tbody>
+        ) : filteredBugs.length === 0 ? (
 
-                    {filteredBugs.map(
-                      (bug, index) => (
+          <div className="py-16 text-center">
 
-                        <tr
-                          key={
-                            bug.id ??
-                            `${bug.bugId}-${index}`
-                          }
-                          className="border-b border-slate-100 last:border-0 hover:bg-slate-50"
-                        >
+            <div className="text-slate-400 text-3xl mb-3">
+              🐞
+            </div>
 
-                          {/* BUG ID */}
+            <p className="text-sm font-medium text-slate-700">
+              {globalSearch
+                ? "No matching bug reports found"
+                : "No bug reports found"}
+            </p>
 
-                          <td className="whitespace-nowrap px-3 py-4 text-xs font-medium text-slate-500">
-                            {bug.bugId}
-                          </td>
+            <p className="mt-1 text-xs text-slate-400">
+              {globalSearch
+                ? `No bugs match "${globalSearch}"`
+                : 'Click "File Bug" to create a new bug report.'}
+            </p>
 
-                          {/* TITLE */}
+          </div>
 
-                          <td className="min-w-[280px] px-3 py-4">
+        ) : (
 
-                            <div className="flex items-center gap-2">
+          <table className="w-full min-w-[1000px] text-sm">
 
-                              <Bug
-                                size={14}
-                                className="shrink-0 text-emerald-400"
-                              />
+            <thead>
 
-                              <span className="text-xs font-semibold text-slate-700">
-                                {bug.title}
-                              </span>
+              <tr className="border-b border-slate-200">
 
-                            </div>
+                <th className="px-3 py-3 text-left text-xs font-medium text-slate-500">
+                  BUG ID
+                </th>
 
-                          </td>
+                <th className="px-3 py-3 text-left text-xs font-medium text-slate-500">
+                  TITLE
+                </th>
 
-                          {/* SEVERITY */}
+                <th className="px-3 py-3 text-left text-xs font-medium text-slate-500">
+                  SEVERITY
+                </th>
 
-                          <td className="whitespace-nowrap px-3 py-4">
+                <th className="px-3 py-3 text-left text-xs font-medium text-slate-500">
+                  STATUS
+                </th>
 
-                            <span
-                              className={`inline-flex rounded-md px-2 py-1 text-[10px] font-medium ${getSeverityClass(
-                                bug.severity
-                              )}`}
-                            >
-                              {bug.severity}
-                            </span>
+                <th className="px-3 py-3 text-left text-xs font-medium text-slate-500">
+                  LINKED TASK
+                </th>
 
-                          </td>
+                <th className="px-3 py-3 text-left text-xs font-medium text-slate-500">
+                  ASSIGNEE
+                </th>
 
-                          {/* STATUS */}
+                <th className="px-3 py-3 text-left text-xs font-medium text-slate-500">
+                  ENVIRONMENT
+                </th>
 
-                          <td className="whitespace-nowrap px-3 py-4">
+                <th className="px-3 py-3 text-left text-xs font-medium text-slate-500">
+                  CREATED
+                </th>
 
-                            <span
-                              className={`inline-flex rounded-md px-2 py-1 text-[10px] font-medium ${getStatusClass(
-                                bug.status ||
-                                  "Open"
-                              )}`}
-                            >
-                              {bug.status ||
-                                "Open"}
-                            </span>
+              </tr>
 
-                          </td>
+            </thead>
 
-                          {/* TASK */}
+            <tbody>
 
-                          <td className="whitespace-nowrap px-3 py-4 text-xs text-slate-500">
-                            {bug.linkedTaskId ||
-                              "-"}
-                          </td>
+              {filteredBugs.map((bug, index) => {
 
-                          {/* ASSIGNEE */}
+                const status = bug.status || "Open";
 
-                          <td className="whitespace-nowrap px-3 py-4 text-xs text-slate-500">
-                            {bug.assignedTo ||
-                              "-"}
-                          </td>
+                return (
 
-                          {/* ENVIRONMENT */}
+                  <tr
+                    key={bug.id ?? `${bug.bugId}-${index}`}
+                    className="border-b border-slate-100 last:border-b-0 hover:bg-slate-50"
+                  >
 
-                          <td className="whitespace-nowrap px-3 py-4 text-xs text-slate-500">
-                            {bug.environment ||
-                              "-"}
-                          </td>
+                    {/* Bug ID */}
+                    <td className="px-3 py-4 text-sm text-slate-600">
+                      {bug.bugId}
+                    </td>
 
-                          {/* DATE */}
+                    {/* Title */}
+                    <td className="px-3 py-4">
 
-                          <td className="whitespace-nowrap px-3 py-4 text-xs text-slate-500">
-                            {formatDate(
-                              bug.createdAt ||
-                                bug.filedAt
-                            )}
-                          </td>
+                      <div className="flex items-center gap-2">
 
-                        </tr>
-                      )
-                    )}
+                        <span className="text-emerald-500">
+                          🐞
+                        </span>
 
-                  </tbody>
-
-                </table>
-
-              </div>
-
-              {/* ==================================================
-                  MOBILE
-              ================================================== */}
-
-              <div className="divide-y divide-slate-100 md:hidden">
-
-                {filteredBugs.map(
-                  (bug, index) => (
-
-                    <div
-                      key={
-                        bug.id ??
-                        `${bug.bugId}-${index}`
-                      }
-                      className="p-4"
-                    >
-
-                      <div className="flex items-start justify-between gap-3">
-
-                        <div className="min-w-0">
-
-                          <div className="flex items-center gap-2">
-
-                            <Bug
-                              size={15}
-                              className="shrink-0 text-emerald-400"
-                            />
-
-                            <span className="text-xs font-medium text-slate-400">
-                              {bug.bugId}
-                            </span>
-
-                          </div>
-
-                          <h3 className="mt-2 text-sm font-semibold text-slate-800">
-                            {bug.title}
-                          </h3>
-
-                        </div>
-
-                        <span
-                          className={`shrink-0 rounded-md px-2 py-1 text-[10px] font-medium ${getSeverityClass(
-                            bug.severity
-                          )}`}
-                        >
-                          {bug.severity}
+                        <span className="text-sm text-slate-700">
+                          {bug.title}
                         </span>
 
                       </div>
 
-                      <div className="mt-4 grid grid-cols-2 gap-3">
+                    </td>
 
-                        <div>
+                    {/* Severity */}
+                    <td className="px-3 py-4">
 
-                          <p className="text-[9px] font-semibold uppercase tracking-wide text-slate-400">
-                            Status
-                          </p>
+                      <span
+                        className={`inline-flex rounded-md px-2 py-1 text-xs ${
+                          bug.severity?.toLowerCase() === "critical"
+                            ? "bg-red-50 text-red-500"
+                            : bug.severity?.toLowerCase() === "high"
+                            ? "bg-red-50 text-red-500"
+                            : bug.severity?.toLowerCase() === "medium"
+                            ? "bg-orange-50 text-orange-500"
+                            : "bg-green-50 text-green-600"
+                        }`}
+                      >
+                        {bug.severity}
+                      </span>
 
-                          <span
-                            className={`mt-1 inline-flex rounded-md px-2 py-1 text-[10px] font-medium ${getStatusClass(
-                              bug.status ||
-                                "Open"
-                            )}`}
-                          >
-                            {bug.status ||
-                              "Open"}
-                          </span>
+                    </td>
 
-                        </div>
+                    {/* Status */}
+                    <td className="px-3 py-4">
 
-                        <div>
+                      <span className="inline-flex rounded-md bg-red-50 px-2 py-1 text-xs text-red-500">
+                        {status}
+                      </span>
 
-                          <p className="text-[9px] font-semibold uppercase tracking-wide text-slate-400">
-                            Linked Task
-                          </p>
+                    </td>
 
-                          <p className="mt-1 text-xs text-slate-600">
-                            {bug.linkedTaskId ||
-                              "-"}
-                          </p>
+                    {/* Linked Task */}
+                    <td className="px-3 py-4 text-sm text-slate-600">
+                      {bug.linkedTaskId}
+                    </td>
 
-                        </div>
+                    {/* Assignee */}
+                    <td className="px-3 py-4 text-sm text-slate-600">
+                      {bug.assignedTo}
+                    </td>
 
-                        <div>
+                    {/* Environment */}
+                    <td className="px-3 py-4 text-sm text-slate-600">
+                      {bug.environment}
+                    </td>
 
-                          <p className="text-[9px] font-semibold uppercase tracking-wide text-slate-400">
-                            Assignee
-                          </p>
+                    {/* Created Date + Time */}
+                    <td className="px-3 py-4 text-sm text-slate-500 whitespace-nowrap">
+                      {formatDateTime(bug)}
+                    </td>
 
-                          <p className="mt-1 text-xs text-slate-600">
-                            {bug.assignedTo ||
-                              "-"}
-                          </p>
+                  </tr>
 
-                        </div>
+                );
+              })}
 
-                        <div>
+            </tbody>
 
-                          <p className="text-[9px] font-semibold uppercase tracking-wide text-slate-400">
-                            Environment
-                          </p>
+          </table>
 
-                          <p className="mt-1 text-xs text-slate-600">
-                            {bug.environment ||
-                              "-"}
-                          </p>
+        )}
 
-                        </div>
+      </div>
 
-                        <div>
-
-                          <p className="text-[9px] font-semibold uppercase tracking-wide text-slate-400">
-                            Filed
-                          </p>
-
-                          <p className="mt-1 text-xs text-slate-600">
-                            {formatDate(
-                              bug.createdAt ||
-                                bug.filedAt
-                            )}
-                          </p>
-
-                        </div>
-
-                      </div>
-
-                    </div>
-                  )
-                )}
-
-              </div>
-            </>
-          )}
-
-        </div>
-      </main>
     </div>
   );
 };
