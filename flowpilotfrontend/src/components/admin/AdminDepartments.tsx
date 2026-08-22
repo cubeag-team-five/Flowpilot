@@ -23,89 +23,6 @@ interface Member {
 }
 
 
-const initialMembers: Record<number, Member[]> = {
-  1: [
-    {
-      id: 1,
-      fullName: 'Karan Mehta',
-      email: 'karan.mehta@ipmt.com',
-      employeeId: 'EMP001',
-      designation: 'Head of Engineering',
-    },
-    {
-      id: 2,
-      fullName: 'Rohit Varma',
-      email: 'rohit.varma@ipmt.com',
-      employeeId: 'EMP002',
-      designation: 'Senior Developer',
-    },
-    {
-      id: 3,
-      fullName: 'Amit Sharma',
-      email: 'amit.sharma@ipmt.com',
-      employeeId: 'EMP003',
-      designation: 'Software Developer',
-    },
-  ],
-
-  2: [
-    {
-      id: 4,
-      fullName: 'Arjun Shah',
-      email: 'arjun.shah@ipmt.com',
-      employeeId: 'EMP004',
-      designation: 'Head of Product',
-    },
-    {
-      id: 5,
-      fullName: 'Priya Joshi',
-      email: 'priya.joshi@ipmt.com',
-      employeeId: 'EMP005',
-      designation: 'Product Manager',
-    },
-  ],
-
-  3: [
-    {
-      id: 6,
-      fullName: 'Sana Sheikh',
-      email: 'sana.sheikh@ipmt.com',
-      employeeId: 'EMP006',
-      designation: 'QA Lead',
-    },
-  ],
-
-  4: [
-    {
-      id: 7,
-      fullName: 'Divya Mehta',
-      email: 'divya.mehta@ipmt.com',
-      employeeId: 'EMP007',
-      designation: 'Design Lead',
-    },
-  ],
-
-  5: [
-    {
-      id: 8,
-      fullName: 'Nisha Agarwal',
-      email: 'nisha.agarwal@ipmt.com',
-      employeeId: 'EMP008',
-      designation: 'Operations Head',
-    },
-  ],
-
-  6: [
-    {
-      id: 9,
-      fullName: 'Rajeev Kumar',
-      email: 'rajeev.kumar@ipmt.com',
-      employeeId: 'EMP009',
-      designation: 'Leadership',
-    },
-  ],
-};
-
 export const AdminDepartments: React.FC = () => {
   const [departments, setDepartments] =
   useState<Department[]>([]);
@@ -130,7 +47,7 @@ export const AdminDepartments: React.FC = () => {
   });
 
   const [departmentMembers, setDepartmentMembers] =
-    useState<Record<number, Member[]>>(initialMembers);
+    useState<Record<number, Member[]>>({});
 
   const [showForm, setShowForm] = useState(false);
 
@@ -226,9 +143,60 @@ export const AdminDepartments: React.FC = () => {
     fetchDepartments();
   }, []);
 
-  const handleViewMembers = (department: Department) => {
-    setSelectedDepartment(department);
-    setShowMembers(true);
+  const handleViewMembers = async (department: Department) => {
+    try {
+      const token = localStorage.getItem('token');
+
+      if (!token) {
+        throw new Error(
+          'Authentication token not found. Please login again.'
+        );
+      }
+
+      const response = await fetch(
+        `http://localhost:8080/api/admin/departments/${department.id}/members`,
+        {
+          method: 'GET',
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(
+          `Failed to fetch members: ${response.statusText}`
+        );
+      }
+
+      const data: Member[] = await response.json();
+
+      setDepartmentMembers((previous) => ({
+        ...previous,
+        [department.id]: data,
+      }));
+
+      setSelectedDepartment({
+        ...department,
+        members: data.length,
+      });
+
+      setShowMembers(true);
+
+    } 
+    catch (error) {
+      console.error('Error fetching department members:', error);
+
+      setToastMessage(
+        error instanceof Error
+        ? error.message
+        : 'Failed to fetch members.'
+      );
+
+      setTimeout(() => {
+        setToastMessage('');
+      }, 3000);
+    }
   };
 
   const handleAddDepartment = async (e: React.FormEvent) => {
@@ -358,49 +326,116 @@ export const AdminDepartments: React.FC = () => {
     }));
   };
 
-  const handleAddOrEditMember = (
-    e: React.FormEvent
-  ) => {
-    e.preventDefault();
+  const handleAddOrEditMember = async (
+  e: React.FormEvent
+) => {
+  e.preventDefault();
 
-    if (
-      !memberForm.fullName.trim() ||
-      !memberForm.email.trim() ||
-      !memberForm.employeeId.trim() ||
-      !memberForm.designation.trim() ||
-      !selectedDepartment
-    ) {
-      return;
+  if (
+    !memberForm.fullName.trim() ||
+    !memberForm.email.trim() ||
+    !memberForm.employeeId.trim() ||
+    !memberForm.designation.trim() ||
+    !selectedDepartment
+  ) {
+    return;
+  }
+
+  try {
+    const token = localStorage.getItem('token');
+
+    if (!token) {
+      throw new Error(
+        'Authentication token not found. Please login again.'
+      );
     }
 
-    if (editingMember) {
-      setDepartmentMembers((previous) => ({
-        ...previous,
-        [selectedDepartment.id]: (
-          previous[selectedDepartment.id] || []
-        ).map((member) =>
-          member.id === editingMember.id
-            ? {
-                ...member,
-                ...memberForm,
-              }
-            : member
-        ),
-      }));
-    } else {
-      const newMember: Member = {
-        id: Date.now(),
-        ...memberForm,
-      };
+    const url = editingMember
+      ? `http://localhost:8080/api/admin/departments/${selectedDepartment.id}/members/${editingMember.id}`
+      : `http://localhost:8080/api/admin/departments/${selectedDepartment.id}/members`;
 
-      setDepartmentMembers((previous) => ({
+    const response = await fetch(url, {
+      method: editingMember ? 'PUT' : 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        fullName: memberForm.fullName.trim(),
+        email: memberForm.email.trim(),
+        employeeId: memberForm.employeeId.trim(),
+        designation: memberForm.designation.trim(),
+      }),
+    });
+
+    if (!response.ok) {
+      let errorMessage = editingMember
+        ? 'Failed to update member.'
+        : 'Failed to add member.';
+
+      try {
+        const errorData = await response.json();
+
+        if (errorData?.message) {
+          errorMessage = errorData.message;
+        }
+      } catch {
+        // Ignore JSON parsing error
+      }
+
+      throw new Error(errorMessage);
+    }
+
+    const savedMember: Member = await response.json();
+
+    setDepartmentMembers((previous) => {
+      const currentMembers =
+        previous[selectedDepartment.id] || [];
+
+      if (editingMember) {
+        return {
+          ...previous,
+          [selectedDepartment.id]: currentMembers.map(
+            (member) =>
+              member.id === savedMember.id
+                ? savedMember
+                : member
+          ),
+        };
+      }
+
+      return {
         ...previous,
         [selectedDepartment.id]: [
-          ...(previous[selectedDepartment.id] || []),
-          newMember,
+          ...currentMembers,
+          savedMember,
         ],
-      }));
-    }
+      };
+    });
+
+    const updatedMemberCount =
+      (departmentMembers[selectedDepartment.id] || []).length +
+      (editingMember ? 0 : 1);
+
+    setDepartments((previous) =>
+      previous.map((department) =>
+        department.id === selectedDepartment.id
+          ? {
+              ...department,
+              members: updatedMemberCount,
+            }
+          : department
+      )
+    );
+
+    setSelectedDepartment((previous) =>
+      previous
+        ? {
+            ...previous,
+            members: updatedMemberCount,
+          }
+        : previous
+    );
 
     setMemberForm({
       fullName: '',
@@ -411,7 +446,31 @@ export const AdminDepartments: React.FC = () => {
 
     setEditingMember(null);
     setShowMemberForm(false);
-  };
+
+    setToastMessage(
+      editingMember
+        ? 'Member updated successfully.'
+        : 'Member added successfully.'
+    );
+
+    setTimeout(() => {
+      setToastMessage('');
+    }, 3000);
+
+  } catch (error) {
+    console.error('Error saving member:', error);
+
+    setToastMessage(
+      error instanceof Error
+        ? error.message
+        : 'Failed to save member.'
+    );
+
+    setTimeout(() => {
+      setToastMessage('');
+    }, 3000);
+  }
+};
 
   const handleEditMember = (member: Member) => {
     setEditingMember(member);
@@ -1093,132 +1152,285 @@ export const AdminDepartments: React.FC = () => {
             </div>
 
 
-            {/* TABLE */}
+            {/* TABLE / RESPONSIVE MEMBER LIST */}
 
-            <div className="max-h-[55vh] overflow-auto">
+            <div className="max-h-[55vh] overflow-y-auto">
 
-              <table className="w-full min-w-[650px]">
+              {/* ================= DESKTOP TABLE ================= */}
 
-                <thead className="sticky top-0 bg-slate-50">
+              <div className="hidden sm:block overflow-x-auto">
 
-                  <tr
-                    className="
-                      border-b
-                      border-slate-200
-                      text-left
-                    "
-                  >
+                <table className="w-full min-w-[650px]">
 
-                    <th className="px-5 py-3 text-[11px] font-extrabold uppercase tracking-wide text-slate-500">
-                      Member Name
-                    </th>
+                  <thead className="sticky top-0 bg-slate-50">
 
-                    <th className="px-4 py-3 text-[11px] font-extrabold uppercase tracking-wide text-slate-500">
-                      Employee ID
-                    </th>
+                    <tr
+                      className="
+                        border-b
+                        border-slate-200
+                        text-left
+                      "
+                    >
 
-                    <th className="px-4 py-3 text-[11px] font-extrabold uppercase tracking-wide text-slate-500">
-                      Designation
-                    </th>
+                      <th className="px-5 py-3 text-[11px] font-extrabold uppercase tracking-wide text-slate-500">
+                        Member Name
+                      </th>
 
-                    <th className="px-4 py-3 text-[11px] font-extrabold uppercase tracking-wide text-slate-500">
-                      Email
-                    </th>
+                      <th className="px-4 py-3 text-[11px] font-extrabold uppercase tracking-wide text-slate-500">
+                        Employee ID
+                      </th>
 
-                    <th className="px-5 py-3 text-[11px] font-extrabold uppercase tracking-wide text-slate-500">
-                      Edit
-                    </th>
+                      <th className="px-4 py-3 text-[11px] font-extrabold uppercase tracking-wide text-slate-500">
+                        Designation
+                      </th>
 
-                  </tr>
+                      <th className="px-4 py-3 text-[11px] font-extrabold uppercase tracking-wide text-slate-500">
+                        Email
+                      </th>
 
-                </thead>
+                      <th className="px-5 py-3 text-[11px] font-extrabold uppercase tracking-wide text-slate-500">
+                        Edit
+                      </th>
 
+                    </tr>
 
-                <tbody>
+                  </thead>
 
-                  {(departmentMembers[selectedDepartment.id] || []).map(
+                  <tbody>
+
+                    {(departmentMembers[selectedDepartment.id] || []).map(
                     (member) => (
 
                       <tr
                         key={member.id}
                         className="
-                          border-b
-                          border-slate-100
-                          hover:bg-slate-50/60
-                        "
-                      >
+                        border-b
+                        border-slate-100
+                        hover:bg-slate-50/60
+              "
+            >
 
-                        <td className="px-5 py-3.5">
+              <td className="px-5 py-3.5">
 
-                          <div className="text-[13px] font-bold text-slate-900">
-                            {member.fullName}
-                          </div>
+                <div className="text-[13px] font-bold text-slate-900">
+                  {member.fullName}
+                </div>
 
-                        </td>
+              </td>
+
+              <td className="px-4 py-3.5">
+
+                <span className="text-[12px] font-semibold text-slate-600">
+                  {member.employeeId}
+                </span>
+
+              </td>
+
+              <td className="px-4 py-3.5">
+
+                <span className="text-[12px] font-medium text-slate-600">
+                  {member.designation}
+                </span>
+
+              </td>
+
+              <td className="px-4 py-3.5">
+
+                <span className="text-[12px] font-medium text-slate-500">
+                  {member.email}
+                </span>
+
+              </td>
+
+              <td className="px-5 py-3.5">
+
+                <button
+                  type="button"
+                  onClick={() => handleEditMember(member)}
+                  className="
+                    rounded-md
+                    border
+                    border-slate-200
+                    bg-white
+                    px-3
+                    py-1.5
+                    text-[11px]
+                    font-bold
+                    text-slate-700
+                    hover:bg-slate-50
+                  "
+                >
+                  Edit
+                </button>
+
+              </td>
+
+            </tr>
+
+          )
+        )}
+
+      </tbody>
+
+    </table>
+
+  </div>
 
 
-                        <td className="px-4 py-3.5">
+  {/* ================= MOBILE MEMBER CARDS ================= */}
 
-                          <span className="text-[12px] font-semibold text-slate-600">
-                            {member.employeeId}
-                          </span>
+  <div className="block space-y-3 p-4 sm:hidden">
 
-                        </td>
+    {(departmentMembers[selectedDepartment.id] || []).map(
+      (member) => (
 
+        <div
+          key={member.id}
+          className="
+            w-full
+            rounded-lg
+            border
+            border-slate-200
+            bg-white
+            p-4
+            shadow-[0_2px_8px_rgba(15,23,42,0.04)]
+          "
+        >
 
-                        <td className="px-4 py-3.5">
+          {/* MEMBER NAME */}
 
-                          <span className="text-[12px] font-medium text-slate-600">
-                            {member.designation}
-                          </span>
+          <div className="mb-3 flex items-start justify-between gap-3">
 
-                        </td>
+            <div className="min-w-0">
 
+              <p
+                className="
+                  truncate
+                  text-[14px]
+                  font-extrabold
+                  text-slate-900
+                "
+              >
+                {member.fullName}
+              </p>
 
-                        <td className="px-4 py-3.5">
-
-                          <span className="text-[12px] font-medium text-slate-500">
-                            {member.email}
-                          </span>
-
-                        </td>
-
-
-                        <td className="px-5 py-3.5">
-
-                          <button
-                            type="button"
-                            onClick={() =>
-                              handleEditMember(member)
-                            }
-                            className="
-                              rounded-md
-                              border
-                              border-slate-200
-                              bg-white
-                              px-3
-                              py-1.5
-                              text-[11px]
-                              font-bold
-                              text-slate-700
-                              hover:bg-slate-50
-                            "
-                          >
-                            Edit
-                          </button>
-
-                        </td>
-
-                      </tr>
-
-                    )
-                  )}
-
-                </tbody>
-
-              </table>
+              <p
+                className="
+                  mt-1
+                  break-all
+                  text-[11px]
+                  font-medium
+                  text-slate-500
+                "
+              >
+                {member.email}
+              </p>
 
             </div>
+
+            <button
+              type="button"
+              onClick={() => handleEditMember(member)}
+              className="
+                shrink-0
+                rounded-md
+                border
+                border-slate-200
+                bg-white
+                px-3
+                py-1.5
+                text-[11px]
+                font-bold
+                text-slate-700
+                hover:bg-slate-50
+              "
+            >
+              Edit
+            </button>
+
+          </div>
+
+
+          {/* MEMBER DETAILS */}
+
+          <div
+            className="
+              grid
+              grid-cols-1
+              gap-2
+              border-t
+              border-slate-100
+              pt-3
+              xs:grid-cols-2
+            "
+          >
+
+            <div>
+
+              <p
+                className="
+                  text-[10px]
+                  font-extrabold
+                  uppercase
+                  tracking-wide
+                  text-slate-400
+                "
+              >
+                Employee ID
+              </p>
+
+              <p
+                className="
+                  mt-0.5
+                  text-[12px]
+                  font-semibold
+                  text-slate-700
+                "
+              >
+                {member.employeeId}
+              </p>
+
+            </div>
+
+
+            <div>
+
+              <p
+                className="
+                  text-[10px]
+                  font-extrabold
+                  uppercase
+                  tracking-wide
+                  text-slate-400
+                "
+              >
+                Designation
+              </p>
+
+              <p
+                className="
+                  mt-0.5
+                  break-words
+                  text-[12px]
+                  font-medium
+                  text-slate-600
+                "
+              >
+                {member.designation}
+              </p>
+
+            </div>
+
+          </div>
+
+        </div>
+
+      )
+    )}
+
+  </div>
+
+</div>
 
 
             {/* CLOSE */}
