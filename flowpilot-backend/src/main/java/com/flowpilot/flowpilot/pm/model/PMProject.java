@@ -1,7 +1,11 @@
 package com.flowpilot.flowpilot.pm.model;
 
+import com.flowpilot.flowpilot.admin.model.AdminDepartmentMember;
 import jakarta.persistence.*;
+
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(name = "pm_projects")
@@ -11,32 +15,32 @@ public class PMProject {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "project_code", nullable = false, unique = true)
+    @Column(nullable = false, unique = true)
     private String projectCode;
 
-    @Column(name = "project_name", nullable = false)
+    @Column(nullable = false)
     private String projectName;
 
-    @Column(name = "sprint")
     private String sprint;
 
-    @Column(name = "team")
-    private String team;
-
-    @Column(name = "budget")
     private String budget;
 
-    @Column(name = "start_date")
     private LocalDate startDate;
 
-    @Column(name = "end_date")
     private LocalDate endDate;
 
-    @Column(name = "status")
     private String status;
 
-    @Column(name = "progress")
-    private Integer progress = 0;
+    private Integer progress;
+
+    @ManyToMany
+    @JoinTable(
+            name = "pm_project_members",
+            joinColumns = @JoinColumn(name = "project_id"),
+            inverseJoinColumns = @JoinColumn(name = "member_id")
+    )
+    private List<AdminDepartmentMember> teamMembers =
+            new ArrayList<>();
 
     public PMProject() {
     }
@@ -71,14 +75,6 @@ public class PMProject {
 
     public void setSprint(String sprint) {
         this.sprint = sprint;
-    }
-
-    public String getTeam() {
-        return team;
-    }
-
-    public void setTeam(String team) {
-        this.team = team;
     }
 
     public String getBudget() {
@@ -119,5 +115,14 @@ public class PMProject {
 
     public void setProgress(Integer progress) {
         this.progress = progress;
+    }
+
+    public List<AdminDepartmentMember> getTeamMembers() {
+        return teamMembers;
+    }
+
+    public void setTeamMembers(
+            List<AdminDepartmentMember> teamMembers) {
+        this.teamMembers = teamMembers;
     }
 }

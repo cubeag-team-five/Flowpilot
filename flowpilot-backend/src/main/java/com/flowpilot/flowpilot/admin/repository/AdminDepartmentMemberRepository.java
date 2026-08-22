@@ -12,4 +12,6 @@ public interface AdminDepartmentMemberRepository
         extends JpaRepository<AdminDepartmentMember, Long> {
 
     List<AdminDepartmentMember> findByDepartment(AdminDepartment department);
+
+    AdminDepartmentMember findTopByOrderByEmployeeIdDesc();
 }

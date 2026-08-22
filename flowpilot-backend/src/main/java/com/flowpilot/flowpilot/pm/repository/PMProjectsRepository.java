@@ -7,9 +7,14 @@ import org.springframework.stereotype.Repository;
 import java.util.Optional;
 
 @Repository
-public interface PMProjectsRepository extends JpaRepository<PMProject, Long> {
+public interface PMProjectsRepository
+        extends JpaRepository<PMProject, Long> {
 
-    Optional<PMProject> findByProjectCode(String projectCode);
+    Optional<PMProject> findByProjectCode(
+            String projectCode
+    );
 
-    boolean existsByProjectCode(String projectCode);
+    boolean existsByProjectCode(
+            String projectCode
+    );
 }
