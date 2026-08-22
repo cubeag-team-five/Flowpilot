@@ -27,10 +27,8 @@ public class SuperAdminUser {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
-
-    @Column(name = "employee_id")
-    private String employeeId;
+    @Column(name = "id")
+    private Long employeeId;
 
     @Column(name = "name", nullable = false)
     private String name;
@@ -73,6 +71,10 @@ public class SuperAdminUser {
 
         if (createdAt == null) {
             createdAt = LocalDateTime.now();
+        }
+
+        if (status == null || status.isBlank()) {
+            status = "ACTIVE";
         }
     }
 }
