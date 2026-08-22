@@ -35,93 +35,9 @@ interface MemberFormErrors {
   designation?: string;
 }
 
-const initialDepartments: Department[] = [
-  {
-    id: 1,
-    name: 'Engineering',
-    head: 'Karan Mehta',
-    members: 18,
-    progress: 40,
-    color: 'bg-[#69E8D0]',
-    bgColor: 'bg-[#F4FEFC]',
-    textColor: 'text-[#5DD9C3]',
-    borderColor: 'border-[#D8F5EF]',
-    shadowColor:
-      'shadow-[0_2px_8px_rgba(45,212,191,0.08)]',
-  },
-  {
-    id: 2,
-    name: 'Product',
-    head: 'Arjun Shah',
-    members: 6,
-    progress: 14,
-    color: 'bg-purple-400',
-    bgColor: 'bg-purple-50',
-    textColor: 'text-purple-500',
-    borderColor: 'border-purple-100',
-    shadowColor:
-      'shadow-[0_2px_8px_rgba(192,132,252,0.08)]',
-  },
-  {
-    id: 3,
-    name: 'Quality Assurance',
-    head: 'Sana Sheikh',
-    members: 7,
-    progress: 16,
-    color: 'bg-emerald-400',
-    bgColor: 'bg-emerald-50',
-    textColor: 'text-emerald-500',
-    borderColor: 'border-emerald-100',
-    shadowColor:
-      'shadow-[0_2px_8px_rgba(52,211,153,0.08)]',
-  },
-  {
-    id: 4,
-    name: 'Design',
-    head: 'Divya Mehta',
-    members: 5,
-    progress: 11,
-    color: 'bg-amber-400',
-    bgColor: 'bg-amber-50',
-    textColor: 'text-amber-500',
-    borderColor: 'border-amber-100',
-    shadowColor:
-      'shadow-[0_2px_8px_rgba(251,191,36,0.08)]',
-  },
-  {
-    id: 5,
-    name: 'Operations',
-    head: 'Nisha Agarwal',
-    members: 8,
-    progress: 20,
-    color: 'bg-rose-400',
-    bgColor: 'bg-rose-50',
-    textColor: 'text-rose-500',
-    borderColor: 'border-rose-100',
-    shadowColor:
-      'shadow-[0_2px_8px_rgba(251,113,133,0.08)]',
-  },
-  {
-    id: 6,
-    name: 'Leadership',
-    head: 'Rajeev Kumar',
-    members: 3,
-    progress: 8,
-    color: 'bg-slate-400',
-    bgColor: 'bg-slate-50',
-    textColor: 'text-slate-500',
-    borderColor: 'border-slate-100',
-    shadowColor:
-      'shadow-[0_2px_8px_rgba(100,116,139,0.06)]',
-  },
-];
-
 export const AdminDepartments: React.FC = () => {
   const [departments, setDepartments] =
     useState<Department[]>([]);
-
-  const [loadingDepartments, setLoadingDepartments] =
-    useState(true);
 
   const [toastMessage, setToastMessage] = useState('');
 
@@ -283,9 +199,7 @@ export const AdminDepartments: React.FC = () => {
           'Error fetching departments:',
           error
         );
-      } finally {
-        setLoadingDepartments(false);
-      }
+      } 
     };
 
     fetchDepartments();
