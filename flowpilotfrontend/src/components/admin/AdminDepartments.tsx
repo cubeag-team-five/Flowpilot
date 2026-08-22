@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Plus } from 'lucide-react';
 
 interface Department {
@@ -182,7 +182,11 @@ const initialMembers: Record<number, Member[]> = {
 
 export const AdminDepartments: React.FC = () => {
   const [departments, setDepartments] =
-    useState<Department[]>(initialDepartments);
+  useState<Department[]>([]);
+
+  const [loadingDepartments, setLoadingDepartments] = useState(true);
+
+  const [toastMessage, setToastMessage] = useState('');
 
   const [selectedDepartment, setSelectedDepartment] =
     useState<Department | null>(null);
@@ -211,96 +215,207 @@ export const AdminDepartments: React.FC = () => {
   const [members, setMembers] = useState('');
   const [progress, setProgress] = useState('');
 
+  useEffect(() => {
+    const fetchDepartments = async () => {
+      try {
+        const token = localStorage.getItem('token');
+
+        if (!token) {
+          throw new Error(
+            'Authentication token not found. Please login again.'
+          );
+        }
+
+        const response = await fetch(
+          'http://localhost:8080/api/admin/departments',
+          {
+            method: 'GET',
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
+
+        if (!response.ok) {
+          throw new Error(
+            `Failed to fetch departments: ${response.statusText}`
+          );
+        }
+
+        const data = await response.json();
+
+        const formattedDepartments: Department[] = data.map(
+          (department: any, index: number) => ({
+            id: department.id,
+            name: department.name,
+            head: department.head,
+            members: department.members,
+            progress: department.progress,
+
+            color: [
+              'bg-[#69E8D0]',
+              'bg-purple-400',
+              'bg-emerald-400',
+              'bg-amber-400',
+              'bg-rose-400',
+              'bg-slate-400',
+            ][index % 6],
+
+            bgColor: [
+              'bg-[#F4FEFC]',
+              'bg-purple-50',
+              'bg-emerald-50',
+              'bg-amber-50',
+              'bg-rose-50',
+              'bg-slate-50',
+            ][index % 6],
+
+            textColor: [
+              'text-[#5DD9C3]',
+              'text-purple-500',
+              'text-emerald-500',
+              'text-amber-500',
+              'text-rose-500',
+              'text-slate-500',
+            ][index % 6],
+
+            borderColor: [
+              'border-[#D8F5EF]',
+              'border-purple-100',
+              'border-emerald-100',
+              'border-amber-100',
+              'border-rose-100',
+              'border-slate-100',
+            ][index % 6],
+
+            shadowColor:
+              'shadow-[0_2px_8px_rgba(15,23,42,0.06)]',
+          })
+        );
+
+        setDepartments(formattedDepartments);
+      } catch (error) {
+        console.error('Error fetching departments:', error);
+      } finally {
+        setLoadingDepartments(false);
+      }
+    };
+
+    fetchDepartments();
+  }, []);
+
   const handleViewMembers = (department: Department) => {
     setSelectedDepartment(department);
     setShowMembers(true);
   };
 
   const handleAddDepartment = async (e: React.FormEvent) => {
-    e.preventDefault();
+  e.preventDefault();
 
-    if (
-      !departmentName.trim() ||
-      !departmentHead.trim() ||
-      !members ||
-      !progress
-    ) {
-      return;
+  if (
+    !departmentName.trim() ||
+    !departmentHead.trim() ||
+    !members ||
+    !progress
+  ) {
+    return;
+  }
+
+  const payload = {
+    name: departmentName.trim(),
+    head: departmentHead.trim(),
+    members: Number(members),
+    progress: Number(progress),
+  };
+
+  try {
+    const token = localStorage.getItem('token');
+
+    if (!token) {
+      throw new Error(
+        'Authentication token not found. Please login again.'
+      );
     }
 
-    const payload = {
-      name: departmentName.trim(),
-      head: departmentHead.trim(),
-      members: Number(members),
-      progress: Number(progress),
-    };
-
-    try {
-      const response = await fetch('http://localhost:8080/api/admin/departments', {
+    const response = await fetch(
+      'http://localhost:8080/api/admin/departments',
+      {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify(payload),
-      });
-
-      if (!response.ok) {
-        throw new Error(`Failed to save department: ${response.statusText}`);
       }
+    );
 
-      const savedDepartment = await response.json();
+    if (!response.ok) {
+  let errorMessage = 'Failed to create department.';
 
-      const newDepartment: Department = {
-        id: savedDepartment.id || departments.length + 1,
-        name: savedDepartment.name || departmentName.trim(),
-        head: savedDepartment.head || departmentHead.trim(),
-        members: savedDepartment.members !== undefined ? savedDepartment.members : Number(members),
-        progress: savedDepartment.progress !== undefined ? savedDepartment.progress : Number(progress),
-        color: 'bg-blue-400',
-        bgColor: 'bg-blue-50',
-        textColor: 'text-blue-500',
-        borderColor: 'border-blue-100',
-        shadowColor: 'shadow-[0_2px_8px_rgba(96,165,250,0.08)]',
-      };
+  try {
+    const errorData = await response.json();
 
-      setDepartments((previous) => [
-        ...previous,
-        newDepartment,
-      ]);
-
-      setDepartmentName('');
-      setDepartmentHead('');
-      setMembers('');
-      setProgress('');
-      setShowForm(false);
-    } catch (error) {
-      console.error('Error creating department in backend:', error);
-      // Fallback local update if backend fails
-      const newDepartment: Department = {
-        id: departments.length + 1,
-        name: departmentName.trim(),
-        head: departmentHead.trim(),
-        members: Number(members),
-        progress: Number(progress),
-        color: 'bg-blue-400',
-        bgColor: 'bg-blue-50',
-        textColor: 'text-blue-500',
-        borderColor: 'border-blue-100',
-        shadowColor: 'shadow-[0_2px_8px_rgba(96,165,250,0.08)]',
-      };
-
-      setDepartments((previous) => [
-        ...previous,
-        newDepartment,
-      ]);
-
-      setDepartmentName('');
-      setDepartmentHead('');
-      setMembers('');
-      setProgress('');
-      setShowForm(false);
+    if (
+      errorData?.message?.toLowerCase().includes('already exists') ||
+      errorData?.message?.toLowerCase().includes('already exist') ||
+      errorData?.message?.toLowerCase().includes('duplicate')
+    ) {
+      errorMessage = 'Department already exists !';
+    } else if (errorData?.message) {
+      errorMessage = errorData.message;
     }
-  };
+  } catch {
+    // Ignore JSON parsing error
+  }
+
+  throw new Error(errorMessage);
+}
+
+    const savedDepartment = await response.json();
+
+    const newDepartment: Department = {
+      id: savedDepartment.id,
+      name: savedDepartment.name,
+      head: savedDepartment.head,
+      members: savedDepartment.members,
+      progress: savedDepartment.progress,
+      color: 'bg-blue-400',
+      bgColor: 'bg-blue-50',
+      textColor: 'text-blue-500',
+      borderColor: 'border-blue-100',
+      shadowColor:
+        'shadow-[0_2px_8px_rgba(96,165,250,0.08)]',
+    };
+
+    setDepartments((previous) => [
+      ...previous,
+      newDepartment,
+    ]);
+
+    setDepartmentName('');
+    setDepartmentHead('');
+    setMembers('');
+    setProgress('');
+    setShowForm(false);
+
+    setToastMessage('Department added successfully.');
+
+    setTimeout(() => {
+      setToastMessage('');
+    }, 3000);
+  } catch (error) {
+    const message =
+      error instanceof Error
+        ? error.message
+        : 'Failed to create department. Please try again.';
+
+    setToastMessage(message);
+
+    setTimeout(() => {
+      setToastMessage('');
+    }, 3000);
+  }
+};
 
   const handleCancel = () => {
     setDepartmentName('');
@@ -405,6 +520,29 @@ export const AdminDepartments: React.FC = () => {
   return (
     <div className="w-full">
 
+      {toastMessage && (
+        <div
+          className="
+            fixed
+            right-5
+            top-5
+            z-[100]
+            rounded-lg
+            border
+            border-red-100
+            bg-white
+            px-4
+            py-3
+            text-[13px]
+            font-semibold
+            text-red-500
+            shadow-[0_8px_24px_rgba(15,23,42,0.12)]
+          "
+        >
+          {toastMessage}
+        </div>
+      )}
+
       {/* =====================================================
           ADD DEPARTMENT BUTTON
       ====================================================== */}
@@ -450,7 +588,7 @@ export const AdminDepartments: React.FC = () => {
       >
         {departments.map((department) => (
           <div
-            key={department.id}
+            key={`${department.id}-${department.name}-${department.head}`}
             className={`
               w-full
               min-h-[96px]
