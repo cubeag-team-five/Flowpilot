@@ -23,8 +23,8 @@ interface LoginPageProps {
 
 export const LoginPage: React.FC<LoginPageProps> = ({ onBackToHome, onLoginSuccess }) => {
   const [selectedRole, setSelectedRole] = useState<string>('Super Admin');
-  const [email, setEmail] = useState<string>('admin@flowpilot.com');
-  const [password, setPassword] = useState<string>('Admin@123');
+  const [email, setEmail] = useState<string>('superadmin@flowpilot.com');
+  const [password, setPassword] = useState<string>('SuperAdmin@123');
 
   const roles = [
     {
@@ -33,7 +33,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onBackToHome, onLoginSucce
       subtitle: 'Full system control — all modules',
       icon: <ShieldCheck size={18} className="text-rose-400" />,
       email: 'superadmin@flowpilot.com',
-      pass: 'Admin@123'
+      pass: 'SuperAdmin@123'
     },
     {
       id: 'admin',
@@ -91,11 +91,35 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onBackToHome, onLoginSucce
     setPassword(role.pass);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const [error, setError] = useState<string>('');
+  const [loading, setLoading] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (onLoginSuccess) {
-      onLoginSuccess(selectedRole);
+    setError('');
+    setLoading(true);
+    const resolvedRole = selectedRole;
+    try {
+      const res = await fetch('http://localhost:8080/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        setError(data.message || 'Invalid credentials');
+        setLoading(false);
+        return;
+      }
+      localStorage.setItem('token', data.data.token);
+      localStorage.setItem('role', data.data.role);
+      localStorage.setItem('name', data.data.name);
+    } catch {
+      // backend unreachable — demo mode
+    } finally {
+      setLoading(false);
     }
+    if (onLoginSuccess) onLoginSuccess(resolvedRole);
   };
 
   return (
@@ -260,10 +284,14 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onBackToHome, onLoginSucce
 
             <button
               type="submit"
-              className="mt-2 w-full bg-emerald-500 hover:bg-emerald-600 text-white font-extrabold text-sm py-3.5 rounded-2xl shadow-lg shadow-emerald-500/25 transition-all cursor-pointer hover:-translate-y-0.5"
+              disabled={loading}
+              className="mt-2 w-full bg-emerald-500 hover:bg-emerald-600 disabled:opacity-60 text-white font-extrabold text-sm py-3.5 rounded-2xl shadow-lg shadow-emerald-500/25 transition-all cursor-pointer hover:-translate-y-0.5"
             >
-              Sign In
+              {loading ? 'Signing in...' : 'Sign In'}
             </button>
+            {error && (
+              <p className="text-red-400 text-xs text-center mt-1">{error}</p>
+            )}
           </form>
 
           {/* Demo Mode Notice Box */}
