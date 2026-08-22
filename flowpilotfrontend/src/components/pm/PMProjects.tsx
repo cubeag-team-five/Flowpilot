@@ -9,12 +9,29 @@ interface BackendProject {
   projectCode: string;
   projectName: string;
   sprint: string;
-  team: string;
   budget: string;
   startDate: string;
   endDate: string;
   status: string;
   progress: number;
+  teamMemberIds: number[];
+}
+
+interface AdminDepartment {
+  id: number;
+  name: string;
+  head: string;
+  members: number;
+  progress: number;
+}
+
+interface AdminDepartmentMember {
+  id: number;
+  fullName: string;
+  email: string;
+  employeeId: string;
+  designation: string;
+  department?: AdminDepartment;
 }
 
 interface Project {
@@ -24,7 +41,7 @@ interface Project {
   status: string;
   statusColor: "green" | "yellow" | "red";
   sprint: string;
-  team: string;
+  teamMemberIds: number[];
   budget: string;
   startDate: string;
   endDate: string;
@@ -35,7 +52,11 @@ interface Project {
    API
 ========================================================= */
 
-const API_URL = "http://localhost:8080/api/pm/projects";
+const API_URL =
+  "http://localhost:8080/api/pm/projects";
+
+const ADMIN_DEPARTMENTS_URL =
+  "http://localhost:8080/api/admin/departments";
 
 /* =========================================================
    AUTH TOKEN
@@ -50,13 +71,15 @@ function getAuthToken(): string | null {
   ];
 
   for (const key of keys) {
-    const localToken = localStorage.getItem(key);
+    const localToken =
+      localStorage.getItem(key);
 
     if (localToken) {
       return localToken;
     }
 
-    const sessionToken = sessionStorage.getItem(key);
+    const sessionToken =
+      sessionStorage.getItem(key);
 
     if (sessionToken) {
       return sessionToken;
@@ -72,21 +95,24 @@ function getAuthToken(): string | null {
 
 const statusStyles = {
   green: {
-    badge: "border-green-200 bg-green-50 text-green-500",
+    badge:
+      "border-green-200 bg-green-50 text-green-500",
     bar: "bg-green-400",
     percentage: "text-green-500",
     border: "border-green-100",
   },
 
   yellow: {
-    badge: "border-orange-200 bg-orange-50 text-orange-500",
+    badge:
+      "border-orange-200 bg-orange-50 text-orange-500",
     bar: "bg-orange-400",
     percentage: "text-orange-500",
     border: "border-orange-100",
   },
 
   red: {
-    badge: "border-red-200 bg-red-50 text-red-500",
+    badge:
+      "border-red-200 bg-red-50 text-red-500",
     bar: "bg-red-400",
     percentage: "text-red-500",
     border: "border-red-100",
@@ -112,7 +138,7 @@ function getStatusColor(
 }
 
 /* =========================================================
-   CONVERT BACKEND PROJECT -> FRONTEND PROJECT
+   MAP BACKEND PROJECT
 ========================================================= */
 
 function mapBackendProject(
@@ -123,9 +149,12 @@ function mapBackendProject(
     id: project.projectCode,
     name: project.projectName,
     status: project.status,
-    statusColor: getStatusColor(project.status),
+    statusColor: getStatusColor(
+      project.status
+    ),
     sprint: project.sprint,
-    team: project.team,
+    teamMemberIds:
+      project.teamMemberIds || [],
     budget: project.budget,
     startDate: project.startDate,
     endDate: project.endDate,
@@ -138,7 +167,14 @@ function mapBackendProject(
 ========================================================= */
 
 export function PMProjects() {
-  const [projects, setProjects] = useState<Project[]>([]);
+  const [projects, setProjects] =
+    useState<Project[]>([]);
+
+  const [adminMembers, setAdminMembers] =
+    useState<AdminDepartmentMember[]>([]);
+
+  const [membersLoading, setMembersLoading] =
+    useState(true);
 
   const [showModal, setShowModal] =
     useState(false);
@@ -159,17 +195,157 @@ export function PMProjects() {
      FORM DATA
   ======================================================= */
 
-  const [formData, setFormData] = useState({
-    projectCode: "",
-    projectName: "",
-    sprint: "Sprint 1",
-    team: "",
-    budget: "",
-    startDate: "2026-01-01",
-    endDate: "2026-06-30",
-    status: "On Track",
-    progress: "0",
-  });
+  const [formData, setFormData] =
+    useState({
+      projectCode: "",
+      projectName: "",
+      sprint: "Sprint 1",
+      teamMemberIds: [] as number[],
+      budget: "",
+      startDate: "2026-01-01",
+      endDate: "2026-06-30",
+      status: "On Track",
+      progress: "0",
+    });
+
+  /* =======================================================
+     LOAD ADMIN MEMBERS
+  ======================================================= */
+
+  const loadAdminMembers = async () => {
+    try {
+      setMembersLoading(true);
+
+      const token = getAuthToken();
+
+      if (!token) {
+        throw new Error(
+          "Authentication token not found. Please log in again."
+        );
+      }
+
+      const departmentsResponse =
+        await fetch(
+          ADMIN_DEPARTMENTS_URL,
+          {
+            method: "GET",
+            headers: {
+              "Content-Type":
+                "application/json",
+              Authorization:
+                `Bearer ${token}`,
+            },
+          }
+        );
+
+      if (
+        departmentsResponse.status === 401 ||
+        departmentsResponse.status === 403
+      ) {
+        throw new Error(
+          "Access denied while loading Admin departments."
+        );
+      }
+
+      if (!departmentsResponse.ok) {
+        throw new Error(
+          `Failed to load departments (${departmentsResponse.status})`
+        );
+      }
+
+      const departments: AdminDepartment[] =
+        await departmentsResponse.json();
+
+      const memberRequests =
+        departments.map(
+          async (department) => {
+            const response =
+              await fetch(
+                `${ADMIN_DEPARTMENTS_URL}/${department.id}/members`,
+                {
+                  method: "GET",
+                  headers: {
+                    "Content-Type":
+                      "application/json",
+                    Authorization:
+                      `Bearer ${token}`,
+                  },
+                }
+              );
+
+            if (
+              response.status === 401 ||
+              response.status === 403
+            ) {
+              throw new Error(
+                "Access denied while loading department members."
+              );
+            }
+
+            if (!response.ok) {
+              throw new Error(
+                `Failed to load members for ${department.name}`
+              );
+            }
+
+            const members:
+              AdminDepartmentMember[] =
+              await response.json();
+
+            return members;
+          }
+        );
+
+      const membersByDepartment =
+        await Promise.all(
+          memberRequests
+        );
+
+      const allMembers =
+        membersByDepartment.flat();
+
+      const uniqueMembers =
+        Array.from(
+          new Map(
+            allMembers.map(
+              (member) => [
+                member.id,
+                member,
+              ]
+            )
+          ).values()
+        );
+
+      uniqueMembers.sort(
+        (a, b) =>
+          a.fullName.localeCompare(
+            b.fullName
+          )
+      );
+
+      setAdminMembers(
+        uniqueMembers
+      );
+
+      console.log(
+        "Admin department members:",
+        uniqueMembers
+      );
+    } catch (err) {
+      console.error(
+        "Error loading Admin department members:",
+        err
+      );
+
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Failed to load Admin members"
+      );
+    } finally {
+      setMembersLoading(false);
+    }
+  };
 
   /* =======================================================
      LOAD PROJECTS
@@ -188,34 +364,43 @@ export function PMProjects() {
         );
       }
 
-      const response = await fetch(API_URL, {
-        method: "GET",
+      const response =
+        await fetch(API_URL, {
+          method: "GET",
+          headers: {
+            "Content-Type":
+              "application/json",
+            Authorization:
+              `Bearer ${token}`,
+          },
+        });
 
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      if (response.status === 401 || response.status === 403) {
+      if (
+        response.status === 401 ||
+        response.status === 403
+      ) {
         throw new Error(
           "Access denied (403). Please log in again."
         );
       }
 
       if (!response.ok) {
+        const errorText =
+          await response.text();
+
         throw new Error(
-          `Failed to load projects (${response.status})`
+          errorText ||
+            `Failed to load projects (${response.status})`
         );
       }
 
-      const data: BackendProject[] =
+      const data:
+        BackendProject[] =
         await response.json();
 
-      const mappedProjects =
-        data.map(mapBackendProject);
-
-      setProjects(mappedProjects);
+      setProjects(
+        data.map(mapBackendProject)
+      );
     } catch (err) {
       console.error(
         "Error loading projects:",
@@ -233,15 +418,16 @@ export function PMProjects() {
   };
 
   /* =======================================================
-     LOAD WHEN PAGE OPENS
+     INITIAL LOAD
   ======================================================= */
 
   useEffect(() => {
     loadProjects();
+    loadAdminMembers();
   }, []);
 
   /* =======================================================
-     OPEN ADD / EDIT MODAL
+     OPEN MODAL
   ======================================================= */
 
   const handleOpenModal = (
@@ -250,24 +436,41 @@ export function PMProjects() {
     setError("");
 
     if (project) {
-      setEditingId(project.backendId);
+      setEditingId(
+        project.backendId
+      );
 
       setFormData({
-        projectCode: project.id,
-        projectName: project.name,
-        sprint: project.sprint,
-        team: project.team,
-        budget: project.budget,
+        projectCode:
+          project.id,
+
+        projectName:
+          project.name,
+
+        sprint:
+          project.sprint,
+
+        teamMemberIds:
+          project.teamMemberIds || [],
+
+        budget:
+          project.budget,
+
         startDate:
           project.startDate ||
           "2026-01-01",
+
         endDate:
           project.endDate ||
           "2026-06-30",
-        status: project.status,
-        progress: String(
-          project.progress
-        ),
+
+        status:
+          project.status,
+
+        progress:
+          String(
+            project.progress
+          ),
       });
     } else {
       setEditingId(null);
@@ -276,25 +479,31 @@ export function PMProjects() {
         projects.length + 1;
 
       setFormData({
-        projectCode: `PRJ-${String(
-          nextNumber
-        ).padStart(3, "0")}`,
+        projectCode:
+          `PRJ-${String(
+            nextNumber
+          ).padStart(3, "0")}`,
 
         projectName: "",
 
-        sprint: "Sprint 1",
+        sprint:
+          "Sprint 1",
 
-        team: "",
+        teamMemberIds: [],
 
         budget: "",
 
-        startDate: "2026-01-01",
+        startDate:
+          "2026-01-01",
 
-        endDate: "2026-06-30",
+        endDate:
+          "2026-06-30",
 
-        status: "On Track",
+        status:
+          "On Track",
 
-        progress: "0",
+        progress:
+          "0",
       });
     }
 
@@ -316,12 +525,13 @@ export function PMProjects() {
   };
 
   /* =======================================================
-     INPUT CHANGE
+     NORMAL INPUT CHANGE
   ======================================================= */
 
   const handleChange = (
     e: React.ChangeEvent<
-      HTMLInputElement | HTMLSelectElement
+      HTMLInputElement |
+      HTMLSelectElement
     >
   ) => {
     const {
@@ -329,242 +539,299 @@ export function PMProjects() {
       value,
     } = e.target;
 
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
+    setFormData(
+      (prev) => ({
+        ...prev,
+        [name]: value,
+      })
+    );
   };
 
   /* =======================================================
-     ADD / UPDATE PROJECT
+     TOGGLE TEAM MEMBER
   ======================================================= */
 
-  const handleSaveProject = async (
-    e: React.FormEvent
+  const handleMemberToggle = (
+    memberId: number
   ) => {
-    e.preventDefault();
+    setFormData(
+      (prev) => {
 
-    setError("");
+        const alreadySelected =
+          prev.teamMemberIds.includes(
+            memberId
+          );
 
-    /* -------------------------------
-       VALIDATION
-    -------------------------------- */
+        if (alreadySelected) {
+          return {
+            ...prev,
+            teamMemberIds:
+              prev.teamMemberIds.filter(
+                (id) =>
+                  id !== memberId
+              ),
+          };
+        }
 
-    if (
-      !formData.projectCode.trim()
-    ) {
-      setError(
-        "Project Code is required."
-      );
-      return;
-    }
-
-    if (
-      !formData.projectName.trim()
-    ) {
-      setError(
-        "Project Name is required."
-      );
-      return;
-    }
-
-    if (!formData.team.trim()) {
-      setError(
-        "Team is required."
-      );
-      return;
-    }
-
-    if (!formData.budget.trim()) {
-      setError(
-        "Budget is required."
-      );
-      return;
-    }
-
-    if (!formData.startDate) {
-      setError(
-        "Start Date is required."
-      );
-      return;
-    }
-
-    if (!formData.endDate) {
-      setError(
-        "End Date is required."
-      );
-      return;
-    }
-
-    /* -------------------------------
-       TOKEN
-    -------------------------------- */
-
-    const token = getAuthToken();
-
-    if (!token) {
-      setError(
-        "Authentication token not found. Please log in again."
-      );
-      return;
-    }
-
-    /* -------------------------------
-       BACKEND OBJECT
-    -------------------------------- */
-
-    const projectData = {
-      projectCode:
-        formData.projectCode.trim(),
-
-      projectName:
-        formData.projectName.trim(),
-
-      sprint:
-        formData.sprint,
-
-      team:
-        formData.team.trim(),
-
-      budget:
-        formData.budget.trim(),
-
-      startDate:
-        formData.startDate,
-
-      endDate:
-        formData.endDate,
-
-      status:
-        formData.status,
-
-      progress:
-        Math.min(
-          100,
-          Math.max(
-            0,
-            Number(formData.progress) || 0
-          )
-        ),
-    };
-
-    try {
-      setSaving(true);
-
-      let response: Response;
-
-      /* =================================================
-         UPDATE
-      ================================================= */
-
-      if (editingId !== null) {
-        response = await fetch(
-          `${API_URL}/${editingId}`,
-          {
-            method: "PUT",
-
-            headers: {
-              "Content-Type":
-                "application/json",
-
-              Authorization:
-                `Bearer ${token}`,
-            },
-
-            body: JSON.stringify(
-              projectData
-            ),
-          }
-        );
+        return {
+          ...prev,
+          teamMemberIds: [
+            ...prev.teamMemberIds,
+            memberId,
+          ],
+        };
       }
+    );
+  };
 
-      /* =================================================
-         CREATE
-      ================================================= */
+  /* =======================================================
+     REMOVE SELECTED MEMBER
+  ======================================================= */
 
-      else {
-        response = await fetch(
-          API_URL,
-          {
-            method: "POST",
+  const removeMember = (
+    memberId: number
+  ) => {
+    setFormData(
+      (prev) => ({
+        ...prev,
+        teamMemberIds:
+          prev.teamMemberIds.filter(
+            (id) =>
+              id !== memberId
+          ),
+      })
+    );
+  };
 
-            headers: {
-              "Content-Type":
-                "application/json",
+  /* =======================================================
+     SAVE PROJECT
+  ======================================================= */
 
-              Authorization:
-                `Bearer ${token}`,
-            },
+  const handleSaveProject =
+    async (
+      e: React.FormEvent
+    ) => {
+      e.preventDefault();
 
-            body: JSON.stringify(
-              projectData
-            ),
-          }
-        );
-      }
+      setError("");
 
-      /* =================================================
-         AUTH ERROR
-      ================================================= */
+      /* =========================================
+         VALIDATION
+      ========================================= */
 
       if (
-        response.status === 401 ||
-        response.status === 403
+        !formData.projectCode.trim()
       ) {
-        throw new Error(
-          "Access denied (403). Please log in again."
+        setError(
+          "Project Code is required."
         );
+        return;
       }
 
-      /* =================================================
-         OTHER ERROR
-      ================================================= */
-
-      if (!response.ok) {
-        const errorText =
-          await response.text();
-
-        throw new Error(
-          errorText ||
-            `Request failed (${response.status})`
+      if (
+        !formData.projectName.trim()
+      ) {
+        setError(
+          "Project Name is required."
         );
+        return;
       }
 
-      /* =================================================
-         SUCCESS
-      ================================================= */
+      if (
+        formData.teamMemberIds
+          .length === 0
+      ) {
+        setError(
+          "Please select at least one team member."
+        );
+        return;
+      }
 
-      await loadProjects();
+      if (
+        !formData.budget.trim()
+      ) {
+        setError(
+          "Budget is required."
+        );
+        return;
+      }
 
-      setShowModal(false);
-      setEditingId(null);
+      if (!formData.startDate) {
+        setError(
+          "Start Date is required."
+        );
+        return;
+      }
 
-      setFormData({
-        projectCode: "",
-        projectName: "",
-        sprint: "Sprint 1",
-        team: "",
-        budget: "",
-        startDate: "2026-01-01",
-        endDate: "2026-06-30",
-        status: "On Track",
-        progress: "0",
-      });
-    } catch (err) {
-      console.error(
-        "Error saving project:",
-        err
+      if (!formData.endDate) {
+        setError(
+          "End Date is required."
+        );
+        return;
+      }
+
+      const token =
+        getAuthToken();
+
+      if (!token) {
+        setError(
+          "Authentication token not found. Please log in again."
+        );
+        return;
+      }
+
+      /* =========================================
+         BACKEND DTO
+      ========================================= */
+
+      const projectData = {
+        projectCode:
+          formData.projectCode.trim(),
+
+        projectName:
+          formData.projectName.trim(),
+
+        sprint:
+          formData.sprint,
+
+        budget:
+          formData.budget.trim(),
+
+        startDate:
+          formData.startDate,
+
+        endDate:
+          formData.endDate,
+
+        status:
+          formData.status,
+
+        progress:
+          Math.min(
+            100,
+            Math.max(
+              0,
+              Number(
+                formData.progress
+              ) || 0
+            )
+          ),
+
+        teamMemberIds:
+          formData.teamMemberIds,
+      };
+
+      console.log(
+        "Saving project:",
+        projectData
       );
 
-      setError(
-        err instanceof Error
-          ? err.message
-          : "Failed to save project"
-      );
-    } finally {
-      setSaving(false);
-    }
-  };
+      try {
+        setSaving(true);
+
+        let response: Response;
+
+        if (
+          editingId !== null
+        ) {
+          response =
+            await fetch(
+              `${API_URL}/${editingId}`,
+              {
+                method: "PUT",
+
+                headers: {
+                  "Content-Type":
+                    "application/json",
+
+                  Authorization:
+                    `Bearer ${token}`,
+                },
+
+                body:
+                  JSON.stringify(
+                    projectData
+                  ),
+              }
+            );
+        } else {
+          response =
+            await fetch(
+              API_URL,
+              {
+                method: "POST",
+
+                headers: {
+                  "Content-Type":
+                    "application/json",
+
+                  Authorization:
+                    `Bearer ${token}`,
+                },
+
+                body:
+                  JSON.stringify(
+                    projectData
+                  ),
+              }
+            );
+        }
+
+        if (
+          response.status === 401 ||
+          response.status === 403
+        ) {
+          throw new Error(
+            "Access denied (403). Please log in again."
+          );
+        }
+
+        if (!response.ok) {
+          const errorText =
+            await response.text();
+
+          throw new Error(
+            errorText ||
+              `Request failed (${response.status})`
+          );
+        }
+
+        await loadProjects();
+
+        setShowModal(false);
+        setEditingId(null);
+
+        setFormData({
+          projectCode: "",
+          projectName: "",
+          sprint:
+            "Sprint 1",
+          teamMemberIds: [],
+          budget: "",
+          startDate:
+            "2026-01-01",
+          endDate:
+            "2026-06-30",
+          status:
+            "On Track",
+          progress:
+            "0",
+        });
+      } catch (err) {
+        console.error(
+          "Error saving project:",
+          err
+        );
+
+        setError(
+          err instanceof Error
+            ? err.message
+            : "Failed to save project"
+        );
+      } finally {
+        setSaving(false);
+      }
+    };
 
   /* =======================================================
      DELETE PROJECT
@@ -572,7 +839,10 @@ export function PMProjects() {
 
   const handleDeleteProject =
     async () => {
-      if (editingId === null) {
+
+      if (
+        editingId === null
+      ) {
         return;
       }
 
@@ -585,7 +855,8 @@ export function PMProjects() {
         return;
       }
 
-      const token = getAuthToken();
+      const token =
+        getAuthToken();
 
       if (!token) {
         setError(
@@ -647,7 +918,7 @@ export function PMProjects() {
     };
 
   /* =======================================================
-     UI
+     RENDER
   ======================================================= */
 
   return (
@@ -670,7 +941,7 @@ export function PMProjects() {
         </div>
       )}
 
-      {/* ADD PROJECT BUTTON */}
+      {/* ADD BUTTON */}
 
       <div className="flex justify-end">
         <button
@@ -712,7 +983,7 @@ export function PMProjects() {
         </div>
       )}
 
-      {/* NO PROJECTS */}
+      {/* EMPTY */}
 
       {!loading &&
         projects.length === 0 && (
@@ -754,8 +1025,13 @@ export function PMProjects() {
             {projects.map(
               (project) => (
                 <ProjectCard
-                  key={project.backendId}
+                  key={
+                    project.backendId
+                  }
                   project={project}
+                  adminMembers={
+                    adminMembers
+                  }
                   onEdit={() =>
                     handleOpenModal(
                       project
@@ -795,7 +1071,6 @@ export function PMProjects() {
               w-full
               max-w-[500px]
               overflow-y-auto
-              overflow-hidden
               rounded-2xl
               bg-white
               shadow-2xl
@@ -812,19 +1087,17 @@ export function PMProjects() {
                 px-7 pt-7
               "
             >
-              <div>
-                <h2
-                  className="
-                    text-[23px]
-                    font-bold
-                    text-slate-800
-                  "
-                >
-                  {editingId !== null
-                    ? "Edit Project"
-                    : "Add New Project"}
-                </h2>
-              </div>
+              <h2
+                className="
+                  text-[23px]
+                  font-bold
+                  text-slate-800
+                "
+              >
+                {editingId !== null
+                  ? "Edit Project"
+                  : "Add New Project"}
+              </h2>
 
               <button
                 type="button"
@@ -837,7 +1110,6 @@ export function PMProjects() {
                   font-light
                   leading-none
                   text-slate-400
-                  transition
                   hover:text-slate-700
                   disabled:opacity-50
                 "
@@ -861,7 +1133,7 @@ export function PMProjects() {
                 "
               >
 
-                {/* PROJECT CODE + NAME */}
+                {/* CODE + NAME */}
 
                 <div
                   className="
@@ -900,17 +1172,9 @@ export function PMProjects() {
                   </FormField>
                 </div>
 
-                {/* SPRINT + TEAM */}
+                {/* SPRINT */}
 
-                <div
-                  className="
-                    mt-4
-                    grid
-                    grid-cols-1
-                    gap-4
-                    sm:grid-cols-2
-                  "
-                >
+                <div className="mt-4">
                   <FormField label="Sprint">
                     <select
                       name="sprint"
@@ -943,23 +1207,246 @@ export function PMProjects() {
                       )}
                     </select>
                   </FormField>
+                </div>
 
-                  <FormField label="Team">
-                    <input
-                      name="team"
-                      value={
-                        formData.team
-                      }
-                      onChange={
-                        handleChange
-                      }
-                      placeholder="e.g. 12 members"
-                      className="form-input"
-                    />
+                {/* =================================================
+                    TEAM MEMBERS
+                ================================================= */}
+
+                <div className="mt-4">
+
+                  <FormField label="Team Members">
+
+                    {/* SELECTED MEMBERS */}
+
+                    {formData.teamMemberIds
+                      .length > 0 && (
+                      <div
+                        className="
+                          mb-3
+                          flex
+                          flex-wrap
+                          gap-2
+                        "
+                      >
+                        {formData.teamMemberIds.map(
+                          (memberId) => {
+
+                            const member =
+                              adminMembers.find(
+                                (item) =>
+                                  item.id ===
+                                  memberId
+                              );
+
+                            if (!member) {
+                              return null;
+                            }
+
+                            return (
+                              <div
+                                key={
+                                  member.id
+                                }
+                                className="
+                                  flex
+                                  items-center
+                                  gap-2
+                                  rounded-lg
+                                  border
+                                  border-red-200
+                                  bg-red-50
+                                  px-3
+                                  py-1.5
+                                  text-xs
+                                  font-bold
+                                  text-red-500
+                                "
+                              >
+                                <span>
+                                  {
+                                    member.fullName
+                                  }
+                                </span>
+
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    removeMember(
+                                      member.id
+                                    )
+                                  }
+                                  className="
+                                    text-sm
+                                    font-bold
+                                    text-red-400
+                                    hover:text-red-700
+                                  "
+                                >
+                                  ×
+                                </button>
+                              </div>
+                            );
+                          }
+                        )}
+                      </div>
+                    )}
+
+                    {/* MEMBER LIST */}
+
+                    <div
+                      className="
+                        max-h-48
+                        overflow-y-auto
+                        rounded-xl
+                        border
+                        border-slate-200
+                        bg-white
+                      "
+                    >
+                      {membersLoading ? (
+                        <div
+                          className="
+                            px-4
+                            py-4
+                            text-sm
+                            text-slate-400
+                          "
+                        >
+                          Loading Admin
+                          department
+                          members...
+                        </div>
+                      ) : adminMembers.length ===
+                        0 ? (
+                        <div
+                          className="
+                            px-4
+                            py-4
+                            text-sm
+                            text-slate-400
+                          "
+                        >
+                          No Admin
+                          department
+                          members found.
+                        </div>
+                      ) : (
+                        adminMembers.map(
+                          (member) => {
+
+                            const selected =
+                              formData.teamMemberIds.includes(
+                                member.id
+                              );
+
+                            return (
+                              <label
+                                key={
+                                  member.id
+                                }
+                                className={`
+                                  flex
+                                  cursor-pointer
+                                  items-center
+                                  gap-3
+                                  border-b
+                                  border-slate-100
+                                  px-4
+                                  py-3
+                                  last:border-b-0
+                                  hover:bg-slate-50
+                                  ${
+                                    selected
+                                      ? "bg-red-50"
+                                      : ""
+                                  }
+                                `}
+                              >
+                                <input
+                                  type="checkbox"
+                                  checked={
+                                    selected
+                                  }
+                                  onChange={() =>
+                                    handleMemberToggle(
+                                      member.id
+                                    )
+                                  }
+                                  className="
+                                    h-4
+                                    w-4
+                                    rounded
+                                    border-slate-300
+                                    text-red-500
+                                    focus:ring-red-400
+                                  "
+                                />
+
+                                <div className="min-w-0">
+                                  <p
+                                    className="
+                                      truncate
+                                      text-sm
+                                      font-bold
+                                      text-slate-700
+                                    "
+                                  >
+                                    {
+                                      member.fullName
+                                    }
+                                  </p>
+
+                                  <p
+                                    className="
+                                      truncate
+                                      text-xs
+                                      text-slate-400
+                                    "
+                                  >
+                                    {
+                                      member.designation
+                                    }
+                                    {" • "}
+                                    {
+                                      member.employeeId
+                                    }
+                                  </p>
+                                </div>
+                              </label>
+                            );
+                          }
+                        )
+                      )}
+                    </div>
+
+                    {formData.teamMemberIds
+                      .length > 0 && (
+                      <p
+                        className="
+                          mt-2
+                          text-xs
+                          font-medium
+                          text-slate-400
+                        "
+                      >
+                        {
+                          formData.teamMemberIds
+                            .length
+                        }{" "}
+                        member
+                        {formData.teamMemberIds
+                          .length !== 1
+                          ? "s"
+                          : ""}{" "}
+                        selected
+                      </p>
+                    )}
+
                   </FormField>
                 </div>
 
-                {/* BUDGET + START DATE */}
+                {/* BUDGET + START */}
 
                 <div
                   className="
@@ -999,7 +1486,7 @@ export function PMProjects() {
                   </FormField>
                 </div>
 
-                {/* END DATE + STATUS */}
+                {/* END + STATUS */}
 
                 <div
                   className="
@@ -1087,8 +1574,6 @@ export function PMProjects() {
                 "
               >
 
-                {/* DELETE */}
-
                 {editingId !== null ? (
                   <button
                     type="button"
@@ -1105,7 +1590,6 @@ export function PMProjects() {
                       text-sm
                       font-bold
                       text-red-500
-                      transition
                       hover:bg-red-100
                       disabled:opacity-50
                     "
@@ -1115,8 +1599,6 @@ export function PMProjects() {
                 ) : (
                   <div />
                 )}
-
-                {/* ACTIONS */}
 
                 <div
                   className="
@@ -1139,7 +1621,6 @@ export function PMProjects() {
                       text-sm
                       font-bold
                       text-slate-500
-                      transition
                       hover:bg-slate-50
                       disabled:opacity-50
                     "
@@ -1158,7 +1639,6 @@ export function PMProjects() {
                       font-bold
                       text-white
                       shadow-sm
-                      transition
                       hover:bg-red-600
                       active:scale-95
                       disabled:cursor-not-allowed
@@ -1167,7 +1647,8 @@ export function PMProjects() {
                   >
                     {saving
                       ? "Saving..."
-                      : editingId !== null
+                      : editingId !==
+                        null
                       ? "Save Changes"
                       : "Add Project"}
                   </button>
@@ -1217,15 +1698,28 @@ function FormField({
 
 function ProjectCard({
   project,
+  adminMembers,
   onEdit,
 }: {
   project: Project;
+  adminMembers: AdminDepartmentMember[];
   onEdit: () => void;
 }) {
   const style =
     statusStyles[
       project.statusColor
     ];
+
+  const teamNames =
+    project.teamMemberIds
+      .map(
+        (id) =>
+          adminMembers.find(
+            (member) =>
+              member.id === id
+          )?.fullName
+      )
+      .filter(Boolean) as string[];
 
   return (
     <article
@@ -1286,8 +1780,6 @@ function ProjectCard({
           </h3>
         </div>
 
-        {/* STATUS + EDIT */}
-
         <div
           className="
             flex
@@ -1320,7 +1812,6 @@ function ProjectCard({
               text-xs
               font-bold
               text-slate-500
-              transition
               hover:border-red-200
               hover:bg-red-50
               hover:text-red-500
@@ -1345,17 +1836,25 @@ function ProjectCard({
       >
         <InfoBox
           label="Sprint"
-          value={project.sprint}
+          value={
+            project.sprint
+          }
         />
 
         <InfoBox
           label="Team"
-          value={project.team}
+          value={
+            teamNames.length > 0
+              ? teamNames.join(", ")
+              : "No members"
+          }
         />
 
         <InfoBox
           label="Budget"
-          value={project.budget}
+          value={
+            project.budget
+          }
         />
       </div>
 
@@ -1463,6 +1962,7 @@ function InfoBox({
           font-bold
           text-slate-700
         "
+        title={value}
       >
         {value}
       </p>
