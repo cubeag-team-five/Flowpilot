@@ -7,4 +7,6 @@ import org.springframework.stereotype.Repository;
 @Repository
 public interface AdminDepartmentsRepository
         extends JpaRepository<AdminDepartment, Long> {
+
+    boolean existsByNameIgnoreCase(String name);
 }
