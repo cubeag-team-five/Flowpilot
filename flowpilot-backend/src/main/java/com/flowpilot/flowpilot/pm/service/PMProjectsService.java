@@ -5,11 +5,14 @@ import com.flowpilot.flowpilot.admin.repository.AdminDepartmentMemberRepository;
 import com.flowpilot.flowpilot.pm.dto.PMProjectDto;
 import com.flowpilot.flowpilot.pm.model.PMProject;
 import com.flowpilot.flowpilot.pm.repository.PMProjectsRepository;
+
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 @Service
 public class PMProjectsService {
@@ -40,7 +43,10 @@ public class PMProjectsService {
                 new ArrayList<>();
 
         for (PMProject project : projects) {
-            result.add(toDto(project));
+
+            result.add(
+                    toDto(project)
+            );
         }
 
         return result;
@@ -62,6 +68,88 @@ public class PMProjectsService {
                         );
 
         return toDto(project);
+    }
+
+    /* =========================================================
+       GET ALL MEMBERS ASSIGNED TO PM PROJECTS
+
+       This endpoint is used by QA.
+
+       It collects the members from all PM projects and
+       removes duplicate members using their member ID.
+    ========================================================= */
+
+    @Transactional(readOnly = true)
+    public List<Map<String, Object>> getProjectTeamMembers() {
+
+        List<PMProject> projects =
+                projectRepository.findAll();
+
+        /*
+         * LinkedHashMap keeps the members unique while
+         * preserving the order in which they are found.
+         */
+        Map<Long, Map<String, Object>> uniqueMembers =
+                new LinkedHashMap<>();
+
+        for (PMProject project : projects) {
+
+            if (project.getTeamMembers() == null) {
+                continue;
+            }
+
+            for (AdminDepartmentMember member :
+                    project.getTeamMembers()) {
+
+                if (member == null ||
+                        member.getId() == null) {
+
+                    continue;
+                }
+
+                Map<String, Object> memberData =
+                        new LinkedHashMap<>();
+
+                memberData.put(
+                        "id",
+                        member.getId()
+                );
+
+                memberData.put(
+                        "fullName",
+                        member.getFullName()
+                );
+
+                memberData.put(
+                        "email",
+                        member.getEmail()
+                );
+
+                memberData.put(
+                        "employeeId",
+                        member.getEmployeeId()
+                );
+
+                memberData.put(
+                        "designation",
+                        member.getDesignation()
+                );
+
+                /*
+                 * Using member ID as the key means the same
+                 * person will appear only once even if they
+                 * are assigned to multiple projects.
+                 */
+                uniqueMembers.put(
+                        member.getId(),
+                        memberData
+                );
+            }
+        }
+
+        return new ArrayList<>(
+                uniqueMembers.values()
+        );
     }
 
     /* =========================================================
@@ -260,7 +348,7 @@ public class PMProjectsService {
     }
 
     /* =========================================================
-       VALIDATE
+       VALIDATE PROJECT
     ========================================================= */
 
     private void validateProject(
@@ -295,7 +383,7 @@ public class PMProjectsService {
     }
 
     /* =========================================================
-       FIND MEMBERS
+       FIND MEMBERS BY IDS
     ========================================================= */
 
     private List<AdminDepartmentMember> getMembersByIds(
@@ -333,11 +421,9 @@ public class PMProjectsService {
 
     /* =========================================================
        ENTITY -> DTO
-       
-       IMPORTANT:
-       We return only member IDs.
-       This prevents recursive JSON serialization
-       through AdminDepartment -> members.
+
+       Only member IDs are returned here to prevent
+       recursive JSON serialization.
     ========================================================= */
 
     private PMProjectDto toDto(
