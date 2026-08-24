@@ -1,19 +1,19 @@
 import React, { useState } from 'react';
-import { 
-  ShieldCheck, 
-  Settings, 
-  FolderKanban, 
-  RefreshCw, 
-  Code2, 
-  TestTube2, 
-  Eye, 
-  Lock, 
-  BarChart3, 
-  Users, 
-  Bell, 
-  LayoutGrid, 
-  Lightbulb, 
-  ArrowLeft 
+import {
+  ShieldCheck,
+  Settings,
+  FolderKanban,
+  RefreshCw,
+  Code2,
+  TestTube2,
+  Eye,
+  Lock,
+  BarChart3,
+  Users,
+  Bell,
+  LayoutGrid,
+  Lightbulb,
+  ArrowLeft
 } from 'lucide-react';
 
 interface LoginPageProps {
@@ -99,26 +99,33 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onBackToHome, onLoginSucce
     setError('');
     setLoading(true);
     const resolvedRole = selectedRole;
+
     try {
       const res = await fetch('http://localhost:8080/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }),
       });
+
       const data = await res.json();
+
       if (!res.ok || !data.success) {
         setError(data.message || 'Invalid credentials');
         setLoading(false);
         return;
       }
+
       localStorage.setItem('token', data.data.token);
       localStorage.setItem('role', data.data.role);
       localStorage.setItem('name', data.data.name);
+      localStorage.setItem('email', data.data.email || email);
+
     } catch {
       // backend unreachable — demo mode
     } finally {
       setLoading(false);
     }
+
     if (onLoginSuccess) onLoginSuccess(resolvedRole);
   };
 
@@ -141,7 +148,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onBackToHome, onLoginSucce
         </div>
 
         {onBackToHome && (
-          <button 
+          <button
             onClick={onBackToHome}
             className="flex items-center gap-2 text-xs font-bold text-slate-400 hover:text-white transition-colors cursor-pointer bg-slate-900/60 px-4 py-2 rounded-full border border-slate-800"
           >
@@ -152,7 +159,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onBackToHome, onLoginSucce
 
       {/* Main Grid Section */}
       <div className="max-w-[1240px] w-full mx-auto px-6 py-5 lg:py-2 grid grid-cols-1 lg:grid-cols-[1fr_1.35fr] gap-12 lg:gap-8 items-start relative z-10 flex-1">
-        
+
         {/* Left Column: Brand Showcase */}
         <div className="flex flex-col justify-between h-full pt-4">
           <div>
@@ -162,6 +169,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onBackToHome, onLoginSucce
                 Management
               </span>
             </h1>
+
             <p className="text-slate-400 text-sm leading-relaxed mb-8 max-w-[420px]">
               Secure role-based access for every member of your team. Select your role and sign in to your personalized workspace.
             </p>
@@ -173,18 +181,21 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onBackToHome, onLoginSucce
                 </div>
                 <span className="text-sm font-semibold text-slate-200">Role-based access control</span>
               </div>
+
               <div className="flex items-center gap-3.5">
                 <div className="w-9 h-9 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-center shrink-0">
                   <BarChart3 size={16} className="text-teal-400" />
                 </div>
                 <span className="text-sm font-semibold text-slate-200">Real-time sprint analytics</span>
               </div>
+
               <div className="flex items-center gap-3.5">
                 <div className="w-9 h-9 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-center shrink-0">
                   <Users size={16} className="text-purple-400" />
                 </div>
                 <span className="text-sm font-semibold text-slate-200">Cross-team collaboration</span>
               </div>
+
               <div className="flex items-center gap-3.5">
                 <div className="w-9 h-9 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-center shrink-0">
                   <Bell size={16} className="text-amber-400" />
@@ -200,10 +211,12 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onBackToHome, onLoginSucce
               <div className="text-2xl font-black text-white">48+</div>
               <div className="text-[11px] font-medium text-slate-500 mt-0.5">Team Members</div>
             </div>
+
             <div>
               <div className="text-2xl font-black text-white">24</div>
               <div className="text-[11px] font-medium text-slate-500 mt-0.5">Active Projects</div>
             </div>
+
             <div>
               <div className="text-2xl font-black text-white">99.9%</div>
               <div className="text-[11px] font-medium text-slate-500 mt-0.5">Uptime</div>
@@ -226,23 +239,26 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onBackToHome, onLoginSucce
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 lg:mb-4 mb-6">
             {roles.map((role) => {
               const isSelected = selectedRole === role.name;
+
               return (
                 <div
                   key={role.id}
                   onClick={() => handleRoleSelect(role)}
                   className={`p-2 rounded-2xl border transition-all duration-200 cursor-pointer flex items-center gap-3 ${
-                    isSelected 
-                      ? 'bg-slate-900 border-emerald-500/80 shadow-md shadow-emerald-500/10' 
+                    isSelected
+                      ? 'bg-slate-900 border-emerald-500/80 shadow-md shadow-emerald-500/10'
                       : 'bg-[#111726]/60 border-slate-800/80 hover:border-slate-700 hover:bg-[#131b2e]'
                   }`}
                 >
                   <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${isSelected ? 'bg-emerald-500/15' : 'bg-slate-900'}`}>
                     {role.icon}
                   </div>
+
                   <div className="min-w-0">
                     <div className={`text-xs font-bold truncate ${isSelected ? 'text-emerald-400' : 'text-white'}`}>
                       {role.name}
                     </div>
+
                     <div className="text-[10px] text-slate-400 truncate">
                       {role.subtitle}
                     </div>
@@ -258,6 +274,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onBackToHome, onLoginSucce
               <label className="block text-[11px] font-extrabold uppercase tracking-wider text-slate-400 mb-1.5">
                 EMAIL ADDRESS
               </label>
+
               <input
                 type="email"
                 value={email}
@@ -272,6 +289,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onBackToHome, onLoginSucce
               <label className="block text-[11px] font-extrabold uppercase tracking-wider text-slate-400 mb-1.5">
                 PASSWORD
               </label>
+
               <input
                 type="password"
                 value={password}
@@ -289,23 +307,32 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onBackToHome, onLoginSucce
             >
               {loading ? 'Signing in...' : 'Sign In'}
             </button>
+
             {error && (
-              <p className="text-red-400 text-xs text-center mt-1">{error}</p>
+              <p className="text-red-400 text-xs text-center mt-1">
+                {error}
+              </p>
             )}
           </form>
 
           {/* Demo Mode Notice Box */}
           <div className="mt-3 bg-[#0f1725]/80 border border-slate-800/80 rounded-2xl p-2.5 flex items-start gap-3">
             <Lightbulb size={18} className="text-emerald-400 shrink-0 mt-0.5" />
+
             <div>
-              <div className="text-xs font-bold text-emerald-400 mb-0.5">DEMO MODE</div>
+              <div className="text-xs font-bold text-emerald-400 mb-0.5">
+                DEMO MODE
+              </div>
+
               <div className="text-[11px] text-slate-400 leading-normal">
-                Click any role card above to auto-fill credentials. Password for all accounts: <span className="font-mono text-slate-200">Admin@123</span>
+                Click any role card above to auto-fill credentials. Password for all accounts:{' '}
+                <span className="font-mono text-slate-200">
+                  Admin@123
+                </span>
               </div>
             </div>
           </div>
         </div>
-
       </div>
 
       {/* Footer copyright */}
