@@ -8,6 +8,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/pm/projects")
@@ -23,7 +24,7 @@ public class PMProjectsController {
     }
 
     /* =========================================================
-       GET ALL
+       GET ALL PROJECTS
     ========================================================= */
 
     @GetMapping
@@ -36,7 +37,25 @@ public class PMProjectsController {
     }
 
     /* =========================================================
-       GET ONE
+       GET ALL MEMBERS ASSIGNED TO PM PROJECTS
+
+       Used by QA for the "Assign To" dropdown.
+
+       Only members actually assigned to at least one
+       PM project will be returned.
+    ========================================================= */
+
+    @GetMapping("/team-members")
+    public ResponseEntity<List<Map<String, Object>>>
+    getProjectTeamMembers() {
+
+        return ResponseEntity.ok(
+                projectService.getProjectTeamMembers()
+        );
+    }
+
+    /* =========================================================
+       GET ONE PROJECT
     ========================================================= */
 
     @GetMapping("/{id}")
@@ -50,7 +69,7 @@ public class PMProjectsController {
     }
 
     /* =========================================================
-       CREATE
+       CREATE PROJECT
     ========================================================= */
 
     @PostMapping
@@ -69,7 +88,7 @@ public class PMProjectsController {
     }
 
     /* =========================================================
-       UPDATE
+       UPDATE PROJECT
     ========================================================= */
 
     @PutMapping("/{id}")
@@ -87,7 +106,7 @@ public class PMProjectsController {
     }
 
     /* =========================================================
-       DELETE
+       DELETE PROJECT
     ========================================================= */
 
     @DeleteMapping("/{id}")

@@ -13,7 +13,7 @@ import {
   Bell,
   LayoutGrid,
   Lightbulb,
-  ArrowLeft
+  ArrowLeft,
 } from 'lucide-react';
 
 interface LoginPageProps {
@@ -21,7 +21,10 @@ interface LoginPageProps {
   onLoginSuccess?: (role: string) => void;
 }
 
-export const LoginPage: React.FC<LoginPageProps> = ({ onBackToHome, onLoginSuccess }) => {
+export const LoginPage: React.FC<LoginPageProps> = ({
+  onBackToHome,
+  onLoginSuccess,
+}) => {
   const [selectedRole, setSelectedRole] = useState<string>('Super Admin');
   const [email, setEmail] = useState<string>('superadmin@flowpilot.com');
   const [password, setPassword] = useState<string>('SuperAdmin@123');
@@ -33,7 +36,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onBackToHome, onLoginSucce
       subtitle: 'Full system control — all modules',
       icon: <ShieldCheck size={18} className="text-rose-400" />,
       email: 'superadmin@flowpilot.com',
-      pass: 'SuperAdmin@123'
+      pass: 'SuperAdmin@123',
     },
     {
       id: 'admin',
@@ -41,7 +44,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onBackToHome, onLoginSucce
       subtitle: 'User & department management',
       icon: <Settings size={18} className="text-purple-400" />,
       email: 'admin@flowpilot.com',
-      pass: 'Admin@123'
+      pass: 'Admin@123',
     },
     {
       id: 'project-manager',
@@ -49,7 +52,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onBackToHome, onLoginSucce
       subtitle: 'Projects, sprints & team oversight',
       icon: <FolderKanban size={18} className="text-amber-400" />,
       email: 'pm@flowpilot.com',
-      pass: 'Admin@123'
+      pass: 'Admin@123',
     },
     {
       id: 'scrum-master',
@@ -57,7 +60,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onBackToHome, onLoginSucce
       subtitle: 'Sprint board, ceremonies & velocity',
       icon: <RefreshCw size={18} className="text-cyan-400" />,
       email: 'sm@flowpilot.com',
-      pass: 'Admin@123'
+      pass: 'Admin@123',
     },
     {
       id: 'developer',
@@ -65,7 +68,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onBackToHome, onLoginSucce
       subtitle: 'My tasks, sprint board & time log',
       icon: <Code2 size={18} className="text-emerald-400" />,
       email: 'dev@flowpilot.com',
-      pass: 'Admin@123'
+      pass: 'Admin@123',
     },
     {
       id: 'qa-engineer',
@@ -73,7 +76,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onBackToHome, onLoginSucce
       subtitle: 'Test cases, bug reports & coverage',
       icon: <TestTube2 size={18} className="text-teal-400" />,
       email: 'qa@flowpilot.com',
-      pass: 'Admin@123'
+      pass: 'Admin@123',
     },
     {
       id: 'viewer',
@@ -81,8 +84,8 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onBackToHome, onLoginSucce
       subtitle: 'Read-only: projects & reports',
       icon: <Eye size={18} className="text-slate-400" />,
       email: 'viewer@flowpilot.com',
-      pass: 'Admin@123'
-    }
+      pass: 'Admin@123',
+    },
   ];
 
   const handleRoleSelect = (role: typeof roles[0]) => {
@@ -96,15 +99,22 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onBackToHome, onLoginSucce
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
     setError('');
     setLoading(true);
+
     const resolvedRole = selectedRole;
 
     try {
       const res = await fetch('http://localhost:8080/api/auth/login', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email,
+          password,
+        }),
       });
 
       const data = await res.json();
@@ -119,30 +129,39 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onBackToHome, onLoginSucce
       localStorage.setItem('role', data.data.role);
       localStorage.setItem('name', data.data.name);
       localStorage.setItem('email', data.data.email || email);
-
     } catch {
       // backend unreachable — demo mode
     } finally {
       setLoading(false);
     }
 
-    if (onLoginSuccess) onLoginSuccess(resolvedRole);
+    if (onLoginSuccess) {
+      onLoginSuccess(resolvedRole);
+    }
   };
 
   return (
     <div className="min-h-screen bg-[#070b12] text-white flex flex-col justify-between font-sans relative overflow-hidden">
       {/* Subtle Ambient Background Gradients */}
       <div className="absolute -top-[20%] -left-[10%] w-[50vw] h-[50vw] bg-emerald-500/10 blur-[130px] pointer-events-none"></div>
+
       <div className="absolute top-[30%] -right-[10%] w-[45vw] h-[45vw] bg-purple-500/10 blur-[140px] pointer-events-none"></div>
 
       {/* Top Header */}
-      <div className="p-4 md:px-12 lg:py-2 flex items-center justify-between relative z-10">
-        <div className="flex items-center gap-2.5 cursor-pointer" onClick={onBackToHome}>
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-emerald-400 to-emerald-600 flex items-center justify-center text-white shadow-md shadow-emerald-500/25">
-            <LayoutGrid size={20} />
+      <div className="p-4 md:px-12 py-1 flex items-center justify-between relative z-10">
+        <div
+          className="flex items-center gap-3 cursor-pointer"
+          onClick={onBackToHome}
+        >
+          <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-emerald-400 to-emerald-600 flex items-center justify-center text-white shadow-md shadow-emerald-500/25">
+            <LayoutGrid size={32} />
           </div>
-          <span className="font-extrabold text-xl tracking-tight text-white">Flowpilot</span>
-          <span className="bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-widest">
+
+          <span className="font-extrabold text-3xl tracking-tight text-white">
+            Flowpilot
+          </span>
+
+          <span className="bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-xs font-bold px-2 py-0.5 rounded-full uppercase tracking-widest">
             V2.0
           </span>
         </div>
@@ -152,84 +171,125 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onBackToHome, onLoginSucce
             onClick={onBackToHome}
             className="flex items-center gap-2 text-xs font-bold text-slate-400 hover:text-white transition-colors cursor-pointer bg-slate-900/60 px-4 py-2 rounded-full border border-slate-800"
           >
-            <ArrowLeft size={14} /> Back to Landing Page
+            <ArrowLeft size={14} />
+            Back to Landing Page
           </button>
         )}
       </div>
 
       {/* Main Grid Section */}
-      <div className="max-w-[1240px] w-full mx-auto px-6 py-5 lg:py-2 grid grid-cols-1 lg:grid-cols-[1fr_1.35fr] gap-12 lg:gap-8 items-start relative z-10 flex-1">
+      <div className="max-w-[1240px] w-full mx-auto px-6 py-2 lg:py-2 grid grid-cols-1 lg:grid-cols-[1fr_1.35fr] gap-12 lg:gap-8 items-start relative z-10 flex-1">
 
         {/* Left Column: Brand Showcase */}
-        <div className="flex flex-col justify-between h-full pt-4">
+        <div className="flex flex-col justify-between h-full pt-0">
           <div>
-            <h1 className="text-4xl sm:text-5xl font-extrabold tracking-tight leading-tight text-white mb-3">
+            <h1 className="text-4xl sm:text-5xl font-extrabold tracking-tight leading-tight text-white mb-1">
               Enterprise Project <br />
+
               <span className="bg-gradient-to-r from-emerald-400 via-teal-300 to-purple-400 bg-clip-text text-transparent">
                 Management
               </span>
             </h1>
 
-            <p className="text-slate-400 text-sm leading-relaxed mb-8 max-w-[420px]">
+            <p className="text-slate-400 text-sm leading-relaxed mb-3 max-w-[420px]">
               Secure role-based access for every member of your team. Select your role and sign in to your personalized workspace.
             </p>
 
-            <div className="flex flex-col gap-4 mb-10">
+            <div className="flex flex-col gap-2 mb-4">
               <div className="flex items-center gap-3.5">
                 <div className="w-9 h-9 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-center shrink-0">
                   <Lock size={16} className="text-emerald-400" />
                 </div>
-                <span className="text-sm font-semibold text-slate-200">Role-based access control</span>
+
+                <span className="text-sm font-semibold text-slate-200">
+                  Role-based access control
+                </span>
               </div>
 
               <div className="flex items-center gap-3.5">
                 <div className="w-9 h-9 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-center shrink-0">
                   <BarChart3 size={16} className="text-teal-400" />
                 </div>
-                <span className="text-sm font-semibold text-slate-200">Real-time sprint analytics</span>
+
+                <span className="text-sm font-semibold text-slate-200">
+                  Real-time sprint analytics
+                </span>
               </div>
 
               <div className="flex items-center gap-3.5">
                 <div className="w-9 h-9 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-center shrink-0">
                   <Users size={16} className="text-purple-400" />
                 </div>
-                <span className="text-sm font-semibold text-slate-200">Cross-team collaboration</span>
+
+                <span className="text-sm font-semibold text-slate-200">
+                  Cross-team collaboration
+                </span>
               </div>
 
               <div className="flex items-center gap-3.5">
                 <div className="w-9 h-9 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-center shrink-0">
                   <Bell size={16} className="text-amber-400" />
                 </div>
-                <span className="text-sm font-semibold text-slate-200">Smart notifications</span>
+
+                <span className="text-sm font-semibold text-slate-200">
+                  Smart notifications
+                </span>
               </div>
             </div>
           </div>
 
           {/* Stats Bar */}
-          <div className="grid grid-cols-3 gap-6 pt-6 border-t border-slate-800/80">
+          <div className="grid grid-cols-3 gap-6 pt-2 border-t border-slate-800/80">
             <div>
-              <div className="text-2xl font-black text-white">48+</div>
-              <div className="text-[11px] font-medium text-slate-500 mt-0.5">Team Members</div>
+              <div className="text-2xl font-black text-white">
+                48+
+              </div>
+
+              <div className="text-[11px] font-medium text-slate-500 mt-0.5">
+                Team Members
+              </div>
             </div>
 
             <div>
-              <div className="text-2xl font-black text-white">24</div>
-              <div className="text-[11px] font-medium text-slate-500 mt-0.5">Active Projects</div>
+              <div className="text-2xl font-black text-white">
+                24
+              </div>
+
+              <div className="text-[11px] font-medium text-slate-500 mt-0.5">
+                Active Projects
+              </div>
             </div>
 
             <div>
-              <div className="text-2xl font-black text-white">99.9%</div>
-              <div className="text-[11px] font-medium text-slate-500 mt-0.5">Uptime</div>
+              <div className="text-2xl font-black text-white">
+                99.9%
+              </div>
+
+              <div className="text-[11px] font-medium text-slate-500 mt-0.5">
+                Uptime
+              </div>
             </div>
           </div>
         </div>
 
         {/* Right Column: Sign In Form & Role Quick Select */}
-        <div className="bg-[#0b101b]/90 border border-slate-800/80 rounded-3xl p-6 sm:p-7 lg:p-4 shadow-2xl backdrop-blur-xl">
+        <div className="bg-[#0b101b]/90 border border-slate-800/80 rounded-3xl p-6 sm:p-7 lg:p-4 shadow-2xl backdrop-blur-xl relative">
+
+          {onBackToHome && (
+            <button
+              onClick={onBackToHome}
+              className="absolute top-4 right-4 flex items-center gap-2 text-xs font-bold text-slate-400 hover:text-white transition-colors cursor-pointer bg-slate-900/60 px-4 py-2 rounded-full border border-slate-800"
+            >
+              <ArrowLeft size={14} />
+              Back to Landing Page
+            </button>
+          )}
+
           <div className="mb-4">
             <h2 className="text-2xl font-extrabold text-white tracking-tight mb-1">
               Sign in to your workspace
             </h2>
+
             <p className="text-xs text-slate-400">
               Quick-select a role below to auto-fill demo credentials
             </p>
@@ -250,12 +310,20 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onBackToHome, onLoginSucce
                       : 'bg-[#111726]/60 border-slate-800/80 hover:border-slate-700 hover:bg-[#131b2e]'
                   }`}
                 >
-                  <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${isSelected ? 'bg-emerald-500/15' : 'bg-slate-900'}`}>
+                  <div
+                    className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${
+                      isSelected ? 'bg-emerald-500/15' : 'bg-slate-900'
+                    }`}
+                  >
                     {role.icon}
                   </div>
 
                   <div className="min-w-0">
-                    <div className={`text-xs font-bold truncate ${isSelected ? 'text-emerald-400' : 'text-white'}`}>
+                    <div
+                      className={`text-xs font-bold truncate ${
+                        isSelected ? 'text-emerald-400' : 'text-white'
+                      }`}
+                    >
                       {role.name}
                     </div>
 
@@ -269,7 +337,10 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onBackToHome, onLoginSucce
           </div>
 
           {/* Login Inputs Form */}
-          <form onSubmit={handleSubmit} className="flex flex-col gap-2.5">
+          <form
+            onSubmit={handleSubmit}
+            className="flex flex-col gap-2.5"
+          >
             <div>
               <label className="block text-[11px] font-extrabold uppercase tracking-wider text-slate-400 mb-1.5">
                 EMAIL ADDRESS
@@ -317,7 +388,10 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onBackToHome, onLoginSucce
 
           {/* Demo Mode Notice Box */}
           <div className="mt-3 bg-[#0f1725]/80 border border-slate-800/80 rounded-2xl p-2.5 flex items-start gap-3">
-            <Lightbulb size={18} className="text-emerald-400 shrink-0 mt-0.5" />
+            <Lightbulb
+              size={18}
+              className="text-emerald-400 shrink-0 mt-0.5"
+            />
 
             <div>
               <div className="text-xs font-bold text-emerald-400 mb-0.5">

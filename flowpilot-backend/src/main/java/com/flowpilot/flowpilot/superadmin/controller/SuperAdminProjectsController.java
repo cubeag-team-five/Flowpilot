@@ -1,6 +1,6 @@
 package com.flowpilot.flowpilot.superadmin.controller;
 
-import com.flowpilot.flowpilot.pm.model.PMProject;
+import com.flowpilot.flowpilot.pm.dto.PMProjectDto;
 import com.flowpilot.flowpilot.superadmin.service.SuperAdminProjectsService;
 
 import org.springframework.http.ResponseEntity;
@@ -23,9 +23,12 @@ public class SuperAdminProjectsController {
 
     /**
      * Get all projects created by Project Managers.
+     *
+     * Returns DTOs instead of JPA entities so that
+     * Hibernate lazy-loading proxies are not serialized.
      */
     @GetMapping
-    public ResponseEntity<List<PMProject>> getAllProjects() {
+    public ResponseEntity<List<PMProjectDto>> getAllProjects() {
 
         return ResponseEntity.ok(
                 projectService.getAllProjects()
@@ -36,7 +39,7 @@ public class SuperAdminProjectsController {
      * Get a single project by ID.
      */
     @GetMapping("/{id}")
-    public ResponseEntity<PMProject> getProject(
+    public ResponseEntity<PMProjectDto> getProject(
             @PathVariable Long id) {
 
         return ResponseEntity.ok(
