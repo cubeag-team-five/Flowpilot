@@ -129,44 +129,37 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onBackToHome, onLoginSucce
       <div className="absolute top-[30%] -right-[10%] w-[45vw] h-[45vw] bg-purple-500/10 blur-[140px] pointer-events-none"></div>
 
       {/* Top Header */}
-      <div className="p-4 md:px-12 lg:py-2 flex items-center justify-between relative z-10">
-        <div className="flex items-center gap-2.5 cursor-pointer" onClick={onBackToHome}>
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-emerald-400 to-emerald-600 flex items-center justify-center text-white shadow-md shadow-emerald-500/25">
-            <LayoutGrid size={20} />
+      <div className="p-4 md:px-12 py-1 flex items-center justify-between relative z-10">
+        <div className="flex items-center gap-3 cursor-pointer" onClick={onBackToHome}>
+          <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-emerald-400 to-emerald-600 flex items-center justify-center text-white shadow-md shadow-emerald-500/25">
+            <LayoutGrid size={32} />
           </div>
-          <span className="font-extrabold text-xl tracking-tight text-white">Flowpilot</span>
-          <span className="bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-widest">
+          <span className="font-extrabold text-3xl tracking-tight text-white">Flowpilot</span>
+          <span className="bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-xs font-bold px-2 py-0.5 rounded-full uppercase tracking-widest">
             V2.0
           </span>
         </div>
 
-        {onBackToHome && (
-          <button 
-            onClick={onBackToHome}
-            className="flex items-center gap-2 text-xs font-bold text-slate-400 hover:text-white transition-colors cursor-pointer bg-slate-900/60 px-4 py-2 rounded-full border border-slate-800"
-          >
-            <ArrowLeft size={14} /> Back to Landing Page
-          </button>
-        )}
+
       </div>
 
       {/* Main Grid Section */}
-      <div className="max-w-[1240px] w-full mx-auto px-6 py-5 lg:py-2 grid grid-cols-1 lg:grid-cols-[1fr_1.35fr] gap-12 lg:gap-8 items-start relative z-10 flex-1">
+      <div className="max-w-[1240px] w-full mx-auto px-6 py-2 lg:py-2 grid grid-cols-1 lg:grid-cols-[1fr_1.35fr] gap-12 lg:gap-8 items-start relative z-10 flex-1">
         
         {/* Left Column: Brand Showcase */}
-        <div className="flex flex-col justify-between h-full pt-4">
+        <div className="flex flex-col justify-between h-full pt-0">
           <div>
-            <h1 className="text-4xl sm:text-5xl font-extrabold tracking-tight leading-tight text-white mb-3">
+            <h1 className="text-4xl sm:text-5xl font-extrabold tracking-tight leading-tight text-white mb-1">
               Enterprise Project <br />
               <span className="bg-gradient-to-r from-emerald-400 via-teal-300 to-purple-400 bg-clip-text text-transparent">
                 Management
               </span>
             </h1>
-            <p className="text-slate-400 text-sm leading-relaxed mb-8 max-w-[420px]">
+            <p className="text-slate-400 text-sm leading-relaxed mb-3 max-w-[420px]">
               Secure role-based access for every member of your team. Select your role and sign in to your personalized workspace.
             </p>
 
-            <div className="flex flex-col gap-4 mb-10">
+            <div className="flex flex-col gap-2 mb-4">
               <div className="flex items-center gap-3.5">
                 <div className="w-9 h-9 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-center shrink-0">
                   <Lock size={16} className="text-emerald-400" />
@@ -195,7 +188,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onBackToHome, onLoginSucce
           </div>
 
           {/* Stats Bar */}
-          <div className="grid grid-cols-3 gap-6 pt-6 border-t border-slate-800/80">
+          <div className="grid grid-cols-3 gap-6 pt-2 border-t border-slate-800/80">
             <div>
               <div className="text-2xl font-black text-white">48+</div>
               <div className="text-[11px] font-medium text-slate-500 mt-0.5">Team Members</div>
@@ -212,7 +205,15 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onBackToHome, onLoginSucce
         </div>
 
         {/* Right Column: Sign In Form & Role Quick Select */}
-        <div className="bg-[#0b101b]/90 border border-slate-800/80 rounded-3xl p-6 sm:p-7 lg:p-4 shadow-2xl backdrop-blur-xl">
+        <div className="bg-[#0b101b]/90 border border-slate-800/80 rounded-3xl p-6 sm:p-7 lg:p-4 shadow-2xl backdrop-blur-xl relative">
+          {onBackToHome && (
+            <button 
+              onClick={onBackToHome}
+              className="absolute top-4 right-4 flex items-center gap-2 text-xs font-bold text-slate-400 hover:text-white transition-colors cursor-pointer bg-slate-900/60 px-4 py-2 rounded-full border border-slate-800"
+            >
+              <ArrowLeft size={14} /> Back to Landing Page
+            </button>
+          )}
           <div className="mb-4">
             <h2 className="text-2xl font-extrabold text-white tracking-tight mb-1">
               Sign in to your workspace

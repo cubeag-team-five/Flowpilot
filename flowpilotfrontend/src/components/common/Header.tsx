@@ -34,16 +34,10 @@ export const Header: React.FC<HeaderProps> = ({ onOpenDemo, onOpenLogin }) => {
         <div className="flex shrink-0 items-center gap-1 sm:gap-3">
           <button 
             onClick={onOpenLogin || onOpenDemo}
-            className="text-slate-700 font-bold text-sm px-2 sm:px-4 py-2 hover:text-slate-900 transition-colors cursor-pointer"
+            className="inline-flex shrink-0 items-center justify-center gap-1.5 bg-emerald-500 hover:bg-emerald-600 text-white font-bold text-[11px] sm:text-sm px-6 sm:px-8 py-2.5 rounded-full shadow-lg shadow-emerald-500/30 hover:-translate-y-0.5 transition-all whitespace-nowrap"
           >
-            Login
+            Login <ArrowRight size={14} className="sm:h-4 sm:w-4" />
           </button>
-          <a 
-            href="#trial" 
-            className="inline-flex shrink-0 items-center justify-center gap-1.5 bg-emerald-500 hover:bg-emerald-600 text-white font-bold text-[11px] sm:text-sm px-3 sm:px-5 py-2.5 rounded-full shadow-lg shadow-emerald-500/30 hover:-translate-y-0.5 transition-all text-decoration-none whitespace-nowrap"
-          >
-            Get Started <ArrowRight size={14} className="sm:h-4 sm:w-4" />
-          </a>
         </div>
       </nav>
     </header>
