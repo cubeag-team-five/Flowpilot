@@ -5,6 +5,7 @@ import com.flowpilot.flowpilot.pm.service.PMProjectsService;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -12,7 +13,9 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api/pm/projects")
-@CrossOrigin(origins = "http://localhost:5173")
+@CrossOrigin(
+        origins = "http://localhost:5173"
+)
 public class PMProjectsController {
 
     private final PMProjectsService projectService;
@@ -20,7 +23,8 @@ public class PMProjectsController {
     public PMProjectsController(
             PMProjectsService projectService) {
 
-        this.projectService = projectService;
+        this.projectService =
+                projectService;
     }
 
     /* =========================================================
@@ -39,18 +43,20 @@ public class PMProjectsController {
     /* =========================================================
        GET ALL MEMBERS ASSIGNED TO PM PROJECTS
 
-       Used by QA for the "Assign To" dropdown.
+       This is still available for QA or other modules.
 
-       Only members actually assigned to at least one
-       PM project will be returned.
+       The members returned here now come from
+       SuperAdminUser instead of AdminDepartmentMember.
     ========================================================= */
 
     @GetMapping("/team-members")
-    public ResponseEntity<List<Map<String, Object>>>
+    public ResponseEntity<
+            List<Map<String, Object>>>
     getProjectTeamMembers() {
 
         return ResponseEntity.ok(
-                projectService.getProjectTeamMembers()
+                projectService
+                        .getProjectTeamMembers()
         );
     }
 
@@ -83,7 +89,9 @@ public class PMProjectsController {
                 );
 
         return ResponseEntity
-                .status(HttpStatus.CREATED)
+                .status(
+                        HttpStatus.CREATED
+                )
                 .body(savedProject);
     }
 
@@ -114,7 +122,9 @@ public class PMProjectsController {
     deleteProject(
             @PathVariable Long id) {
 
-        projectService.deleteProject(id);
+        projectService.deleteProject(
+                id
+        );
 
         return ResponseEntity
                 .noContent()

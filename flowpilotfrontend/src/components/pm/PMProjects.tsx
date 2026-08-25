@@ -17,21 +17,16 @@ interface BackendProject {
   teamMemberIds: number[];
 }
 
-interface AdminDepartment {
-  id: number;
+interface SuperAdminUser {
+  employeeId: number;
   name: string;
-  head: string;
-  members: number;
-  progress: number;
-}
-
-interface AdminDepartmentMember {
-  id: number;
-  fullName: string;
   email: string;
-  employeeId: string;
+  role: string;
+  department: string;
   designation: string;
-  department?: AdminDepartment;
+  status: string;
+  lastLogin: string;
+  initials: string;
 }
 
 interface Project {
@@ -55,8 +50,8 @@ interface Project {
 const API_URL =
   "http://localhost:8080/api/pm/projects";
 
-const ADMIN_DEPARTMENTS_URL =
-  "http://localhost:8080/api/admin/departments";
+const SUPERADMIN_USERS_URL =
+  "http://localhost:8080/api/superadmin/users";
 
 /* =========================================================
    AUTH TOKEN
@@ -170,8 +165,10 @@ export function PMProjects() {
   const [projects, setProjects] =
     useState<Project[]>([]);
 
-  const [adminMembers, setAdminMembers] =
-    useState<AdminDepartmentMember[]>([]);
+  const [
+    superAdminMembers,
+    setSuperAdminMembers,
+  ] = useState<SuperAdminUser[]>([]);
 
   const [membersLoading, setMembersLoading] =
     useState(true);
@@ -209,143 +206,102 @@ export function PMProjects() {
     });
 
   /* =======================================================
-     LOAD ADMIN MEMBERS
+     LOAD SUPERADMIN USERS
   ======================================================= */
 
-  const loadAdminMembers = async () => {
-    try {
-      setMembersLoading(true);
+  const loadSuperAdminMembers =
+    async () => {
+      try {
+        setMembersLoading(true);
 
-      const token = getAuthToken();
+        const token = getAuthToken();
 
-      if (!token) {
-        throw new Error(
-          "Authentication token not found. Please log in again."
-        );
-      }
+        if (!token) {
+          throw new Error(
+            "Authentication token not found. Please log in again."
+          );
+        }
 
-      const departmentsResponse =
-        await fetch(
-          ADMIN_DEPARTMENTS_URL,
-          {
-            method: "GET",
-            headers: {
-              "Content-Type":
-                "application/json",
-              Authorization:
-                `Bearer ${token}`,
-            },
-          }
-        );
+        const response =
+          await fetch(
+            SUPERADMIN_USERS_URL,
+            {
+              method: "GET",
 
-      if (
-        departmentsResponse.status === 401 ||
-        departmentsResponse.status === 403
-      ) {
-        throw new Error(
-          "Access denied while loading Admin departments."
-        );
-      }
+              headers: {
+                "Content-Type":
+                  "application/json",
 
-      if (!departmentsResponse.ok) {
-        throw new Error(
-          `Failed to load departments (${departmentsResponse.status})`
-        );
-      }
-
-      const departments: AdminDepartment[] =
-        await departmentsResponse.json();
-
-      const memberRequests =
-        departments.map(
-          async (department) => {
-            const response =
-              await fetch(
-                `${ADMIN_DEPARTMENTS_URL}/${department.id}/members`,
-                {
-                  method: "GET",
-                  headers: {
-                    "Content-Type":
-                      "application/json",
-                    Authorization:
-                      `Bearer ${token}`,
-                  },
-                }
-              );
-
-            if (
-              response.status === 401 ||
-              response.status === 403
-            ) {
-              throw new Error(
-                "Access denied while loading department members."
-              );
+                Authorization:
+                  `Bearer ${token}`,
+              },
             }
+          );
 
-            if (!response.ok) {
-              throw new Error(
-                `Failed to load members for ${department.name}`
-              );
-            }
+        if (
+          response.status === 401 ||
+          response.status === 403
+        ) {
+          throw new Error(
+            "Access denied while loading SuperAdmin users."
+          );
+        }
 
-            const members:
-              AdminDepartmentMember[] =
-              await response.json();
+        if (!response.ok) {
+          const errorText =
+            await response.text();
 
-            return members;
-          }
-        );
+          throw new Error(
+            errorText ||
+              `Failed to load SuperAdmin users (${response.status})`
+          );
+        }
 
-      const membersByDepartment =
-        await Promise.all(
-          memberRequests
-        );
+        const users:
+          SuperAdminUser[] =
+          await response.json();
 
-      const allMembers =
-        membersByDepartment.flat();
+        /*
+         * Only ACTIVE SuperAdmin users are
+         * available for project assignment.
+         */
+        const activeUsers =
+          users.filter(
+            (user) =>
+              user.status?.toUpperCase() ===
+              "ACTIVE"
+          );
 
-      const uniqueMembers =
-        Array.from(
-          new Map(
-            allMembers.map(
-              (member) => [
-                member.id,
-                member,
-              ]
+        activeUsers.sort(
+          (a, b) =>
+            a.name.localeCompare(
+              b.name
             )
-          ).values()
         );
 
-      uniqueMembers.sort(
-        (a, b) =>
-          a.fullName.localeCompare(
-            b.fullName
-          )
-      );
+        setSuperAdminMembers(
+          activeUsers
+        );
 
-      setAdminMembers(
-        uniqueMembers
-      );
+        console.log(
+          "SuperAdmin users loaded:",
+          activeUsers
+        );
+      } catch (err) {
+        console.error(
+          "Error loading SuperAdmin users:",
+          err
+        );
 
-      console.log(
-        "Admin department members:",
-        uniqueMembers
-      );
-    } catch (err) {
-      console.error(
-        "Error loading Admin department members:",
-        err
-      );
-
-      setError(
-        err instanceof Error
-          ? err.message
-          : "Failed to load Admin members"
-      );
-    } finally {
-      setMembersLoading(false);
-    }
-  };
+        setError(
+          err instanceof Error
+            ? err.message
+            : "Failed to load SuperAdmin users"
+        );
+      } finally {
+        setMembersLoading(false);
+      }
+    };
 
   /* =======================================================
      LOAD PROJECTS
@@ -367,9 +323,11 @@ export function PMProjects() {
       const response =
         await fetch(API_URL, {
           method: "GET",
+
           headers: {
             "Content-Type":
               "application/json",
+
             Authorization:
               `Bearer ${token}`,
           },
@@ -399,7 +357,9 @@ export function PMProjects() {
         await response.json();
 
       setProjects(
-        data.map(mapBackendProject)
+        data.map(
+          mapBackendProject
+        )
       );
     } catch (err) {
       console.error(
@@ -423,7 +383,7 @@ export function PMProjects() {
 
   useEffect(() => {
     loadProjects();
-    loadAdminMembers();
+    loadSuperAdminMembers();
   }, []);
 
   /* =======================================================
@@ -552,32 +512,34 @@ export function PMProjects() {
   ======================================================= */
 
   const handleMemberToggle = (
-    memberId: number
+    employeeId: number
   ) => {
     setFormData(
       (prev) => {
 
         const alreadySelected =
           prev.teamMemberIds.includes(
-            memberId
+            employeeId
           );
 
         if (alreadySelected) {
           return {
             ...prev,
+
             teamMemberIds:
               prev.teamMemberIds.filter(
                 (id) =>
-                  id !== memberId
+                  id !== employeeId
               ),
           };
         }
 
         return {
           ...prev,
+
           teamMemberIds: [
             ...prev.teamMemberIds,
-            memberId,
+            employeeId,
           ],
         };
       }
@@ -589,15 +551,16 @@ export function PMProjects() {
   ======================================================= */
 
   const removeMember = (
-    memberId: number
+    employeeId: number
   ) => {
     setFormData(
       (prev) => ({
         ...prev,
+
         teamMemberIds:
           prev.teamMemberIds.filter(
             (id) =>
-              id !== memberId
+              id !== employeeId
           ),
       })
     );
@@ -648,7 +611,8 @@ export function PMProjects() {
       }
 
       if (
-        !formData.budget.trim()
+        formData.budget.trim()
+          .length === 0
       ) {
         setError(
           "Budget is required."
@@ -1029,8 +993,8 @@ export function PMProjects() {
                     project.backendId
                   }
                   project={project}
-                  adminMembers={
-                    adminMembers
+                  superAdminMembers={
+                    superAdminMembers
                   }
                   onEdit={() =>
                     handleOpenModal(
@@ -1230,13 +1194,13 @@ export function PMProjects() {
                         "
                       >
                         {formData.teamMemberIds.map(
-                          (memberId) => {
+                          (employeeId) => {
 
                             const member =
-                              adminMembers.find(
+                              superAdminMembers.find(
                                 (item) =>
-                                  item.id ===
-                                  memberId
+                                  item.employeeId ===
+                                  employeeId
                               );
 
                             if (!member) {
@@ -1246,7 +1210,7 @@ export function PMProjects() {
                             return (
                               <div
                                 key={
-                                  member.id
+                                  member.employeeId
                                 }
                                 className="
                                   flex
@@ -1265,7 +1229,7 @@ export function PMProjects() {
                               >
                                 <span>
                                   {
-                                    member.fullName
+                                    member.name
                                   }
                                 </span>
 
@@ -1273,7 +1237,7 @@ export function PMProjects() {
                                   type="button"
                                   onClick={() =>
                                     removeMember(
-                                      member.id
+                                      member.employeeId
                                     )
                                   }
                                   className="
@@ -1313,11 +1277,10 @@ export function PMProjects() {
                             text-slate-400
                           "
                         >
-                          Loading Admin
-                          department
-                          members...
+                          Loading SuperAdmin
+                          users...
                         </div>
-                      ) : adminMembers.length ===
+                      ) : superAdminMembers.length ===
                         0 ? (
                         <div
                           className="
@@ -1327,23 +1290,22 @@ export function PMProjects() {
                             text-slate-400
                           "
                         >
-                          No Admin
-                          department
-                          members found.
+                          No active SuperAdmin
+                          users found.
                         </div>
                       ) : (
-                        adminMembers.map(
+                        superAdminMembers.map(
                           (member) => {
 
                             const selected =
                               formData.teamMemberIds.includes(
-                                member.id
+                                member.employeeId
                               );
 
                             return (
                               <label
                                 key={
-                                  member.id
+                                  member.employeeId
                                 }
                                 className={`
                                   flex
@@ -1370,7 +1332,7 @@ export function PMProjects() {
                                   }
                                   onChange={() =>
                                     handleMemberToggle(
-                                      member.id
+                                      member.employeeId
                                     )
                                   }
                                   className="
@@ -1393,7 +1355,7 @@ export function PMProjects() {
                                     "
                                   >
                                     {
-                                      member.fullName
+                                      member.name
                                     }
                                   </p>
 
@@ -1405,9 +1367,11 @@ export function PMProjects() {
                                     "
                                   >
                                     {
-                                      member.designation
+                                      member.designation ||
+                                      "No designation"
                                     }
                                     {" • "}
+                                    EMP-
                                     {
                                       member.employeeId
                                     }
@@ -1698,11 +1662,11 @@ function FormField({
 
 function ProjectCard({
   project,
-  adminMembers,
+  superAdminMembers,
   onEdit,
 }: {
   project: Project;
-  adminMembers: AdminDepartmentMember[];
+  superAdminMembers: SuperAdminUser[];
   onEdit: () => void;
 }) {
   const style =
@@ -1713,11 +1677,12 @@ function ProjectCard({
   const teamNames =
     project.teamMemberIds
       .map(
-        (id) =>
-          adminMembers.find(
+        (employeeId) =>
+          superAdminMembers.find(
             (member) =>
-              member.id === id
-          )?.fullName
+              member.employeeId ===
+              employeeId
+          )?.name
       )
       .filter(Boolean) as string[];
 
