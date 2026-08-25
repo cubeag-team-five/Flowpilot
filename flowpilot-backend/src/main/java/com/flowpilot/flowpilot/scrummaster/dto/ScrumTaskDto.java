@@ -50,7 +50,14 @@ public class ScrumTaskDto {
             Long sprintId
     ) {}
 
-    /** Every field optional — only what is sent gets changed. */
+    /**
+     * Every field optional — only what is sent gets changed.
+     *
+     * A null therefore means "leave alone", which makes clearing a field
+     * impossible to express. The explicit clear flags exist for exactly that:
+     * without them an emptied due date would be silently discarded and the
+     * request would still report success.
+     */
     public record UpdateRequest(
             String title,
             String description,
@@ -66,7 +73,12 @@ public class ScrumTaskDto {
             Boolean unassign,
             Long reporterId,
             Long sprintId,
-            Boolean removeFromSprint
+            Boolean removeFromSprint,
+            Boolean clearDescription,
+            Boolean clearDueDate,
+            Boolean clearEstimatedHours,
+            Boolean clearActualHours,
+            Boolean clearLabels
     ) {}
 
     /** A person a task can be assigned to. */

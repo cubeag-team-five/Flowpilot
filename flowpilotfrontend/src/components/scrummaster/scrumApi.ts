@@ -48,9 +48,11 @@ const request = async <T>(path: string, init?: RequestInit): Promise<T> => {
   return response.json() as Promise<T>;
 };
 
+type QueryValue = string | number | boolean | undefined | null;
+
 /** Drops empty values so optional filters do not become `?assigneeId=`. */
-const query = (params: Record<string, string | number | boolean | undefined | null>): string => {
-  const parts = Object.entries(params)
+const query = (params: Record<string, QueryValue> | object): string => {
+  const parts = Object.entries(params as Record<string, QueryValue>)
     .filter(([, value]) => value !== undefined && value !== null && value !== '')
     .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`);
 
@@ -346,6 +348,16 @@ export interface TaskInput {
   reporterId?: number | null;
   sprintId?: number | null;
   removeFromSprint?: boolean;
+  /**
+   * A null value means "leave unchanged" on a PATCH, so emptying a field has
+   * to be said explicitly. Without these, clearing a due date would report
+   * success and silently keep the old value.
+   */
+  clearDescription?: boolean;
+  clearDueDate?: boolean;
+  clearEstimatedHours?: boolean;
+  clearActualHours?: boolean;
+  clearLabels?: boolean;
 }
 
 export const createTask = (body: TaskInput) =>

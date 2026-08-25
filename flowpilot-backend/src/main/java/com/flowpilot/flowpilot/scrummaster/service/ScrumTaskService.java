@@ -222,7 +222,9 @@ public class ScrumTaskService {
             task.setTitle(requireTitle(request.title()));
         }
 
-        if (request.description() != null) {
+        if (Boolean.TRUE.equals(request.clearDescription())) {
+            task.setDescription(null);
+        } else if (request.description() != null) {
             task.setDescription(trimToNull(request.description()));
         }
 
@@ -234,23 +236,31 @@ public class ScrumTaskService {
             task.setStoryPoints(validStoryPoints(request.storyPoints()));
         }
 
-        if (request.estimatedHours() != null) {
+        if (Boolean.TRUE.equals(request.clearEstimatedHours())) {
+            task.setEstimatedHours(null);
+        } else if (request.estimatedHours() != null) {
             task.setEstimatedHours(
                     validHours(request.estimatedHours(), "estimatedHours")
             );
         }
 
-        if (request.actualHours() != null) {
+        if (Boolean.TRUE.equals(request.clearActualHours())) {
+            task.setActualHours(null);
+        } else if (request.actualHours() != null) {
             task.setActualHours(
                     validHours(request.actualHours(), "actualHours")
             );
         }
 
-        if (request.dueDate() != null) {
+        if (Boolean.TRUE.equals(request.clearDueDate())) {
+            task.setDueDate(null);
+        } else if (request.dueDate() != null) {
             task.setDueDate(request.dueDate());
         }
 
-        if (request.labels() != null) {
+        if (Boolean.TRUE.equals(request.clearLabels())) {
+            task.setLabels(null);
+        } else if (request.labels() != null) {
             task.setLabels(joinLabels(request.labels()));
         }
 
