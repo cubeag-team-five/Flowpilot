@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import { LayoutGrid, CheckSquare, Activity, Users, Calendar } from 'lucide-react';
+import { LayoutGrid, CheckSquare, Activity, Users, Calendar, Repeat } from 'lucide-react';
 import { DashboardLayout } from '../common/DashboardLayout';
 import { ScrumMasterDashboardView } from './ScrumMasterDashboardView';
 import { ScrumBoard } from './ScrumBoard';
+import { ScrumSprints } from './ScrumSprints';
 import { ScrumBurndown } from './ScrumBurndown';
 import { ScrumStandups } from './ScrumStandups';
 import { ScrumRetrospective } from './ScrumRetrospective';
@@ -18,6 +19,7 @@ const roleConfig = {
 
 const navItems = [
   { name: 'Sprint Overview',      icon: <LayoutGrid size={18} /> },
+  { name: 'Sprint Cycles',        icon: <Repeat size={18} /> },
   { name: 'Scrum Board',          icon: <CheckSquare size={18} /> },
   { name: 'Burndown & Velocity',  icon: <Activity size={18} /> },
   { name: 'Team & Standups',      icon: <Users size={18} /> },
@@ -26,6 +28,7 @@ const navItems = [
 
 const pageTitles: Record<string, string> = {
   'Sprint Overview':     'Sprint Overview',
+  'Sprint Cycles':       'Sprint Cycles',
   'Scrum Board':         'Scrum Board',
   'Burndown & Velocity': 'Burndown & Velocity',
   'Team & Standups':     'Team & Standups',
@@ -55,6 +58,7 @@ export const ScrumMasterLayout: React.FC<Props> = ({ onLogout }) => {
 
   const renderContent = () => {
     switch (activeTab) {
+      case 'Sprint Cycles':       return <ScrumSprints />;
       case 'Scrum Board':         return <ScrumBoard />;
       case 'Burndown & Velocity': return <ScrumBurndown />;
       case 'Team & Standups':     return <ScrumStandups />;
