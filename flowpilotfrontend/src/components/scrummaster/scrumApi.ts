@@ -1,9 +1,10 @@
 /**
- * API access for the Scrum Master section.
+ * API client for the Scrum Master module.
  *
- * Teammates repeat the base URL and auth header in every component; keeping
- * them here means the five Scrum Master pages stay consistent and there is one
- * place to change when the API moves off localhost.
+ * Types mirror the backend records in
+ * com.flowpilot.flowpilot.scrummaster.dto exactly. Keeping the base URL and
+ * auth header in one place means the five pages cannot drift apart, and there
+ * is a single line to change when the API stops living on localhost.
  */
 
 const BASE_URL = 'http://localhost:8080/api/scrummaster';
@@ -17,13 +18,13 @@ const authHeaders = (): HeadersInit => {
   };
 };
 
-/** Reads the backend's message so the UI can show why something failed. */
-const readError = async (response: Response, fallback: string): Promise<string> => {
+/** Surfaces the backend's own message so the UI can say what actually failed. */
+const readError = async (response: Response): Promise<string> => {
   try {
     const body = await response.json();
-    return body?.message || fallback;
+    return body?.message || `Request failed (${response.status})`;
   } catch {
-    return fallback;
+    return `Request failed (${response.status})`;
   }
 };
 
@@ -37,23 +38,71 @@ const request = async <T>(path: string, init?: RequestInit): Promise<T> => {
   }
 
   if (!response.ok) {
-    throw new Error(await readError(response, `Request failed (${response.status})`));
+    throw new Error(await readError(response));
+  }
+
+  if (response.status === 204) {
+    return undefined as T;
   }
 
   return response.json() as Promise<T>;
 };
 
+/** Drops empty values so optional filters do not become `?assigneeId=`. */
+const query = (params: Record<string, string | number | boolean | undefined | null>): string => {
+  const parts = Object.entries(params)
+    .filter(([, value]) => value !== undefined && value !== null && value !== '')
+    .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`);
+
+  return parts.length ? `?${parts.join('&')}` : '';
+};
+
 // ============================================
-// TYPES — mirror the backend DTOs
+// SHARED VOCABULARY
 // ============================================
 
-export type TaskStatus =
-  | 'BACKLOG'
-  | 'TODO'
-  | 'IN_PROGRESS'
-  | 'CODE_REVIEW'
-  | 'TESTING'
-  | 'DONE';
+export const TASK_STATUSES = [
+  'BACKLOG',
+  'SPRINT_READY',
+  'TODO',
+  'IN_PROGRESS',
+  'CODE_REVIEW',
+  'TESTING',
+  'DONE',
+  'BLOCKED'
+] as const;
+
+export type TaskStatus = (typeof TASK_STATUSES)[number];
+
+export const PRIORITIES = ['LOWEST', 'LOW', 'MEDIUM', 'HIGH', 'HIGHEST'] as const;
+
+export type Priority = (typeof PRIORITIES)[number];
+
+export type SprintStatus = 'PLANNED' | 'ACTIVE' | 'COMPLETED';
+
+/** Human labels. The backend sends these too, but forms need them before a fetch. */
+export const STATUS_LABEL: Record<TaskStatus, string> = {
+  BACKLOG: 'Backlog',
+  SPRINT_READY: 'Sprint ready',
+  TODO: 'To do',
+  IN_PROGRESS: 'In progress',
+  CODE_REVIEW: 'Review',
+  TESTING: 'Testing',
+  DONE: 'Done',
+  BLOCKED: 'Blocked'
+};
+
+export const PRIORITY_LABEL: Record<Priority, string> = {
+  LOWEST: 'Lowest',
+  LOW: 'Low',
+  MEDIUM: 'Medium',
+  HIGH: 'High',
+  HIGHEST: 'Highest'
+};
+
+// ============================================
+// TYPES
+// ============================================
 
 export interface Member {
   id: number;
@@ -63,7 +112,50 @@ export interface Member {
   initials: string;
 }
 
-export type SprintStatus = 'PLANNED' | 'ACTIVE' | 'COMPLETED';
+export interface Card {
+  id: number;
+  taskKey: string;
+  title: string;
+  description: string | null;
+  priority: Priority;
+  status: TaskStatus;
+  storyPoints: number;
+  estimatedHours: number | null;
+  actualHours: number | null;
+  dueDate: string | null;
+  labels: string[];
+  blockedReason: string | null;
+  assigneeId: number | null;
+  assigneeName: string | null;
+  assigneeInitials: string;
+  reporterId: number | null;
+  reporterName: string | null;
+  sprintId: number | null;
+  daysInColumn: number;
+  stuck: boolean;
+  overdue: boolean;
+}
+
+export interface BoardColumn {
+  status: TaskStatus;
+  label: string;
+  taskCount: number;
+  totalPoints: number;
+  wipLimit: number | null;
+  wipExceeded: boolean;
+  cards: Card[];
+}
+
+export interface Board {
+  sprintId: number;
+  sprintName: string;
+  sprintStatus: SprintStatus;
+  totalTasks: number;
+  totalPoints: number;
+  availableLabels: string[];
+  members: Member[];
+  columns: BoardColumn[];
+}
 
 export interface Sprint {
   id: number;
@@ -73,43 +165,148 @@ export interface Sprint {
   startDate: string | null;
   endDate: string | null;
   status: SprintStatus;
+  durationDays: number | null;
+  daysRemaining: number;
+  daysElapsed: number;
+  capacityPoints: number | null;
   committedPoints: number | null;
+  projectId: number | null;
   taskCount: number;
   totalPoints: number;
+  donePoints: number;
+  scopeAddedPoints: number;
+  overCapacity: boolean;
 }
 
 export interface CompleteResult {
   completedSprintId: number;
   completedPoints: number;
   carriedTaskCount: number;
+  carriedPoints: number;
   carriedToSprintId: number | null;
+  carriedToSprintName: string | null;
 }
 
-export interface BoardCard {
+export interface StandupEntry {
   id: number;
-  taskKey: string;
-  title: string;
-  assigneeName: string | null;
-  assigneeInitials: string;
-  storyPoints: number;
-  status: TaskStatus;
-  daysInColumn: number;
+  memberId: number;
+  memberName: string | null;
+  memberInitials: string;
+  memberRole: string | null;
+  standupDate: string;
+  yesterday: string | null;
+  today: string | null;
+  blocker: string | null;
+  blocked: boolean;
 }
 
-export interface BoardColumn {
-  status: TaskStatus;
-  label: string;
-  taskCount: number;
-  totalPoints: number;
-  cards: BoardCard[];
-}
-
-export interface BoardResponse {
+export interface Standups {
   sprintId: number;
   sprintName: string;
-  totalTasks: number;
+  date: string;
+  attending: number;
+  blockedCount: number;
+  recordedDates: string[];
+  members: Member[];
+  entries: StandupEntry[];
+}
+
+export type RetroKind = 'WENT_WELL' | 'TO_CHANGE' | 'ACTION';
+
+export interface RetroItem {
+  id: number;
+  kind: RetroKind;
+  text: string;
+  ownerId: number | null;
+  ownerName: string | null;
+  ownerInitials: string;
+  dueLabel: string | null;
+  dueDate: string | null;
+  completed: boolean;
+}
+
+export interface Retrospective {
+  sprintId: number;
+  sprintName: string;
+  sprintStatus: SprintStatus;
+  heldOn: string | null;
+  wentWell: RetroItem[];
+  toChange: RetroItem[];
+  actions: RetroItem[];
+  members: Member[];
+}
+
+export interface DayPoint {
+  date: string;
+  dayNumber: number;
+  remainingPoints: number;
+  completedPoints: number;
   totalPoints: number;
-  columns: BoardColumn[];
+  idealRemaining: number;
+}
+
+export interface Burndown {
+  sprintId: number;
+  sprintName: string;
+  startDate: string | null;
+  endDate: string | null;
+  committedPoints: number | null;
+  totalPoints: number;
+  remainingPoints: number;
+  durationDays: number | null;
+  pointsBehindIdeal: number;
+  trend: 'ahead' | 'on track' | 'behind';
+  series: DayPoint[];
+}
+
+export interface VelocitySprint {
+  sprintId: number;
+  sprintNumber: number;
+  name: string;
+  committedPoints: number | null;
+  completedPoints: number;
+  current: boolean;
+}
+
+export interface Velocity {
+  average: number | null;
+  rollingAverage: number | null;
+  sprintsCounted: number;
+  sprints: VelocitySprint[];
+}
+
+export interface Slice {
+  label: string;
+  count: number;
+  points: number;
+}
+
+export interface MemberProductivity {
+  memberId: number;
+  name: string | null;
+  initials: string;
+  assigned: number;
+  completed: number;
+  points: number;
+  completionPercent: number;
+}
+
+export interface Kpis {
+  tasksCompleted: number;
+  tasksTotal: number;
+  overdueTasks: number;
+  averageCompletionHours: number | null;
+  sprintSuccessRatePercent: number | null;
+  sprintsAssessed: number;
+}
+
+export interface Analytics {
+  burndown: Burndown;
+  velocity: Velocity;
+  kpis: Kpis;
+  byPriority: Slice[];
+  byStatus: Slice[];
+  byMember: MemberProductivity[];
 }
 
 export interface Ceremony {
@@ -118,62 +315,12 @@ export interface Ceremony {
   tone: string;
 }
 
-export interface DashboardResponse {
-  sprintId: number;
-  sprintNumber: number;
-  sprintName: string;
-  goal: string;
-  status: string;
-  daysRemaining: number;
-  totalDays: number;
-  tasksDone: number;
-  tasksTotal: number;
-  percentComplete: number;
-  pointsDone: number;
-  pointsTotal: number;
-  committedPoints: number | null;
-  blockerCount: number;
+export interface Dashboard {
+  sprint: Sprint;
+  kpis: Kpis;
   ceremonies: Ceremony[];
+  stuckTasks: Card[];
 }
-
-// ============================================
-// CALLS
-// ============================================
-
-export const fetchDashboard = () => request<DashboardResponse>('/dashboard');
-
-export const fetchBoard = () => request<BoardResponse>('/board');
-
-export const moveTask = (taskId: number, status: TaskStatus) =>
-  request<BoardCard>(`/board/tasks/${taskId}/status`, {
-    method: 'PATCH',
-    body: JSON.stringify({ status })
-  });
-
-// ============================================
-// SPRINT LIFECYCLE
-// ============================================
-
-export const fetchSprints = () => request<Sprint[]>('/sprints');
-
-export const createSprint = (body: {
-  name: string;
-  goal?: string;
-  startDate?: string;
-  endDate?: string;
-}) => request<Sprint>('/sprints', { method: 'POST', body: JSON.stringify(body) });
-
-export const startSprint = (sprintId: number) =>
-  request<Sprint>(`/sprints/${sprintId}/start`, { method: 'POST' });
-
-export const completeSprint = (sprintId: number, carryTo?: number) =>
-  request<CompleteResult>(
-    `/sprints/${sprintId}/complete${carryTo ? `?carryTo=${carryTo}` : ''}`,
-    { method: 'POST' }
-  );
-
-export const deleteSprint = (sprintId: number) =>
-  request<{ success: boolean }>(`/sprints/${sprintId}`, { method: 'DELETE' });
 
 // ============================================
 // TASKS
@@ -181,28 +328,169 @@ export const deleteSprint = (sprintId: number) =>
 
 export const fetchMembers = () => request<Member[]>('/tasks/members');
 
-export const createTask = (body: {
-  title: string;
-  storyPoints?: number;
-  assigneeId?: number | null;
-  sprintId?: number | null;
-  status?: TaskStatus;
-}) => request<BoardCard>('/tasks', { method: 'POST', body: JSON.stringify(body) });
+export const fetchBacklog = () => request<Card[]>('/tasks/backlog');
 
-export const updateTask = (
-  taskId: number,
+export interface TaskInput {
+  title?: string;
+  description?: string | null;
+  priority?: Priority;
+  status?: TaskStatus;
+  storyPoints?: number;
+  estimatedHours?: number | null;
+  actualHours?: number | null;
+  dueDate?: string | null;
+  labels?: string[];
+  blockedReason?: string | null;
+  assigneeId?: number | null;
+  unassign?: boolean;
+  reporterId?: number | null;
+  sprintId?: number | null;
+  removeFromSprint?: boolean;
+}
+
+export const createTask = (body: TaskInput) =>
+  request<Card>('/tasks', { method: 'POST', body: JSON.stringify(body) });
+
+export const updateTask = (taskId: number, body: TaskInput) =>
+  request<Card>(`/tasks/${taskId}`, { method: 'PATCH', body: JSON.stringify(body) });
+
+export const cloneTask = (taskId: number) =>
+  request<Card>(`/tasks/${taskId}/clone`, { method: 'POST' });
+
+export const deleteTask = (taskId: number) =>
+  request<{ success: boolean }>(`/tasks/${taskId}`, { method: 'DELETE' });
+
+// ============================================
+// BOARD
+// ============================================
+
+export interface BoardFilters {
+  sprintId?: number;
+  assigneeId?: number;
+  priority?: Priority;
+  label?: string;
+  search?: string;
+  unassigned?: boolean;
+}
+
+export const fetchBoard = (filters: BoardFilters = {}) =>
+  request<Board>(`/board${query(filters)}`);
+
+export const moveTask = (taskId: number, status: TaskStatus, blockedReason?: string) =>
+  request<Card>(`/board/tasks/${taskId}/status`, {
+    method: 'PATCH',
+    body: JSON.stringify({ status, blockedReason: blockedReason ?? null })
+  });
+
+export const fetchWipLimits = () => request<Record<string, number>>('/board/wip-limits');
+
+export const setWipLimit = (status: TaskStatus, limit: number | null) =>
+  request<Board>('/board/wip-limits', {
+    method: 'PUT',
+    body: JSON.stringify({ status, limit })
+  });
+
+// ============================================
+// SPRINTS
+// ============================================
+
+export const fetchSprints = () => request<Sprint[]>('/sprints');
+
+export const fetchActiveSprint = () => request<Sprint>('/sprints/active');
+
+export interface SprintInput {
+  name?: string;
+  goal?: string | null;
+  startDate?: string | null;
+  endDate?: string | null;
+  durationDays?: number | null;
+  capacityPoints?: number | null;
+  projectId?: number | null;
+  backlogTaskIds?: number[];
+}
+
+export const createSprint = (body: SprintInput) =>
+  request<Sprint>('/sprints', { method: 'POST', body: JSON.stringify(body) });
+
+export const updateSprint = (sprintId: number, body: SprintInput) =>
+  request<Sprint>(`/sprints/${sprintId}`, { method: 'PATCH', body: JSON.stringify(body) });
+
+export const startSprint = (sprintId: number) =>
+  request<Sprint>(`/sprints/${sprintId}/start`, { method: 'POST' });
+
+export const completeSprint = (sprintId: number, carryTo?: number) =>
+  request<CompleteResult>(
+    `/sprints/${sprintId}/complete${query({ carryTo })}`,
+    { method: 'POST' }
+  );
+
+export const addToSprint = (sprintId: number, taskIds: number[]) =>
+  request<Sprint>(`/sprints/${sprintId}/backlog`, {
+    method: 'POST',
+    body: JSON.stringify({ taskIds })
+  });
+
+export const removeFromSprint = (sprintId: number, taskIds: number[]) =>
+  request<Sprint>(`/sprints/${sprintId}/backlog`, {
+    method: 'DELETE',
+    body: JSON.stringify({ taskIds })
+  });
+
+export const deleteSprint = (sprintId: number) =>
+  request<{ success: boolean }>(`/sprints/${sprintId}`, { method: 'DELETE' });
+
+// ============================================
+// CEREMONIES
+// ============================================
+
+export const fetchStandups = (params: { sprintId?: number; date?: string } = {}) =>
+  request<Standups>(`/standups${query(params)}`);
+
+export const saveStandup = (body: {
+  memberId: number;
+  standupDate: string;
+  yesterday?: string | null;
+  today?: string | null;
+  blocker?: string | null;
+}) => request<StandupEntry>('/standups', { method: 'POST', body: JSON.stringify(body) });
+
+export const deleteStandup = (standupId: number) =>
+  request<{ success: boolean }>(`/standups/${standupId}`, { method: 'DELETE' });
+
+export const fetchRetrospective = (sprintId?: number) =>
+  request<Retrospective>(`/retrospective${query({ sprintId })}`);
+
+export const createRetroItem = (body: {
+  kind: RetroKind;
+  text: string;
+  ownerId?: number | null;
+  dueLabel?: string | null;
+  dueDate?: string | null;
+}) => request<RetroItem>('/retrospective', { method: 'POST', body: JSON.stringify(body) });
+
+export const updateRetroItem = (
+  itemId: number,
   body: {
-    title?: string;
-    storyPoints?: number;
-    assigneeId?: number;
-    unassign?: boolean;
-    sprintId?: number;
-    status?: TaskStatus;
+    text?: string;
+    ownerId?: number | null;
+    clearOwner?: boolean;
+    dueLabel?: string | null;
+    dueDate?: string | null;
+    completed?: boolean;
   }
-) => request<BoardCard>(`/tasks/${taskId}`, {
+) => request<RetroItem>(`/retrospective/${itemId}`, {
   method: 'PATCH',
   body: JSON.stringify(body)
 });
 
-export const deleteTask = (taskId: number) =>
-  request<{ success: boolean }>(`/tasks/${taskId}`, { method: 'DELETE' });
+export const deleteRetroItem = (itemId: number) =>
+  request<{ success: boolean }>(`/retrospective/${itemId}`, { method: 'DELETE' });
+
+// ============================================
+// ANALYTICS
+// ============================================
+
+export const fetchAnalytics = (sprintId?: number) =>
+  request<Analytics>(`/analytics${query({ sprintId })}`);
+
+export const fetchDashboard = () => request<Dashboard>('/dashboard');

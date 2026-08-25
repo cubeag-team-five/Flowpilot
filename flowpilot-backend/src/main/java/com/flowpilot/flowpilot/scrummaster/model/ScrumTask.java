@@ -1,5 +1,8 @@
 package com.flowpilot.flowpilot.scrummaster.model;
 
+import java.math.BigDecimal;
+import java.time.Duration;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 import com.flowpilot.flowpilot.common.model.User;
@@ -18,55 +21,102 @@ import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
 
 /**
- * A single work item on the scrum board.
+ * A work item on the scrum board. Fields follow SRS Module 4 (Task Management).
  *
- * `enteredStatusAt` is stamped every time the status changes. That is what
- * powers the ageing warning on the board — a card sitting in one column for
- * days is the signal a scrum master needs, and it cannot be recovered later
- * if we only store the current status.
+ * Two timestamps carry the metrics the SRS asks for and cannot be recovered
+ * later: `enteredStatusAt` powers the ageing / stuck indicator, and
+ * `completedAt` is the only way to compute average completion time.
  */
 @Entity
 @Table(name = "scrum_tasks")
 public class ScrumTask {
 
-    /** The board columns, in flow order. */
+    /**
+     * Board columns, in flow order. SRS Module 5 lists Backlog, Sprint Ready,
+     * To Do, In Progress, Testing, Review, Done and Blocked; Module 4 names the
+     * review stage "Code Review". CODE_REVIEW is kept as the stored value and
+     * displayed as "Review", so both readings of the SRS are satisfied.
+     */
     public enum Status {
         BACKLOG,
+        SPRINT_READY,
         TODO,
         IN_PROGRESS,
         CODE_REVIEW,
         TESTING,
-        DONE
+        DONE,
+        BLOCKED
+    }
+
+    /** SRS Module 4 task field: Priority. */
+    public enum Priority {
+        LOWEST,
+        LOW,
+        MEDIUM,
+        HIGH,
+        HIGHEST
     }
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    /** Human-facing identifier shown on the card, e.g. "T-043". */
     @Column(name = "task_key", nullable = false, unique = true, length = 20)
     private String taskKey;
 
     @Column(nullable = false, length = 255)
     private String title;
 
-    @ManyToOne(fetch = FetchType.EAGER)
-    @JoinColumn(name = "assignee_id")
-    private User assignee;
+    @Column(columnDefinition = "TEXT")
+    private String description;
 
-    @Column(name = "story_points", nullable = false)
-    private Integer storyPoints;
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 12)
+    private Priority priority;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     private Status status;
 
-    @Column(name = "entered_status_at", nullable = false)
-    private LocalDateTime enteredStatusAt;
+    @Column(name = "story_points", nullable = false)
+    private Integer storyPoints;
+
+    @Column(name = "estimated_hours", precision = 8, scale = 2)
+    private BigDecimal estimatedHours;
+
+    @Column(name = "actual_hours", precision = 8, scale = 2)
+    private BigDecimal actualHours;
+
+    @Column(name = "due_date")
+    private LocalDate dueDate;
+
+    /** Comma-separated labels. A join table is overkill for free-form tags. */
+    @Column(length = 255)
+    private String labels;
+
+    /** Why the card is blocked. Only meaningful while status is BLOCKED. */
+    @Column(name = "blocked_reason", length = 500)
+    private String blockedReason;
+
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "assignee_id")
+    private User assignee;
+
+    /** SRS Module 4: who raised the task, as distinct from who works on it. */
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "reporter_id")
+    private User reporter;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "sprint_id")
     private ScrumSprint sprint;
+
+    @Column(name = "entered_status_at", nullable = false)
+    private LocalDateTime enteredStatusAt;
+
+    /** Set the first time the task reaches DONE; cleared if it reopens. */
+    @Column(name = "completed_at")
+    private LocalDateTime completedAt;
 
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
@@ -81,6 +131,10 @@ public class ScrumTask {
             this.status = Status.BACKLOG;
         }
 
+        if (this.priority == null) {
+            this.priority = Priority.MEDIUM;
+        }
+
         if (this.storyPoints == null) {
             this.storyPoints = 0;
         }
@@ -92,11 +146,15 @@ public class ScrumTask {
         if (this.createdAt == null) {
             this.createdAt = LocalDateTime.now();
         }
+
+        if (this.status == Status.DONE && this.completedAt == null) {
+            this.completedAt = LocalDateTime.now();
+        }
     }
 
     /**
-     * Moves the card and restarts its ageing clock. Always use this rather
-     * than setStatus, so `enteredStatusAt` can never drift out of step.
+     * Moves the card, restarts its ageing clock, and maintains completedAt.
+     * Always use this instead of setStatus so the metrics stay truthful.
      */
     public void moveTo(Status newStatus) {
 
@@ -106,6 +164,23 @@ public class ScrumTask {
 
         this.status = newStatus;
         this.enteredStatusAt = LocalDateTime.now();
+
+        if (newStatus == Status.DONE) {
+            // First completion wins, so reopened-then-closed work is not double counted
+            if (this.completedAt == null) {
+                this.completedAt = LocalDateTime.now();
+            }
+        } else {
+            this.completedAt = null;
+        }
+
+        if (newStatus != Status.BLOCKED) {
+            this.blockedReason = null;
+        }
+    }
+
+    public boolean isDone() {
+        return this.status == Status.DONE;
     }
 
     /** Whole days the card has sat in its current column. */
@@ -115,17 +190,40 @@ public class ScrumTask {
             return 0;
         }
 
-        long hours = java.time.Duration
-                .between(this.enteredStatusAt, LocalDateTime.now())
-                .toHours();
-
-        return (int) (hours / 24);
+        return (int) (Duration.between(this.enteredStatusAt, LocalDateTime.now()).toHours() / 24);
     }
 
-    /** Initials for the card avatar, derived so the UI needs no extra field. */
-    public String getAssigneeInitials() {
+    /** Past its due date and not finished. */
+    public boolean isOverdue() {
 
-        String name = getAssigneeName();
+        return this.dueDate != null
+                && !isDone()
+                && this.dueDate.isBefore(LocalDate.now());
+    }
+
+    /** Hours from creation to completion, or null while unfinished. */
+    public Double getCompletionHours() {
+
+        if (this.completedAt == null || this.createdAt == null) {
+            return null;
+        }
+
+        return Duration.between(this.createdAt, this.completedAt).toMinutes() / 60.0;
+    }
+
+    public String getAssigneeName() {
+        return this.assignee == null ? null : this.assignee.getName();
+    }
+
+    public String getReporterName() {
+        return this.reporter == null ? null : this.reporter.getName();
+    }
+
+    public String getAssigneeInitials() {
+        return initialsOf(getAssigneeName());
+    }
+
+    public static String initialsOf(String name) {
 
         if (name == null || name.isBlank()) {
             return "?";
@@ -165,25 +263,20 @@ public class ScrumTask {
         this.title = title;
     }
 
-    public User getAssignee() {
-        return assignee;
+    public String getDescription() {
+        return description;
     }
 
-    public void setAssignee(User assignee) {
-        this.assignee = assignee;
+    public void setDescription(String description) {
+        this.description = description;
     }
 
-    /** Display name of the assignee, or null when nobody owns the task. */
-    public String getAssigneeName() {
-        return this.assignee == null ? null : this.assignee.getName();
+    public Priority getPriority() {
+        return priority;
     }
 
-    public Integer getStoryPoints() {
-        return storyPoints;
-    }
-
-    public void setStoryPoints(Integer storyPoints) {
-        this.storyPoints = storyPoints;
+    public void setPriority(Priority priority) {
+        this.priority = priority;
     }
 
     public Status getStatus() {
@@ -194,12 +287,68 @@ public class ScrumTask {
         this.status = status;
     }
 
-    public LocalDateTime getEnteredStatusAt() {
-        return enteredStatusAt;
+    public Integer getStoryPoints() {
+        return storyPoints;
     }
 
-    public void setEnteredStatusAt(LocalDateTime enteredStatusAt) {
-        this.enteredStatusAt = enteredStatusAt;
+    public void setStoryPoints(Integer storyPoints) {
+        this.storyPoints = storyPoints;
+    }
+
+    public BigDecimal getEstimatedHours() {
+        return estimatedHours;
+    }
+
+    public void setEstimatedHours(BigDecimal estimatedHours) {
+        this.estimatedHours = estimatedHours;
+    }
+
+    public BigDecimal getActualHours() {
+        return actualHours;
+    }
+
+    public void setActualHours(BigDecimal actualHours) {
+        this.actualHours = actualHours;
+    }
+
+    public LocalDate getDueDate() {
+        return dueDate;
+    }
+
+    public void setDueDate(LocalDate dueDate) {
+        this.dueDate = dueDate;
+    }
+
+    public String getLabels() {
+        return labels;
+    }
+
+    public void setLabels(String labels) {
+        this.labels = labels;
+    }
+
+    public String getBlockedReason() {
+        return blockedReason;
+    }
+
+    public void setBlockedReason(String blockedReason) {
+        this.blockedReason = blockedReason;
+    }
+
+    public User getAssignee() {
+        return assignee;
+    }
+
+    public void setAssignee(User assignee) {
+        this.assignee = assignee;
+    }
+
+    public User getReporter() {
+        return reporter;
+    }
+
+    public void setReporter(User reporter) {
+        this.reporter = reporter;
     }
 
     public ScrumSprint getSprint() {
@@ -208,6 +357,22 @@ public class ScrumTask {
 
     public void setSprint(ScrumSprint sprint) {
         this.sprint = sprint;
+    }
+
+    public LocalDateTime getEnteredStatusAt() {
+        return enteredStatusAt;
+    }
+
+    public void setEnteredStatusAt(LocalDateTime enteredStatusAt) {
+        this.enteredStatusAt = enteredStatusAt;
+    }
+
+    public LocalDateTime getCompletedAt() {
+        return completedAt;
+    }
+
+    public void setCompletedAt(LocalDateTime completedAt) {
+        this.completedAt = completedAt;
     }
 
     public LocalDateTime getCreatedAt() {

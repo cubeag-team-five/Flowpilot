@@ -3,6 +3,8 @@ package com.flowpilot.flowpilot.scrummaster.model;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
+import com.flowpilot.flowpilot.scrummaster.service.ScrumWorkingDays;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -57,6 +59,21 @@ public class ScrumSprint {
     @Column(name = "committed_points")
     private Integer committedPoints;
 
+    /**
+     * Team capacity in story points for this sprint (SRS Module 6). Planning
+     * beyond capacity is allowed but surfaced as over-commitment.
+     */
+    @Column(name = "capacity_points")
+    private Integer capacityPoints;
+
+    /**
+     * Owning project (SRS section 14: sprints.project_id). Kept as a plain id
+     * rather than a JPA relation because the PM module owns that table and we
+     * must not couple the two mappings together.
+     */
+    @Column(name = "project_id")
+    private Long projectId;
+
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
 
@@ -75,26 +92,26 @@ public class ScrumSprint {
         }
     }
 
-    /** Total sprint length in days, or 0 if the dates are not set yet. */
+    /**
+     * Working days in the sprint window, inclusive of both ends.
+     *
+     * All three of these delegate to ScrumWorkingDays so the sprint header and
+     * the burndown ideal line are measured in the same unit. Counting calendar
+     * days here understates the required daily burn by roughly a quarter on a
+     * two-week sprint, which makes a slipping sprint look healthy.
+     */
     public int getTotalDays() {
-
-        if (this.startDate == null || this.endDate == null) {
-            return 0;
-        }
-
-        return (int) (this.endDate.toEpochDay() - this.startDate.toEpochDay());
+        return ScrumWorkingDays.durationOf(this.startDate, this.endDate);
     }
 
-    /** Days left before the sprint ends, never negative. */
+    /** Working days already spent. */
+    public int getDaysElapsed() {
+        return ScrumWorkingDays.elapsed(this.startDate, this.endDate);
+    }
+
+    /** Working days left before the sprint ends. */
     public int getDaysRemaining() {
-
-        if (this.endDate == null) {
-            return 0;
-        }
-
-        long remaining = this.endDate.toEpochDay() - LocalDate.now().toEpochDay();
-
-        return remaining < 0 ? 0 : (int) remaining;
+        return ScrumWorkingDays.remaining(this.startDate, this.endDate);
     }
 
     public Long getId() {
@@ -151,6 +168,22 @@ public class ScrumSprint {
 
     public void setStatus(Status status) {
         this.status = status;
+    }
+
+    public Integer getCapacityPoints() {
+        return capacityPoints;
+    }
+
+    public void setCapacityPoints(Integer capacityPoints) {
+        this.capacityPoints = capacityPoints;
+    }
+
+    public Long getProjectId() {
+        return projectId;
+    }
+
+    public void setProjectId(Long projectId) {
+        this.projectId = projectId;
     }
 
     public Integer getCommittedPoints() {

@@ -81,3 +81,60 @@ export const STATUS = {
 } as const;
 
 export type StatusKey = keyof typeof STATUS;
+
+/**
+ * Board column tones. Colour encodes flow stage, so a reader can scan the
+ * board by hue: grey is not started, amber is in flight, violet and teal are
+ * verification, green is finished, red is stopped.
+ */
+export const COLUMN_TONE = {
+  BACKLOG: 'idle',
+  SPRINT_READY: 'idle',
+  TODO: 'idle',
+  IN_PROGRESS: 'active',
+  CODE_REVIEW: 'plan',
+  TESTING: 'test',
+  DONE: 'done',
+  BLOCKED: 'blocked'
+} as const;
+
+/**
+ * Priority badges. Deliberately monochrome-with-accent rather than a rainbow:
+ * only the top two priorities take a warm colour, so "everything is urgent"
+ * cannot happen visually. Ordered highest first for sorting.
+ */
+export const PRIORITY_STYLE = {
+  HIGHEST: { chip: 'bg-rose-500/12 text-rose-700 border-rose-500/25', rank: 0, mark: '↑↑' },
+  HIGH:    { chip: 'bg-amber-500/12 text-amber-700 border-amber-500/25', rank: 1, mark: '↑' },
+  MEDIUM:  { chip: 'bg-slate-100 text-slate-600 border-slate-200', rank: 2, mark: '=' },
+  LOW:     { chip: 'bg-slate-50 text-slate-500 border-slate-200', rank: 3, mark: '↓' },
+  LOWEST:  { chip: 'bg-slate-50 text-slate-400 border-slate-200', rank: 4, mark: '↓↓' }
+} as const;
+
+/** Label chips stay neutral so they never compete with status colour. */
+export const LABEL_CHIP =
+  'bg-slate-100 text-slate-600 border border-slate-200 rounded px-1.5 py-0.5';
+
+/** Shared form control styling, so every Scrum Master form matches. */
+export const FIELD = {
+  input:
+    'w-full px-3 py-2 rounded-lg bg-white border border-slate-200 text-slate-900 ' +
+    'placeholder:text-slate-400 focus-visible:outline-2 focus-visible:outline-offset-2 ' +
+    'focus-visible:outline-emerald-500',
+  select:
+    'px-2 py-1.5 rounded-lg cursor-pointer bg-slate-50 border border-slate-200 ' +
+    'text-slate-600 hover:border-slate-300 focus-visible:outline-2 ' +
+    'focus-visible:outline-offset-2 focus-visible:outline-emerald-500 disabled:cursor-wait',
+  button:
+    'font-semibold inline-flex items-center gap-1.5 px-3 py-2 rounded-lg cursor-pointer ' +
+    'transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 ' +
+    'disabled:opacity-50 disabled:cursor-wait',
+  primary:
+    'bg-emerald-600 text-white hover:bg-emerald-700 focus-visible:outline-emerald-500',
+  secondary:
+    'bg-slate-100 text-slate-700 border border-slate-200 hover:bg-slate-200 ' +
+    'focus-visible:outline-emerald-500',
+  danger:
+    'bg-rose-500/10 text-rose-700 border border-rose-500/20 hover:bg-rose-500/15 ' +
+    'focus-visible:outline-rose-500'
+} as const;

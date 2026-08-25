@@ -2,123 +2,139 @@ package com.flowpilot.flowpilot.scrummaster.service;
 
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.springframework.stereotype.Service;
 
+import com.flowpilot.flowpilot.scrummaster.dto.ScrumTaskDto;
 import com.flowpilot.flowpilot.scrummaster.exception.ScrumNotFoundException;
-import com.flowpilot.flowpilot.scrummaster.dto.ScrumDashboardDto;
 import com.flowpilot.flowpilot.scrummaster.model.ScrumSprint;
 import com.flowpilot.flowpilot.scrummaster.model.ScrumTask;
 import com.flowpilot.flowpilot.scrummaster.repository.ScrumSprintRepository;
 import com.flowpilot.flowpilot.scrummaster.repository.ScrumTaskRepository;
 
+/**
+ * Sprint Overview: the one screen a scrum master opens first.
+ *
+ * It answers three questions — where is the sprint, what needs unblocking
+ * today, and what is happening next — by composing the sprint and analytics
+ * services rather than recalculating anything itself.
+ */
 @Service
 public class ScrumMasterDashboardService {
 
-    private static final DateTimeFormatter DAY_MONTH =
-            DateTimeFormatter.ofPattern("MMM d");
+    private static final DateTimeFormatter DAY_MONTH = DateTimeFormatter.ofPattern("MMM d");
+
+    /** A card idle this long is worth a scrum master's attention. */
+    private static final int STUCK_AFTER_DAYS = 3;
 
     private final ScrumSprintRepository sprintRepository;
     private final ScrumTaskRepository taskRepository;
+    private final ScrumSprintService sprintService;
+    private final ScrumTaskService taskService;
+    private final ScrumAnalyticsService analyticsService;
 
     public ScrumMasterDashboardService(
             ScrumSprintRepository sprintRepository,
-            ScrumTaskRepository taskRepository
+            ScrumTaskRepository taskRepository,
+            ScrumSprintService sprintService,
+            ScrumTaskService taskService,
+            ScrumAnalyticsService analyticsService
     ) {
         this.sprintRepository = sprintRepository;
         this.taskRepository = taskRepository;
+        this.sprintService = sprintService;
+        this.taskService = taskService;
+        this.analyticsService = analyticsService;
     }
 
 
-    // ============================================
-    // SPRINT HEALTH FOR THE ACTIVE SPRINT
-    // ============================================
-    public ScrumDashboardDto.Response getDashboard() {
+    public Map<String, Object> getDashboard() {
 
         ScrumSprint sprint = sprintRepository
                 .findFirstByStatus(ScrumSprint.Status.ACTIVE)
-                .orElseThrow(() -> new ScrumNotFoundException("No active sprint"));
+                .orElseThrow(() -> new ScrumNotFoundException(
+                        "No active sprint. Create one and start it."));
 
-        Long sprintId = sprint.getId();
+        Map<String, Object> payload = new LinkedHashMap<>();
+        payload.put("sprint", sprintService.toResponse(sprint));
+        payload.put("kpis", analyticsService.buildKpis(sprint));
+        payload.put("ceremonies", ceremonies(sprint));
+        payload.put("stuckTasks", stuckTasks(sprint));
 
-        long tasksTotal = taskRepository.countBySprintId(sprintId);
-        long tasksDone = taskRepository
-                .countBySprintIdAndStatus(sprintId, ScrumTask.Status.DONE);
-
-        Integer pointsTotal = taskRepository.sumStoryPointsForSprint(sprintId);
-        Integer pointsDone = taskRepository
-                .sumStoryPointsForSprintByStatus(sprintId, ScrumTask.Status.DONE);
-
-        // Cards stuck in one column are what a scrum master must unblock
-        long blockers = taskRepository
-                .findBySprintIdOrderByStatusAscTaskKeyAsc(sprintId)
-                .stream()
-                .filter(task -> task.getStatus() != ScrumTask.Status.DONE)
-                .filter(task -> task.getDaysInColumn() >= 3)
-                .count();
-
-        ScrumDashboardDto.Response response = new ScrumDashboardDto.Response();
-        response.setSprintId(sprintId);
-        response.setSprintNumber(sprint.getSprintNumber());
-        response.setSprintName(sprint.getName());
-        response.setGoal(sprint.getGoal());
-        response.setStatus(sprint.getStatus().name());
-
-        response.setDaysRemaining(sprint.getDaysRemaining());
-        response.setTotalDays(sprint.getTotalDays());
-
-        response.setTasksDone((int) tasksDone);
-        response.setTasksTotal((int) tasksTotal);
-        response.setPercentComplete(
-                tasksTotal == 0 ? 0 : (int) Math.round(tasksDone * 100.0 / tasksTotal)
-        );
-
-        response.setPointsDone(pointsDone == null ? 0 : pointsDone);
-        response.setPointsTotal(pointsTotal == null ? 0 : pointsTotal);
-        response.setCommittedPoints(sprint.getCommittedPoints());
-
-        response.setBlockerCount((int) blockers);
-        response.setCeremonies(buildCeremonies(sprint));
-
-        return response;
+        return payload;
     }
 
 
     /**
-     * Ceremony dates are derived from the sprint window rather than stored,
-     * because they follow a fixed cadence: standup daily, review and retro at
-     * the end, next planning the day after this sprint closes.
+     * Cards that have not moved in days. Done work is excluded because a
+     * finished task is not stuck, and backlog items are excluded because they
+     * are not meant to be moving yet.
      */
-    private List<ScrumDashboardDto.Ceremony> buildCeremonies(ScrumSprint sprint) {
+    private List<ScrumTaskDto.Card> stuckTasks(ScrumSprint sprint) {
 
-        List<ScrumDashboardDto.Ceremony> ceremonies = new ArrayList<>();
+        List<ScrumTaskDto.Card> stuck = new ArrayList<>();
 
-        ceremonies.add(new ScrumDashboardDto.Ceremony(
-                "Daily standup", "9:30 AM — daily", "done"
-        ));
+        for (ScrumTask task : taskRepository
+                .findBySprintIdOrderByStatusAscTaskKeyAsc(sprint.getId())) {
+
+            boolean idle = task.getDaysInColumn() >= STUCK_AFTER_DAYS;
+            boolean shouldBeMoving = task.getStatus() != ScrumTask.Status.DONE
+                    && task.getStatus() != ScrumTask.Status.BACKLOG;
+
+            if (idle && shouldBeMoving) {
+                stuck.add(taskService.toCard(task));
+            }
+        }
+
+        return stuck;
+    }
+
+
+    /**
+     * Ceremonies follow a fixed cadence, so they are derived from the sprint
+     * window rather than stored: standup daily, review and retro at the close,
+     * next planning the working day after.
+     */
+    private List<Map<String, String>> ceremonies(ScrumSprint sprint) {
+
+        List<Map<String, String>> list = new ArrayList<>();
+
+        list.add(ceremony("Daily standup", "9:30 AM — every working day", "done"));
 
         if (sprint.getEndDate() != null) {
 
-            ceremonies.add(new ScrumDashboardDto.Ceremony(
-                    "Sprint review / demo",
+            list.add(ceremony(
+                    "Sprint review",
                     sprint.getEndDate().minusDays(1).format(DAY_MONTH) + " · 3:00 PM",
                     "plan"
             ));
 
-            ceremonies.add(new ScrumDashboardDto.Ceremony(
-                    "Sprint retrospective",
+            list.add(ceremony(
+                    "Retrospective",
                     sprint.getEndDate().format(DAY_MONTH) + " · 10:00 AM",
-                    "done"
+                    "test"
             ));
 
-            ceremonies.add(new ScrumDashboardDto.Ceremony(
+            list.add(ceremony(
                     "Next sprint planning",
                     sprint.getEndDate().plusDays(1).format(DAY_MONTH) + " · 9:00 AM",
                     "active"
             ));
         }
 
-        return ceremonies;
+        return list;
+    }
+
+    private Map<String, String> ceremony(String name, String when, String tone) {
+
+        Map<String, String> entry = new LinkedHashMap<>();
+        entry.put("name", name);
+        entry.put("when", when);
+        entry.put("tone", tone);
+
+        return entry;
     }
 }
