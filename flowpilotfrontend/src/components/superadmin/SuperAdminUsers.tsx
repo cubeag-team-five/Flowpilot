@@ -1899,30 +1899,8 @@ const SuperAdminUsers: React.FC = () => {
                             className="
                               flex
                               items-center
-                              gap-3
                             "
                           >
-
-                            <div
-                              className="
-                                flex
-                                h-9
-                                w-9
-                                shrink-0
-                                items-center
-                                justify-center
-                                rounded-full
-                                bg-[#edf2f7]
-                                text-[11px]
-                                font-extrabold
-                                text-[#5d7490]
-                              "
-                            >
-                              {user.initials ||
-                                getInitials(
-                                  user.name
-                                )}
-                            </div>
 
                             <span
                               className="
@@ -2214,7 +2192,7 @@ const TableHeader: React.FC<{
     className="
       px-4
       py-[13px]
-      text-left
+      text-center
       text-[11px]
       font-extrabold
       tracking-[0.02em]

@@ -92,6 +92,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
     setSelectedRole(role.name);
     setEmail(role.email);
     setPassword(role.pass);
+    setError('');
   };
 
   const [error, setError] = useState<string>('');
@@ -103,8 +104,6 @@ export const LoginPage: React.FC<LoginPageProps> = ({
     setError('');
     setLoading(true);
 
-    const resolvedRole = selectedRole;
-
     try {
       const res = await fetch('http://localhost:8080/api/auth/login', {
         method: 'POST',
@@ -114,13 +113,16 @@ export const LoginPage: React.FC<LoginPageProps> = ({
         body: JSON.stringify({
           email,
           password,
+          role: selectedRole,
         }),
       });
 
       const data = await res.json();
 
       if (!res.ok || !data.success) {
-        setError(data.message || 'Invalid credentials');
+        setError(
+          data.message || 'Invalid credentials or selected role'
+        );
         setLoading(false);
         return;
       }
@@ -128,15 +130,23 @@ export const LoginPage: React.FC<LoginPageProps> = ({
       localStorage.setItem('token', data.data.token);
       localStorage.setItem('role', data.data.role);
       localStorage.setItem('name', data.data.name);
-      localStorage.setItem('email', data.data.email || email);
+      localStorage.setItem(
+        'email',
+        data.data.email || email
+      );
+
+      /*
+       * Use the role returned by the backend.
+       * The backend is the source of truth.
+       */
+      if (onLoginSuccess) {
+        onLoginSuccess(data.data.role);
+      }
     } catch {
       // backend unreachable — demo mode
+      setError('Unable to connect to the server');
     } finally {
       setLoading(false);
-    }
-
-    if (onLoginSuccess) {
-      onLoginSuccess(resolvedRole);
     }
   };
 
@@ -170,7 +180,6 @@ export const LoginPage: React.FC<LoginPageProps> = ({
 
       {/* Main Grid Section */}
       <div className="max-w-[1240px] w-full mx-auto px-6 py-2 lg:py-2 grid grid-cols-1 lg:grid-cols-[1fr_1.35fr] gap-12 lg:gap-8 items-start relative z-10 flex-1">
-
         {/* Left Column: Brand Showcase */}
         <div className="flex flex-col justify-between h-full pt-0">
           <div>
@@ -265,6 +274,16 @@ export const LoginPage: React.FC<LoginPageProps> = ({
 
         {/* Right Column: Sign In Form & Role Quick Select */}
         <div className="bg-[#0b101b]/90 border border-slate-800/80 rounded-3xl p-6 pb-2 sm:p-7 lg:h-full lg:px-2 lg:py-3 lg:flex lg:flex-col lg:justify-between shadow-2xl backdrop-blur-xl relative">
+
+          {onBackToHome && (
+            <button
+              onClick={onBackToHome}
+              className="absolute top-4 right-4 flex items-center gap-2 text-xs font-bold text-slate-400 hover:text-white transition-colors cursor-pointer bg-slate-900/60 px-4 py-2 rounded-full border border-slate-800"
+            >
+              <ArrowLeft size={14} />
+              Back to Landing Page
+            </button>
+          )}
 
           <div className="mb-4 lg:mb-2">
             <h2 className="text-2xl font-extrabold text-white tracking-tight mb-1">
@@ -388,15 +407,6 @@ export const LoginPage: React.FC<LoginPageProps> = ({
             </div>
           </div>
 
-          {onBackToHome && (
-            <button
-              onClick={onBackToHome}
-              className="mt-3 mx-auto flex items-center gap-2 text-xs font-bold text-slate-400 hover:text-white transition-colors cursor-pointer bg-slate-900/60 px-4 py-2 rounded-full border border-slate-800 sm:absolute sm:top-4 sm:right-4 sm:mt-0 sm:mx-0"
-            >
-              <ArrowLeft size={14} />
-              Back to Landing Page
-            </button>
-          )}
         </div>
       </div>
 
@@ -407,3 +417,5 @@ export const LoginPage: React.FC<LoginPageProps> = ({
     </div>
   );
 };
+
+export default LoginPage;
