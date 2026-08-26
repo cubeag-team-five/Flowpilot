@@ -148,16 +148,16 @@ export const LoginPage: React.FC<LoginPageProps> = ({
       <div className="absolute top-[30%] -right-[10%] w-[45vw] h-[45vw] bg-purple-500/10 blur-[140px] pointer-events-none"></div>
 
       {/* Top Header */}
-      <div className="p-4 md:px-12 py-1 flex items-center justify-between relative z-10">
+      <div className="px-4 pt-4 pb-1 md:px-12 flex items-center justify-between relative z-10">
         <div
           className="flex items-center gap-3 cursor-pointer"
           onClick={onBackToHome}
         >
-          <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-emerald-400 to-emerald-600 flex items-center justify-center text-white shadow-md shadow-emerald-500/25">
-            <LayoutGrid size={32} />
+          <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-emerald-400 to-emerald-600 flex items-center justify-center text-white shadow-md shadow-emerald-500/25">
+            <LayoutGrid size={24} />
           </div>
 
-          <span className="font-extrabold text-3xl tracking-tight text-white">
+          <span className="font-extrabold text-2xl tracking-tight text-white">
             Flowpilot
           </span>
 
@@ -166,15 +166,6 @@ export const LoginPage: React.FC<LoginPageProps> = ({
           </span>
         </div>
 
-        {onBackToHome && (
-          <button
-            onClick={onBackToHome}
-            className="flex items-center gap-2 text-xs font-bold text-slate-400 hover:text-white transition-colors cursor-pointer bg-slate-900/60 px-4 py-2 rounded-full border border-slate-800"
-          >
-            <ArrowLeft size={14} />
-            Back to Landing Page
-          </button>
-        )}
       </div>
 
       {/* Main Grid Section */}
@@ -273,19 +264,9 @@ export const LoginPage: React.FC<LoginPageProps> = ({
         </div>
 
         {/* Right Column: Sign In Form & Role Quick Select */}
-        <div className="bg-[#0b101b]/90 border border-slate-800/80 rounded-3xl p-6 sm:p-7 lg:p-4 shadow-2xl backdrop-blur-xl relative">
+        <div className="bg-[#0b101b]/90 border border-slate-800/80 rounded-3xl p-6 pb-2 sm:p-7 lg:h-full lg:px-2 lg:py-3 lg:flex lg:flex-col lg:justify-between shadow-2xl backdrop-blur-xl relative">
 
-          {onBackToHome && (
-            <button
-              onClick={onBackToHome}
-              className="absolute top-4 right-4 flex items-center gap-2 text-xs font-bold text-slate-400 hover:text-white transition-colors cursor-pointer bg-slate-900/60 px-4 py-2 rounded-full border border-slate-800"
-            >
-              <ArrowLeft size={14} />
-              Back to Landing Page
-            </button>
-          )}
-
-          <div className="mb-4">
+          <div className="mb-4 lg:mb-2">
             <h2 className="text-2xl font-extrabold text-white tracking-tight mb-1">
               Sign in to your workspace
             </h2>
@@ -296,7 +277,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
           </div>
 
           {/* Role Quick-Select Cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 lg:mb-4 mb-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 lg:gap-1 lg:mb-2 mb-6">
             {roles.map((role) => {
               const isSelected = selectedRole === role.name;
 
@@ -304,14 +285,14 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                 <div
                   key={role.id}
                   onClick={() => handleRoleSelect(role)}
-                  className={`p-2 rounded-2xl border transition-all duration-200 cursor-pointer flex items-center gap-3 ${
+                  className={`p-2 lg:p-1.5 rounded-2xl border transition-all duration-200 cursor-pointer flex items-center gap-3 ${
                     isSelected
                       ? 'bg-slate-900 border-emerald-500/80 shadow-md shadow-emerald-500/10'
                       : 'bg-[#111726]/60 border-slate-800/80 hover:border-slate-700 hover:bg-[#131b2e]'
                   }`}
                 >
                   <div
-                    className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${
+                    className={`w-8 h-8 lg:w-7 lg:h-7 rounded-xl flex items-center justify-center shrink-0 ${
                       isSelected ? 'bg-emerald-500/15' : 'bg-slate-900'
                     }`}
                   >
@@ -339,7 +320,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
           {/* Login Inputs Form */}
           <form
             onSubmit={handleSubmit}
-            className="flex flex-col gap-2.5"
+            className="flex flex-col gap-2 lg:gap-1.5"
           >
             <div>
               <label className="block text-[11px] font-extrabold uppercase tracking-wider text-slate-400 mb-1.5">
@@ -351,7 +332,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="your.email@company.com"
-                className="w-full bg-[#121929] border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-emerald-500 transition-colors"
+                className="w-full bg-[#121929] border border-slate-800 rounded-xl px-4 py-2.5 lg:py-2 text-sm text-white focus:outline-none focus:border-emerald-500 transition-colors"
                 required
               />
             </div>
@@ -366,7 +347,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
-                className="w-full bg-[#121929] border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-emerald-500 transition-colors"
+                className="w-full bg-[#121929] border border-slate-800 rounded-xl px-4 py-2.5 lg:py-2 text-sm text-white focus:outline-none focus:border-emerald-500 transition-colors"
                 required
               />
             </div>
@@ -374,7 +355,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
             <button
               type="submit"
               disabled={loading}
-              className="mt-1 w-full bg-emerald-500 hover:bg-emerald-600 disabled:opacity-60 text-white font-extrabold text-sm py-3 rounded-2xl shadow-lg shadow-emerald-500/25 transition-all cursor-pointer hover:-translate-y-0.5"
+              className="mt-1 w-full bg-emerald-500 hover:bg-emerald-600 disabled:opacity-60 text-white font-extrabold text-sm py-3 lg:py-2.5 rounded-2xl shadow-lg shadow-emerald-500/25 transition-all cursor-pointer hover:-translate-y-0.5"
             >
               {loading ? 'Signing in...' : 'Sign In'}
             </button>
@@ -387,7 +368,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
           </form>
 
           {/* Demo Mode Notice Box */}
-          <div className="mt-3 bg-[#0f1725]/80 border border-slate-800/80 rounded-2xl p-2.5 flex items-start gap-3">
+          <div className="mt-3 lg:mt-2 bg-[#0f1725]/80 border border-slate-800/80 rounded-2xl p-2.5 lg:p-2 flex items-start gap-3">
             <Lightbulb
               size={18}
               className="text-emerald-400 shrink-0 mt-0.5"
@@ -406,11 +387,21 @@ export const LoginPage: React.FC<LoginPageProps> = ({
               </div>
             </div>
           </div>
+
+          {onBackToHome && (
+            <button
+              onClick={onBackToHome}
+              className="mt-3 mx-auto flex items-center gap-2 text-xs font-bold text-slate-400 hover:text-white transition-colors cursor-pointer bg-slate-900/60 px-4 py-2 rounded-full border border-slate-800 sm:absolute sm:top-4 sm:right-4 sm:mt-0 sm:mx-0"
+            >
+              <ArrowLeft size={14} />
+              Back to Landing Page
+            </button>
+          )}
         </div>
       </div>
 
       {/* Footer copyright */}
-      <div className="py-2 text-center text-xs text-slate-600 border-t border-slate-900">
+      <div className="py-1.5 text-center text-xs text-slate-600 border-t border-slate-900">
         © 2026 Flowpilot Inc. All rights reserved.
       </div>
     </div>
