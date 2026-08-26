@@ -1,23 +1,24 @@
 package com.flowpilot.flowpilot.qa.service;
 
-import com.flowpilot.flowpilot.admin.model.AdminDepartmentMember;
-import com.flowpilot.flowpilot.pm.model.PMProject;
-import com.flowpilot.flowpilot.pm.repository.PMProjectsRepository;
-import com.flowpilot.flowpilot.qa.model.QABugReport;
-import com.flowpilot.flowpilot.qa.repository.QABugRepository;
-
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import com.flowpilot.flowpilot.pm.model.PMProject;
+import com.flowpilot.flowpilot.pm.repository.PMProjectsRepository;
+import com.flowpilot.flowpilot.qa.model.QABugReport;
+import com.flowpilot.flowpilot.qa.repository.QABugRepository;
+import com.flowpilot.flowpilot.superadmin.model.SuperAdminUser;
+
 @Service
 public class QABugReportsService {
 
     private final QABugRepository bugRepository;
+
     private final PMProjectsRepository pmProjectsRepository;
 
     public QABugReportsService(
@@ -28,25 +29,14 @@ public class QABugReportsService {
         this.pmProjectsRepository = pmProjectsRepository;
     }
 
-    /*
-     * Existing functionality - unchanged
-     */
     public List<QABugReport> getAllBugs() {
         return bugRepository.findAll();
     }
 
-    /*
-     * Existing functionality - unchanged
-     */
     public QABugReport createBug(QABugReport bug) {
         return bugRepository.save(bug);
     }
 
-    /*
-     * Get members assigned by Project Managers.
-     *
-     * No new DTO/file is required.
-     */
     @Transactional(readOnly = true)
     public List<Map<String, Object>> getQAAssignees() {
 
@@ -62,24 +52,52 @@ public class QABugReportsService {
                 continue;
             }
 
-            for (AdminDepartmentMember member :
+            for (SuperAdminUser member :
                     project.getTeamMembers()) {
 
-                if (member == null || member.getId() == null) {
+                if (member == null ||
+                       member.getEmployeeId() == null) {
+
                     continue;
                 }
 
                 Map<String, Object> memberData =
                         new LinkedHashMap<>();
 
-                memberData.put("id", member.getId());
-                memberData.put("fullName", member.getFullName());
-                memberData.put("email", member.getEmail());
-                memberData.put("employeeId", member.getEmployeeId());
-                memberData.put("designation", member.getDesignation());
+                /*
+                 * Database ID.
+                 */
+                memberData.put(
+                        "id",
+                      member.getEmployeeId()
+                );
+
+                /*
+                 * Employee ID is kept separately
+                 * for display/reference.
+                 */
+                memberData.put(
+                        "employeeId",
+                        member.getEmployeeId()
+                );
+
+                memberData.put(
+                        "fullName",
+                        member.getName()
+                );
+
+                memberData.put(
+                        "email",
+                        member.getEmail()
+                );
+
+                memberData.put(
+                        "designation",
+                        member.getDesignation()
+                );
 
                 uniqueMembers.putIfAbsent(
-                        member.getId(),
+                      member.getEmployeeId(),
                         memberData
                 );
             }

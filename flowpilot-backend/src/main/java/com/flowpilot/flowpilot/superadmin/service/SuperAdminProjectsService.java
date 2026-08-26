@@ -1,14 +1,15 @@
 package com.flowpilot.flowpilot.superadmin.service;
 
-import com.flowpilot.flowpilot.pm.dto.PMProjectDto;
-import com.flowpilot.flowpilot.pm.model.PMProject;
-import com.flowpilot.flowpilot.pm.repository.PMProjectsRepository;
+import java.util.ArrayList;
+import java.util.List;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.ArrayList;
-import java.util.List;
+import com.flowpilot.flowpilot.pm.dto.PMProjectDto;
+import com.flowpilot.flowpilot.pm.model.PMProject;
+import com.flowpilot.flowpilot.pm.repository.PMProjectsRepository;
+import com.flowpilot.flowpilot.superadmin.model.SuperAdminUser;
 
 @Service
 public class SuperAdminProjectsService {
@@ -21,12 +22,6 @@ public class SuperAdminProjectsService {
         this.pmProjectsRepository = pmProjectsRepository;
     }
 
-    /**
-     * Returns all projects created by Project Managers.
-     *
-     * DTOs are returned instead of JPA entities to prevent
-     * Hibernate proxy / ByteBuddyInterceptor serialization errors.
-     */
     @Transactional(readOnly = true)
     public List<PMProjectDto> getAllProjects() {
 
@@ -37,21 +32,18 @@ public class SuperAdminProjectsService {
                 new ArrayList<>();
 
         for (PMProject project : projects) {
-
             result.add(toDto(project));
         }
 
         return result;
     }
 
-    /**
-     * Returns a single project by ID.
-     */
     @Transactional(readOnly = true)
     public PMProjectDto getProject(Long id) {
 
         PMProject project =
-                pmProjectsRepository.findById(id)
+                pmProjectsRepository
+                        .findById(id)
                         .orElseThrow(() ->
                                 new RuntimeException(
                                         "Project not found: " + id
@@ -61,21 +53,13 @@ public class SuperAdminProjectsService {
         return toDto(project);
     }
 
-    /**
-     * Convert PMProject entity to PMProjectDto.
-     *
-     * Only member IDs are returned.
-     * We do NOT return AdminDepartmentMember entities,
-     * preventing recursive/lazy Hibernate serialization.
-     */
-    private PMProjectDto toDto(PMProject project) {
+    private PMProjectDto toDto(
+            PMProject project) {
 
         PMProjectDto dto =
                 new PMProjectDto();
 
-        dto.setId(
-                project.getId()
-        );
+        dto.setId(project.getId());
 
         dto.setProjectCode(
                 project.getProjectCode()
@@ -109,15 +93,34 @@ public class SuperAdminProjectsService {
                 project.getProgress()
         );
 
+        /*
+         * SuperAdminUser.id is Long.
+         *
+         * Do NOT use:
+         *
+         * member.getEmployeeId()
+         *
+         * because employeeId is String.
+         */
         List<Long> memberIds =
-                project.getTeamMembers()
-                        .stream()
-                        .map(member -> member.getId())
-                        .toList();
+                new ArrayList<>();
 
-        dto.setTeamMemberIds(
-                memberIds
-        );
+        if (project.getTeamMembers() != null) {
+
+            for (SuperAdminUser member :
+                    project.getTeamMembers()) {
+
+                if (member != null &&
+                       member.getEmployeeId() != null) {
+
+                    memberIds.add(
+                         member.getEmployeeId()
+                    );
+                }
+            }
+        }
+
+        dto.setTeamMemberIds(memberIds);
 
         return dto;
     }

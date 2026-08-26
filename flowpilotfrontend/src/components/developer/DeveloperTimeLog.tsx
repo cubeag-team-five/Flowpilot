@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 
 interface TimeEntry {
   id: number;
@@ -7,7 +7,7 @@ interface TimeEntry {
   hours: number;
   notes: string;
 }
-const API_URL = "http://localhost:8080/api/developer/time-logs";
+const API_URL = `${import.meta.env.VITE_API_URL || "http://localhost:8080"}/api/developer/time-logs`;
 
 interface BackendTimeEntry {
   id: number;
@@ -30,12 +30,38 @@ const getToken = () => {
   );
 };
 
-const getAuthHeaders = (): HeadersInit => {
+const getAuthHeaders = (includeContentType = false): HeadersInit => {
   const token = getToken();
   return {
-    "Content-Type": "application/json",
+    ...(includeContentType ? { "Content-Type": "application/json" } : {}),
     ...(token ? { Authorization: `Bearer ${token}` } : {}),
   };
+};
+
+const fetchWithRetry = async (
+  input: RequestInfo | URL,
+  init: RequestInit,
+  attempts = 2
+) => {
+  let lastError: unknown;
+
+  for (let attempt = 0; attempt < attempts; attempt += 1) {
+    const controller = new AbortController();
+    const timeout = window.setTimeout(() => controller.abort(), 10000);
+
+    try {
+      return await fetch(input, { ...init, signal: controller.signal });
+    } catch (error) {
+      lastError = error;
+      if (attempt === attempts - 1) {
+        throw lastError;
+      }
+    } finally {
+      window.clearTimeout(timeout);
+    }
+  }
+
+  throw lastError;
 };
 
 const DeveloperTimeLog: React.FC = () => {
@@ -61,19 +87,26 @@ const formatDate = (dateString: string) => {
 };
 const fetchTimeLogs = async () => {
   try {
-    const response = await fetch(API_URL, {
+    const response = await fetchWithRetry(API_URL, {
       headers: getAuthHeaders(),
     });
 
     if (!response.ok) {
-      throw new Error("Failed to load time logs");
+      if (response.status === 401 || response.status === 403) {
+        localStorage.removeItem("token");
+        throw new Error("Session expired. Please log in again.");
+      }
+
+      throw new Error(`Failed to load time logs (${response.status})`);
     }
 
     const data: TimeLogHistoryResponse =
       await response.json();
 
+    const rawEntries = Array.isArray(data?.entries) ? data.entries : [];
+
     const formattedEntries: TimeEntry[] =
-      data.entries.map((entry) => ({
+      rawEntries.map((entry) => ({
         id: entry.id,
         date: formatDate(entry.logDate),
         task: entry.task,
@@ -84,7 +117,7 @@ const fetchTimeLogs = async () => {
     setEntries(formattedEntries);
 
     setWeeklyTotal(
-      Number(data.weeklyTotal)
+      Number(data?.weeklyTotal ?? 0)
     );
 
   } catch (error) {
@@ -93,11 +126,18 @@ const fetchTimeLogs = async () => {
       error
     );
 
-    setSuccess(
-      "Failed to load time log history."
-    );
+    setSuccess(error instanceof Error && error.name === "AbortError"
+      ? "Time log service timed out. Please try again."
+      : error instanceof TypeError
+        ? "Unable to reach time log service. Please check that the backend is running."
+        : error instanceof Error
+          ? error.message
+          : "Failed to load time log history.");
   }
 };
+useEffect(() => {
+  fetchTimeLogs();
+}, []);
   const handleLogTime = async (
   event: React.FormEvent
 ) => {
@@ -124,9 +164,9 @@ const fetchTimeLogs = async () => {
     setLoading(true);
     setSuccess("");
 
-    const response = await fetch(API_URL, {
+    const response = await fetchWithRetry(API_URL, {
       method: "POST",
-      headers: getAuthHeaders(),
+      headers: getAuthHeaders(true),
       body: JSON.stringify({
         task: selectedTask,
         hours: numericHours,

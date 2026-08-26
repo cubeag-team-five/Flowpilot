@@ -66,13 +66,21 @@ public class TimeLogController {
     // GET /api/developer/time-logs
     // ============================================
     @GetMapping
-    public ResponseEntity<DeveloperTimeLogDto.HistoryResponse>
+    public ResponseEntity<?> 
     getTimeLogHistory() {
 
-        DeveloperTimeLogDto.HistoryResponse response =
-                timeLogService.getTimeLogHistory();
+        try {
+            DeveloperTimeLogDto.HistoryResponse response =
+                    timeLogService.getTimeLogHistory();
 
-        return ResponseEntity.ok(response);
+            return ResponseEntity.ok(response);
+        } catch (RuntimeException exception) {
+            return ResponseEntity
+                    .status(HttpStatus.SERVICE_UNAVAILABLE)
+                    .body(new ErrorResponse(
+                            "Time log history is temporarily unavailable"
+                    ));
+        }
     }
 
 

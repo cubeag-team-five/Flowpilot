@@ -30,12 +30,28 @@ const SuperAdminProjects =
   (SuperAdminProjectsModule as any).default ??
   (SuperAdminProjectsModule as any).SuperAdminProjects;
 
+// Get logged-in user's name from localStorage
+const loggedInName = localStorage.getItem('name') || 'User';
+
+// Generate initials from logged-in user's name
+const getInitials = (name: string) => {
+  const parts = name.trim().split(/\s+/);
+
+  if (parts.length === 1) {
+    return parts[0].substring(0, 2).toUpperCase();
+  }
+
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+};
+
+const loggedInAvatar = getInitials(loggedInName);
+
 const roleConfig = {
   label: 'SUPER ADMINISTRATOR',
   color: 'border-rose-500/30 bg-rose-500/10 text-rose-400',
-  name: 'Rajeev Kumar',
+  name: loggedInName,
   dept: 'Leadership',
-  avatar: 'RK',
+  avatar: loggedInAvatar,
   avatarBg: 'bg-rose-500',
 };
 
@@ -120,7 +136,7 @@ const notifications = [
 ];
 
 const profileConfig = {
-  name: 'Rajeev Kumar',
+  name: loggedInName,
   email: 'ra.kumar@ipmt.com',
   roleLabel: 'Super Administrator',
   roleBadgeColor: 'bg-rose-100 text-rose-600',
