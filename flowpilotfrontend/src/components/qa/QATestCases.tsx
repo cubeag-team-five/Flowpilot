@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import axios from "axios";
 
 interface TestCase {
@@ -14,16 +14,81 @@ interface TestCase {
   createdAt?: string;
 }
 
-const API_URL = "http://localhost:8080/api/qa/test-cases";
+interface StoredUser {
+  id?: string | number;
+  userId?: string | number;
+  name?: string;
+  fullName?: string;
+  username?: string;
+  email?: string;
+}
+
+const API_URL =
+  "http://localhost:8080/api/qa/test-cases";
 
 /*
- * Get the JWT that was saved during login.
- *
- * We check the common keys so we don't need to change
- * anything outside the QA section.
+ * ---------------------------------------------------------
+ * GET LOGGED-IN USER
+ * ---------------------------------------------------------
  */
+
+const getCurrentUser = (): StoredUser | null => {
+  const keys = [
+    "currentUser",
+    "user",
+    "auth",
+    "userData",
+    "loggedInUser",
+  ];
+
+  for (const key of keys) {
+    const value = localStorage.getItem(key);
+
+    if (!value) continue;
+
+    try {
+      const parsed = JSON.parse(value);
+      const user = parsed?.user ?? parsed;
+
+      if (
+        user?.name ||
+        user?.fullName ||
+        user?.username ||
+        user?.email ||
+        user?.id ||
+        user?.userId
+      ) {
+        return user;
+      }
+    } catch {
+      // Continue.
+    }
+  }
+
+  return {
+    name:
+      localStorage.getItem("name") ||
+      localStorage.getItem("username") ||
+      undefined,
+
+    username:
+      localStorage.getItem("username") ||
+      undefined,
+
+    email:
+      localStorage.getItem("email") ||
+      undefined,
+  };
+};
+
+/*
+ * ---------------------------------------------------------
+ * TOKEN
+ * ---------------------------------------------------------
+ */
+
 const getAuthToken = (): string | null => {
-  const possibleKeys = [
+  const keys = [
     "token",
     "jwt",
     "accessToken",
@@ -31,7 +96,7 @@ const getAuthToken = (): string | null => {
     "access_token",
   ];
 
-  for (const key of possibleKeys) {
+  for (const key of keys) {
     const value = localStorage.getItem(key);
 
     if (value) {
@@ -39,13 +104,14 @@ const getAuthToken = (): string | null => {
     }
   }
 
-  /*
-   * In case your application stores the token
-   * inside a user/auth object.
-   */
-  const possibleObjects = ["user", "currentUser", "auth", "userData"];
+  const objectKeys = [
+    "currentUser",
+    "user",
+    "auth",
+    "userData",
+  ];
 
-  for (const key of possibleObjects) {
+  for (const key of objectKeys) {
     const value = localStorage.getItem(key);
 
     if (!value) continue;
@@ -57,13 +123,17 @@ const getAuthToken = (): string | null => {
         parsed?.token ||
         parsed?.jwt ||
         parsed?.accessToken ||
-        parsed?.access_token;
+        parsed?.access_token ||
+        parsed?.user?.token;
 
       if (token) {
-        return String(token).replace(/^Bearer\s+/i, "");
+        return String(token).replace(
+          /^Bearer\s+/i,
+          ""
+        );
       }
     } catch {
-      // Ignore invalid JSON and continue checking.
+      // Continue.
     }
   }
 
@@ -85,53 +155,170 @@ const getAxiosConfig = () => {
   };
 };
 
-const QATestCases: React.FC = () => {
-  const [testCases, setTestCases] = useState<TestCase[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string>("");
-  const [updatingId, setUpdatingId] = useState<number | null>(null);
+/*
+ * ---------------------------------------------------------
+ * NORMALIZE TEXT
+ * ---------------------------------------------------------
+ */
+
+const normalize = (value: unknown): string => {
+  return String(value ?? "")
+    .trim()
+    .toLowerCase();
+};
+
+/*
+ * ---------------------------------------------------------
+ * CHECK WHETHER TEST CASE BELONGS TO CURRENT USER
+ * ---------------------------------------------------------
+ */
+
+const belongsToCurrentUser = (
+  testCase: TestCase,
+  user: StoredUser | null
+): boolean => {
+  /*
+   * If backend doesn't provide assignedTo,
+   * we cannot determine ownership.
+   */
+
+  if (!user) {
+    return false;
+  }
+
+  const assigned = normalize(
+    testCase.assignedTo
+  );
+
+  if (!assigned) {
+    return false;
+  }
+
+  const possibleUserValues = [
+    user.id,
+    user.userId,
+    user.name,
+    user.fullName,
+    user.username,
+    user.email,
+  ]
+    .filter(
+      (value) =>
+        value !== undefined &&
+        value !== null &&
+        String(value).trim() !== ""
+    )
+    .map(normalize);
+
+  return possibleUserValues.includes(assigned);
+};
+
+const QATestCases = () => {
+  const [testCases, setTestCases] = useState<
+    TestCase[]
+  >([]);
+
+  const [loading, setLoading] =
+    useState(true);
+
+  const [error, setError] =
+    useState("");
+
+  const [updatingId, setUpdatingId] =
+    useState<number | null>(null);
+
+  const [currentUser, setCurrentUser] =
+    useState<StoredUser | null>(null);
 
   /*
-   * GET TEST CASES
+   * -------------------------------------------------------
+   * LOAD USER
+   * -------------------------------------------------------
    */
-  const loadTestCases = useCallback(async () => {
-    try {
-      setLoading(true);
-      setError("");
 
-      const response = await axios.get<TestCase[]>(
-        API_URL,
-        getAxiosConfig()
-      );
-
-      setTestCases(response.data || []);
-    } catch (err: any) {
-      console.error("Failed to load test cases:", err);
-
-      if (err?.response?.status === 401) {
-        setError("Authentication required. Please login again.");
-      } else if (err?.response?.status === 403) {
-        setError(
-          "Access denied. Your login session may have expired. Please login again."
-        );
-      } else {
-        setError("Failed to load test cases.");
-      }
-    } finally {
-      setLoading(false);
-    }
+  useEffect(() => {
+    setCurrentUser(getCurrentUser());
   }, []);
 
   /*
-   * LOAD WHEN PAGE OPENS
+   * -------------------------------------------------------
+   * LOAD TEST CASES
+   * -------------------------------------------------------
    */
+
+  const loadTestCases = useCallback(
+    async () => {
+      try {
+        setLoading(true);
+        setError("");
+
+        const response =
+          await axios.get<TestCase[]>(
+            API_URL,
+            getAxiosConfig()
+          );
+
+        const allTestCases =
+          response.data || [];
+
+        const user = getCurrentUser();
+
+        setCurrentUser(user);
+
+        /*
+         * ONLY CURRENT QA USER'S TASKS
+         */
+
+        const myTestCases =
+          allTestCases.filter(
+            (testCase) =>
+              belongsToCurrentUser(
+                testCase,
+                user
+              )
+          );
+
+        setTestCases(myTestCases);
+      } catch (err: any) {
+        console.error(
+          "Failed to load test cases:",
+          err
+        );
+
+        if (
+          err?.response?.status === 401
+        ) {
+          setError(
+            "Authentication required. Please login again."
+          );
+        } else if (
+          err?.response?.status === 403
+        ) {
+          setError(
+            "Access denied. Please login again."
+          );
+        } else {
+          setError(
+            "Failed to load test cases."
+          );
+        }
+      } finally {
+        setLoading(false);
+      }
+    },
+    []
+  );
+
   useEffect(() => {
     loadTestCases();
   }, [loadTestCases]);
 
   /*
+   * -------------------------------------------------------
    * UPDATE STATUS
+   * -------------------------------------------------------
    */
+
   const updateStatus = async (
     id: number,
     status: "Passed" | "Failed"
@@ -142,16 +329,10 @@ const QATestCases: React.FC = () => {
 
       await axios.put(
         `${API_URL}/${id}/status`,
-        {
-          status,
-        },
+        { status },
         getAxiosConfig()
       );
 
-      /*
-       * Update the table immediately instead of waiting
-       * for another page refresh.
-       */
       setTestCases((current) =>
         current.map((testCase) =>
           testCase.id === id
@@ -163,26 +344,22 @@ const QATestCases: React.FC = () => {
         )
       );
     } catch (err: any) {
-      console.error("Failed to update test case:", err);
+      console.error(
+        "Failed to update status:",
+        err
+      );
 
-      if (err?.response?.status === 401) {
-        setError("Authentication required. Please login again.");
-      } else if (err?.response?.status === 403) {
-        setError(
-          "Access denied. Your login session may have expired. Please login again."
-        );
-      } else {
-        setError("Failed to update test case status.");
-      }
+      setError(
+        "Failed to update test case status."
+      );
     } finally {
       setUpdatingId(null);
     }
   };
 
-  /*
-   * PRIORITY STYLE
-   */
-  const getPriorityClass = (priority: string) => {
+  const getPriorityClass = (
+    priority: string
+  ) => {
     switch (priority) {
       case "High":
         return "bg-[#fff0f0] text-[#ff3b3b]";
@@ -198,10 +375,9 @@ const QATestCases: React.FC = () => {
     }
   };
 
-  /*
-   * STATUS STYLE
-   */
-  const getStatusClass = (status: string) => {
+  const getStatusClass = (
+    status: string
+  ) => {
     switch (status) {
       case "Passed":
         return "bg-[#eafaf2] text-[#20c978]";
@@ -212,19 +388,15 @@ const QATestCases: React.FC = () => {
       case "Failed":
         return "bg-[#fff0f0] text-[#ff3b3b]";
 
-      case "Pending":
       default:
         return "bg-[#f4f6f8] text-[#9aa8bb]";
     }
   };
 
-  /*
-   * FORMAT DATE
-   */
-  const formatDate = (createdAt?: string) => {
-    if (!createdAt) {
-      return "-";
-    }
+  const formatDate = (
+    createdAt?: string
+  ) => {
+    if (!createdAt) return "-";
 
     const date = new Date(createdAt);
 
@@ -232,49 +404,82 @@ const QATestCases: React.FC = () => {
       return "-";
     }
 
-    return date.toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-    });
+    return date.toLocaleDateString(
+      "en-US",
+      {
+        month: "short",
+        day: "numeric",
+      }
+    );
   };
 
   return (
     <div className="w-full">
-      {/* ERROR MESSAGE */}
+
+      {/* ERROR */}
 
       {error && (
-        <div className="mb-[12px] rounded-[6px] border border-[#ffc9c9] bg-[#fff4f4] px-[12px] py-[8px] text-[9px] font-[500] text-[#ff4b4b]">
+        <div
+          className="
+            mb-3
+            rounded-[6px]
+            border
+            border-[#ffc9c9]
+            bg-[#fff4f4]
+            px-3
+            py-2
+            text-[9px]
+            font-medium
+            text-[#ff4b4b]
+          "
+        >
           {error}
         </div>
       )}
 
-      {/* ============================================================
-          DESKTOP TABLE
-      ============================================================ */}
+      {/* CURRENT USER */}
+
+      {currentUser && (
+        <div
+          className="
+            mb-3
+            text-[10px]
+            text-[#8d98a8]
+          "
+        >
+          Showing tasks assigned to{" "}
+          <span className="font-semibold text-[#111827]">
+            {currentUser.name ||
+              currentUser.fullName ||
+              currentUser.username ||
+              currentUser.email}
+          </span>
+        </div>
+      )}
+
+      {/* DESKTOP */}
 
       <div className="hidden md:block w-full overflow-x-auto">
         <div
           className="
             min-w-[1050px]
             bg-white
-            border-b
+            border
             border-[#e5e7eb]
-            shadow-sm
+            rounded-[12px]
             overflow-hidden
+            shadow-[0_2px_8px_rgba(17,24,39,0.05)]
           "
         >
-          {/* TABLE HEADER */}
-
           <div
             className="
               grid
               grid-cols-[110px_minmax(300px,1fr)_120px_130px_110px_120px_100px_95px]
               items-center
               h-[40px]
-              px-[12px]
+              px-3
               border-b
               border-[#e5e7eb]
-              bg-white
             "
           >
             {[
@@ -291,7 +496,7 @@ const QATestCases: React.FC = () => {
                 key={heading}
                 className="
                   text-[9px]
-                  font-[600]
+                  font-semibold
                   uppercase
                   tracking-[0.06em]
                   text-[#7c8796]
@@ -302,251 +507,189 @@ const QATestCases: React.FC = () => {
             ))}
           </div>
 
-          {/* LOADING */}
-
           {loading && (
-            <div className="py-[40px] text-center text-[10px] text-[#9aa8bb]">
+            <div className="py-10 text-center text-[10px] text-[#9aa8bb]">
               Loading test cases...
             </div>
           )}
 
-          {/* EMPTY */}
-
-          {!loading && testCases.length === 0 && !error && (
-            <div className="py-[40px] text-center text-[10px] text-[#9aa8bb]">
-              No test cases found.
-            </div>
-          )}
-
-          {/* TABLE ROWS */}
+          {!loading &&
+            testCases.length === 0 &&
+            !error && (
+              <div className="py-10 text-center text-[10px] text-[#9aa8bb]">
+                No test cases assigned to you.
+              </div>
+            )}
 
           {!loading &&
-            testCases.map((testCase, index) => (
-              <div
-                key={testCase.id}
-                className={`
-                  grid
-                  grid-cols-[110px_minmax(300px,1fr)_120px_130px_110px_120px_100px_95px]
-                  items-center
-                  h-[50px]
-                  px-[12px]
-                  bg-white
-                  ${
-                    index !== testCases.length - 1
-                      ? "border-b border-[#eeeeee]"
-                      : ""
-                  }
-                `}
-              >
-                {/* TEST ID */}
-
+            testCases.map(
+              (testCase, index) => (
                 <div
-                  className="
-                    text-[9px]
-                    font-[400]
-                    leading-[12px]
-                    text-[#8d98a8]
-                  "
+                  key={testCase.id}
+                  className={`
+                    grid
+                    grid-cols-[110px_minmax(300px,1fr)_120px_130px_110px_120px_100px_95px]
+                    items-center
+                    h-[50px]
+                    px-3
+                    bg-white
+                    ${
+                      index !==
+                      testCases.length - 1
+                        ? "border-b border-[#eeeeee]"
+                        : ""
+                    }
+                  `}
                 >
-                  {testCase.testId}
-                </div>
+                  <div className="text-[9px] text-[#8d98a8]">
+                    {testCase.testId}
+                  </div>
 
-                {/* TITLE */}
+                  <div className="min-w-0 pr-3">
+                    <p className="text-[11px] font-semibold text-[#111827] truncate">
+                      {testCase.title}
+                    </p>
+                  </div>
 
-                <div className="min-w-0 pr-[12px]">
-                  <p
-                    className="
-                      text-[11px]
-                      font-[600]
-                      leading-[14px]
-                      text-[#111827]
-                      truncate
-                    "
-                  >
-                    {testCase.title}
-                  </p>
-                </div>
+                  <div>
+                    <span className="rounded-[6px] bg-[#f4f6f8] px-2 py-1 text-[9px] text-[#657184]">
+                      {testCase.type || "-"}
+                    </span>
+                  </div>
 
-                {/* TYPE */}
+                  <div className="text-[9px] text-[#8d98a8]">
+                    {testCase.linkedTask || "-"}
+                  </div>
 
-                <div>
-                  <span
-                    className="
-                      inline-flex
-                      items-center
-                      justify-center
-                      rounded-[6px]
-                      bg-[#f4f6f8]
-                      px-[8px]
-                      py-[4px]
-                      text-[9px]
-                      font-[500]
-                      leading-[10px]
-                      text-[#657184]
-                    "
-                  >
-                    {testCase.type || "-"}
-                  </span>
-                </div>
-
-                {/* LINKED TASK */}
-
-                <div
-                  className="
-                    text-[9px]
-                    font-[400]
-                    leading-[12px]
-                    text-[#8d98a8]
-                  "
-                >
-                  {testCase.linkedTask || "-"}
-                </div>
-
-                {/* PRIORITY */}
-
-                <div>
-                  <span
-                    className={`
-                      inline-flex
-                      items-center
-                      justify-center
-                      rounded-[6px]
-                      px-[8px]
-                      py-[4px]
-                      text-[9px]
-                      font-[600]
-                      leading-[10px]
-                      ${getPriorityClass(testCase.priority)}
-                    `}
-                  >
-                    {testCase.priority || "-"}
-                  </span>
-                </div>
-
-                {/* STATUS */}
-
-                <div>
-                  <span
-                    className={`
-                      inline-flex
-                      items-center
-                      justify-center
-                      rounded-[6px]
-                      px-[8px]
-                      py-[4px]
-                      text-[9px]
-                      font-[600]
-                      leading-[10px]
-                      ${getStatusClass(testCase.status)}
-                    `}
-                  >
-                    {testCase.status || "Pending"}
-                  </span>
-                </div>
-
-                {/* DATE */}
-
-                <div
-                  className="
-                    text-[9px]
-                    font-[400]
-                    leading-[12px]
-                    text-[#8d98a8]
-                  "
-                >
-                  {formatDate(testCase.createdAt)}
-                </div>
-
-                {/* ACTION */}
-
-                <div className="flex items-center gap-[6px]">
-                  {/* PASS */}
-
-                  {testCase.status !== "Passed" && (
-                    <button
-                      type="button"
-                      disabled={updatingId === testCase.id}
-                      onClick={() =>
-                        updateStatus(testCase.id, "Passed")
-                      }
-                      className="
-                        flex
-                        h-[24px]
-                        items-center
-                        justify-center
+                  <div>
+                    <span
+                      className={`
                         rounded-[6px]
-                        border
-                        border-[#b9ead4]
-                        bg-[#f0fbf6]
-                        px-[9px]
+                        px-2
+                        py-1
                         text-[9px]
-                        font-[600]
-                        leading-[10px]
-                        text-[#20b978]
-                        transition
-                        hover:bg-[#e5f8ef]
-                        disabled:cursor-not-allowed
-                        disabled:opacity-50
-                      "
+                        font-semibold
+                        ${getPriorityClass(
+                          testCase.priority
+                        )}
+                      `}
                     >
-                      {updatingId === testCase.id ? "..." : "Pass"}
-                    </button>
-                  )}
+                      {testCase.priority || "-"}
+                    </span>
+                  </div>
 
-                  {/* FAIL */}
-
-                  {testCase.status !== "Failed" && (
-                    <button
-                      type="button"
-                      disabled={updatingId === testCase.id}
-                      onClick={() =>
-                        updateStatus(testCase.id, "Failed")
-                      }
-                      className="
-                        flex
-                        h-[24px]
-                        items-center
-                        justify-center
+                  <div>
+                    <span
+                      className={`
                         rounded-[6px]
-                        border
-                        border-[#ffc9c9]
-                        bg-[#fff4f4]
-                        px-[9px]
+                        px-2
+                        py-1
                         text-[9px]
-                        font-[600]
-                        leading-[10px]
-                        text-[#ff4b4b]
-                        transition
-                        hover:bg-[#ffeaea]
-                        disabled:cursor-not-allowed
-                        disabled:opacity-50
-                      "
+                        font-semibold
+                        ${getStatusClass(
+                          testCase.status
+                        )}
+                      `}
                     >
-                      {updatingId === testCase.id ? "..." : "Fail"}
-                    </button>
-                  )}
+                      {testCase.status || "Pending"}
+                    </span>
+                  </div>
+
+                  <div className="text-[9px] text-[#8d98a8]">
+                    {formatDate(
+                      testCase.createdAt
+                    )}
+                  </div>
+
+                  <div className="flex items-center gap-1.5">
+                    {testCase.status !==
+                      "Passed" && (
+                      <button
+                        type="button"
+                        disabled={
+                          updatingId ===
+                          testCase.id
+                        }
+                        onClick={() =>
+                          updateStatus(
+                            testCase.id,
+                            "Passed"
+                          )
+                        }
+                        className="
+                          h-6
+                          rounded-[6px]
+                          border
+                          border-[#b9ead4]
+                          bg-[#f0fbf6]
+                          px-2
+                          text-[9px]
+                          font-semibold
+                          text-[#20b978]
+                        "
+                      >
+                        {updatingId ===
+                        testCase.id
+                          ? "..."
+                          : "Pass"}
+                      </button>
+                    )}
+
+                    {testCase.status !==
+                      "Failed" && (
+                      <button
+                        type="button"
+                        disabled={
+                          updatingId ===
+                          testCase.id
+                        }
+                        onClick={() =>
+                          updateStatus(
+                            testCase.id,
+                            "Failed"
+                          )
+                        }
+                        className="
+                          h-6
+                          rounded-[6px]
+                          border
+                          border-[#ffc9c9]
+                          bg-[#fff4f4]
+                          px-2
+                          text-[9px]
+                          font-semibold
+                          text-[#ff4b4b]
+                        "
+                      >
+                        {updatingId ===
+                        testCase.id
+                          ? "..."
+                          : "Fail"}
+                      </button>
+                    )}
+                  </div>
                 </div>
-              </div>
-            ))}
+              )
+            )}
         </div>
       </div>
 
-      {/* ============================================================
-          MOBILE CARDS
-      ============================================================ */}
+      {/* MOBILE */}
 
       <div className="md:hidden space-y-3">
         {loading && (
-          <div className="py-[30px] text-center text-[10px] text-[#9aa8bb]">
+          <div className="py-8 text-center text-[10px] text-[#9aa8bb]">
             Loading test cases...
           </div>
         )}
 
-        {!loading && testCases.length === 0 && !error && (
-          <div className="py-[30px] text-center text-[10px] text-[#9aa8bb]">
-            No test cases found.
-          </div>
-        )}
+        {!loading &&
+          testCases.length === 0 &&
+          !error && (
+            <div className="py-8 text-center text-[10px] text-[#9aa8bb]">
+              No test cases assigned to you.
+            </div>
+          )}
 
         {!loading &&
           testCases.map((testCase) => (
@@ -561,137 +704,129 @@ const QATestCases: React.FC = () => {
                 shadow-sm
               "
             >
-              {/* TOP */}
-
               <div className="flex items-start justify-between gap-2 mb-3">
-                <div className="min-w-0">
-                  <p className="text-[9px] text-[#8d98a8] mb-1">
+                <div>
+                  <p className="text-[9px] text-[#8d98a8]">
                     {testCase.testId}
                   </p>
 
-                  <p
-                    className="
-                      text-[11px]
-                      font-[600]
-                      text-[#111827]
-                      leading-[15px]
-                    "
-                  >
+                  <p className="text-[11px] font-semibold text-[#111827]">
                     {testCase.title}
                   </p>
                 </div>
 
                 <span
                   className={`
-                    shrink-0
                     rounded-[6px]
-                    px-[7px]
-                    py-[3px]
+                    px-2
+                    py-1
                     text-[9px]
-                    font-[600]
-                    ${getStatusClass(testCase.status)}
+                    font-semibold
+                    ${getStatusClass(
+                      testCase.status
+                    )}
                   `}
                 >
                   {testCase.status}
                 </span>
               </div>
 
-              {/* DETAILS */}
-
-              <div className="grid grid-cols-2 gap-2 text-[9px] mb-3">
+              <div className="grid grid-cols-2 gap-2 text-[9px]">
                 <div>
-                  <span className="text-[#9aa8bb]">Type: </span>
-
-                  <span className="bg-[#f4f6f8] text-[#657184] rounded-[5px] px-[6px] py-[2px]">
-                    {testCase.type || "-"}
-                  </span>
+                  <span className="text-[#9aa8bb]">
+                    Type:
+                  </span>{" "}
+                  {testCase.type || "-"}
                 </div>
 
                 <div>
-                  <span className="text-[#9aa8bb]">Task: </span>
-
-                  <span className="text-[#8d98a8]">
-                    {testCase.linkedTask || "-"}
-                  </span>
+                  <span className="text-[#9aa8bb]">
+                    Task:
+                  </span>{" "}
+                  {testCase.linkedTask || "-"}
                 </div>
 
                 <div>
-                  <span className="text-[#9aa8bb]">Priority: </span>
-
-                  <span
-                    className={`
-                      rounded-[5px]
-                      px-[6px]
-                      py-[2px]
-                      font-[600]
-                      ${getPriorityClass(testCase.priority)}
-                    `}
-                  >
-                    {testCase.priority || "-"}
-                  </span>
+                  <span className="text-[#9aa8bb]">
+                    Priority:
+                  </span>{" "}
+                  {testCase.priority || "-"}
                 </div>
 
                 <div>
-                  <span className="text-[#9aa8bb]">Date: </span>
-
-                  <span className="text-[#8d98a8]">
-                    {formatDate(testCase.createdAt)}
-                  </span>
+                  <span className="text-[#9aa8bb]">
+                    Date:
+                  </span>{" "}
+                  {formatDate(
+                    testCase.createdAt
+                  )}
                 </div>
               </div>
 
-              {/* ACTIONS */}
-
-              <div className="flex gap-2 pt-2 border-t border-[#eeeeee]">
-                {testCase.status !== "Passed" && (
+              <div className="flex gap-2 mt-3 pt-3 border-t border-[#eeeeee]">
+                {testCase.status !==
+                  "Passed" && (
                   <button
                     type="button"
-                    disabled={updatingId === testCase.id}
+                    disabled={
+                      updatingId ===
+                      testCase.id
+                    }
                     onClick={() =>
-                      updateStatus(testCase.id, "Passed")
+                      updateStatus(
+                        testCase.id,
+                        "Passed"
+                      )
                     }
                     className="
-                      flex
                       h-[26px]
-                      items-center
                       rounded-[6px]
                       border
                       border-[#b9ead4]
                       bg-[#f0fbf6]
-                      px-[10px]
+                      px-3
                       text-[9px]
-                      font-[600]
+                      font-semibold
                       text-[#20b978]
-                      disabled:opacity-50
                     "
                   >
-                    {updatingId === testCase.id ? "..." : "Pass"}
+                    {updatingId ===
+                    testCase.id
+                      ? "..."
+                      : "Pass"}
                   </button>
                 )}
 
-                {testCase.status !== "Failed" && (
+                {testCase.status !==
+                  "Failed" && (
                   <button
                     type="button"
-                    disabled={updatingId === testCase.id}
+                    disabled={
+                      updatingId ===
+                      testCase.id
+                    }
                     onClick={() =>
-                      updateStatus(testCase.id, "Failed")
+                      updateStatus(
+                        testCase.id,
+                        "Failed"
+                      )
                     }
                     className="
-                      flex
                       h-[26px]
-                      items-center
                       rounded-[6px]
                       border
                       border-[#ffc9c9]
                       bg-[#fff4f4]
-                      px-[10px]
+                      px-3
                       text-[9px]
-                      font-[600]
+                      font-semibold
                       text-[#ff4b4b]
-                      disabled:opacity-50
                     "
                   >
-                    {updatingId === testCase.id ? "..." : "Fail"}
+                    {updatingId ===
+                    testCase.id
+                      ? "..."
+                      : "Fail"}
                   </button>
                 )}
               </div>

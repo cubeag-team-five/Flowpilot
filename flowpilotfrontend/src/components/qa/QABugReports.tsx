@@ -30,23 +30,40 @@ type Project = {
   id: number;
   projectCode: string;
   projectName: string;
-  teamMemberIds?: number[];
+
+  // PM stores the selected users' employeeId values here
+  teamMemberIds?: Array<number | string>;
 };
 
 type Member = {
-  id: number;
-  fullName: string;
+  employeeId: number | string;
+  name: string;
   email: string;
-  employeeId: string;
+  role: string;
+  department: string;
   designation: string;
+  status: string;
+  lastLogin: string;
+  initials: string;
 };
 
-const BUG_API_URL = "http://localhost:8080/api/qa/bugs";
+const BUG_API_URL =
+  "http://localhost:8080/api/qa/bugs";
 
-const PROJECT_API_URL = "http://localhost:8080/api/pm/projects";
+const PROJECT_API_URL =
+  "http://localhost:8080/api/pm/projects";
 
-const ADMIN_DEPARTMENT_API_URL =
-  "http://localhost:8080/api/admin/departments";
+/*
+ * IMPORTANT:
+ * This is the same member API used by PMProjects.tsx.
+ *
+ * We DO NOT use:
+ * /api/admin/departments
+ *
+ * because QA needs the members assigned by PM.
+ */
+const SUPERADMIN_USERS_URL =
+  "http://localhost:8080/api/superadmin/users";
 
 const emptyForm: BugForm = {
   bugId: "",
@@ -70,15 +87,18 @@ const QABugReports: React.FC = () => {
      PROJECTS
   ========================================================= */
 
-  const [projects, setProjects] = useState<Project[]>([]);
+  const [projects, setProjects] =
+    useState<Project[]>([]);
 
   /* =========================================================
      MEMBERS
   ========================================================= */
 
-  const [members, setMembers] = useState<Member[]>([]);
+  const [members, setMembers] =
+    useState<Member[]>([]);
 
-  const [memberSearch, setMemberSearch] = useState("");
+  const [memberSearch, setMemberSearch] =
+    useState("");
 
   const [showMemberDropdown, setShowMemberDropdown] =
     useState(false);
@@ -87,35 +107,63 @@ const QABugReports: React.FC = () => {
      FORM
   ========================================================= */
 
-  const [form, setForm] = useState<BugForm>(emptyForm);
+  const [form, setForm] =
+    useState<BugForm>(emptyForm);
 
-  const [showForm, setShowForm] = useState(false);
+  const [showForm, setShowForm] =
+    useState(false);
 
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] =
+    useState(false);
 
-  const [saving, setSaving] = useState(false);
+  const [saving, setSaving] =
+    useState(false);
 
-  const [loadingProjects, setLoadingProjects] = useState(false);
+  const [loadingProjects, setLoadingProjects] =
+    useState(false);
 
-  const [loadingMembers, setLoadingMembers] = useState(false);
+  const [loadingMembers, setLoadingMembers] =
+    useState(false);
 
-  const [error, setError] = useState("");
+  const [error, setError] =
+    useState("");
 
-  const [success, setSuccess] = useState("");
+  const [success, setSuccess] =
+    useState("");
 
-  const [globalSearch, setGlobalSearch] = useState("");
+  const [globalSearch, setGlobalSearch] =
+    useState("");
 
   /* =========================================================
      AUTH TOKEN
   ========================================================= */
 
   const getToken = () => {
-    return (
-      localStorage.getItem("token") ||
-      localStorage.getItem("accessToken") ||
-      localStorage.getItem("jwt") ||
-      ""
-    );
+    const keys = [
+      "token",
+      "accessToken",
+      "jwtToken",
+      "authToken",
+      "jwt",
+    ];
+
+    for (const key of keys) {
+      const localToken =
+        localStorage.getItem(key);
+
+      if (localToken) {
+        return localToken;
+      }
+
+      const sessionToken =
+        sessionStorage.getItem(key);
+
+      if (sessionToken) {
+        return sessionToken;
+      }
+    }
+
+    return "";
   };
 
   /* =========================================================
@@ -127,9 +175,11 @@ const QABugReports: React.FC = () => {
 
     return {
       "Content-Type": "application/json",
+
       ...(token
         ? {
-            Authorization: `Bearer ${token}`,
+            Authorization:
+              `Bearer ${token}`,
           }
         : {}),
     };
@@ -140,10 +190,15 @@ const QABugReports: React.FC = () => {
   ========================================================= */
 
   useEffect(() => {
-    const handleGlobalSearch = (event: Event) => {
-      const customEvent = event as CustomEvent<string>;
+    const handleGlobalSearch = (
+      event: Event
+    ) => {
+      const customEvent =
+        event as CustomEvent<string>;
 
-      setGlobalSearch(customEvent.detail || "");
+      setGlobalSearch(
+        customEvent.detail || ""
+      );
     };
 
     window.addEventListener(
@@ -161,7 +216,7 @@ const QABugReports: React.FC = () => {
 
   /* =========================================================
      SUCCESS MESSAGE
-     Automatically disappears after 4 seconds.
+     Automatically disappears after 4 seconds
   ========================================================= */
 
   useEffect(() => {
@@ -169,9 +224,10 @@ const QABugReports: React.FC = () => {
       return;
     }
 
-    const timer = window.setTimeout(() => {
-      setSuccess("");
-    }, 4000);
+    const timer =
+      window.setTimeout(() => {
+        setSuccess("");
+      }, 4000);
 
     return () => {
       window.clearTimeout(timer);
@@ -187,13 +243,15 @@ const QABugReports: React.FC = () => {
       setLoading(true);
       setError("");
 
-      const response = await fetch(BUG_API_URL, {
-        method: "GET",
-        headers: getHeaders(),
-      });
+      const response =
+        await fetch(BUG_API_URL, {
+          method: "GET",
+          headers: getHeaders(),
+        });
 
       if (!response.ok) {
-        const errorText = await response.text();
+        const errorText =
+          await response.text();
 
         throw new Error(
           errorText ||
@@ -201,33 +259,45 @@ const QABugReports: React.FC = () => {
         );
       }
 
-      const result = await response.json();
+      const result =
+        await response.json();
 
-     const data = Array.isArray(result)
-  ? result
-  : Array.isArray(result?.data)
-  ? result.data
-  : [];
+      const data = Array.isArray(result)
+        ? result
+        : Array.isArray(result?.data)
+        ? result.data
+        : [];
 
-/*
- * Show the most recently created bug at the top.
- * createdAt is stored by the backend when the bug is created.
- */
-const sortedData = [...data].sort((a, b) => {
-  const dateA = new Date(
-    a.createdAt || a.filedDate || 0
-  ).getTime();
+      /*
+       * Most recently created bug at top.
+       */
+      const sortedData =
+        [...data].sort(
+          (a, b) => {
+            const dateA =
+              new Date(
+                a.createdAt ||
+                  a.filedDate ||
+                  0
+              ).getTime();
 
-  const dateB = new Date(
-    b.createdAt || b.filedDate || 0
-  ).getTime();
+            const dateB =
+              new Date(
+                b.createdAt ||
+                  b.filedDate ||
+                  0
+              ).getTime();
 
-  return dateB - dateA;
-});
+            return dateB - dateA;
+          }
+        );
 
-setBugs(sortedData);
+      setBugs(sortedData);
     } catch (err) {
-      console.error("Error loading bugs:", err);
+      console.error(
+        "Error loading bugs:",
+        err
+      );
 
       setError(
         err instanceof Error
@@ -240,20 +310,25 @@ setBugs(sortedData);
   };
 
   /* =========================================================
-     LOAD PROJECTS
+     LOAD PROJECTS FROM PM
   ========================================================= */
 
   const loadProjects = async () => {
     try {
       setLoadingProjects(true);
 
-      const response = await fetch(PROJECT_API_URL, {
-        method: "GET",
-        headers: getHeaders(),
-      });
+      const response =
+        await fetch(
+          PROJECT_API_URL,
+          {
+            method: "GET",
+            headers: getHeaders(),
+          }
+        );
 
       if (!response.ok) {
-        const errorText = await response.text();
+        const errorText =
+          await response.text();
 
         throw new Error(
           errorText ||
@@ -261,7 +336,8 @@ setBugs(sortedData);
         );
       }
 
-      const result = await response.json();
+      const result =
+        await response.json();
 
       const data = Array.isArray(result)
         ? result
@@ -271,7 +347,10 @@ setBugs(sortedData);
 
       setProjects(data);
     } catch (err) {
-      console.error("Error loading projects:", err);
+      console.error(
+        "Error loading projects:",
+        err
+      );
 
       setError(
         err instanceof Error
@@ -293,145 +372,229 @@ setBugs(sortedData);
   }, []);
 
   /* =========================================================
-     LOAD MEMBERS FOR SELECTED PROJECT
+     LOAD PM MEMBERS FOR SELECTED PROJECT
      
-     We use the existing Admin Department Member API.
-     
-     The PM project gives us teamMemberIds.
-     
-     We then find those members from the Admin departments.
+     CORRECT FLOW:
+
+     PM Project
+          ↓
+     teamMemberIds
+          ↓
+     /api/superadmin/users
+          ↓
+     match employeeId
+          ↓
+     Assign To dropdown
+
+     NO ADMIN DEPARTMENT API
   ========================================================= */
 
-  const loadMembersForProject = async (
-    project: Project
-  ) => {
-    try {
-      setLoadingMembers(true);
-      setError("");
+  const loadMembersForProject =
+    async (
+      project: Project
+    ) => {
+      try {
+        setLoadingMembers(true);
+        setError("");
+        setMembers([]);
 
-      setMembers([]);
+        /*
+         * PM stores employee IDs in teamMemberIds.
+         *
+         * Convert everything to string so:
+         *
+         * 1001
+         *
+         * and
+         *
+         * "1001"
+         *
+         * match correctly.
+         */
+        const projectMemberIds =
+          (
+            project.teamMemberIds ??
+            []
+          )
+            .map((id) =>
+              String(id).trim()
+            )
+            .filter(Boolean);
 
-      if (
-        !project.teamMemberIds ||
-        project.teamMemberIds.length === 0
-      ) {
-        setLoadingMembers(false);
-        return;
-      }
-
-      /*
-       * Get all departments.
-       *
-       * We do not change Admin.
-       * We only read the existing members.
-       */
-      const departmentResponse = await fetch(
-        ADMIN_DEPARTMENT_API_URL,
-        {
-          method: "GET",
-          headers: getHeaders(),
-        }
-      );
-
-      if (!departmentResponse.ok) {
-        const errorText =
-          await departmentResponse.text();
-
-        throw new Error(
-          errorText ||
-            `Failed to load departments (${departmentResponse.status})`
+        console.log(
+          "PM project teamMemberIds:",
+          projectMemberIds
         );
-      }
 
-      const departmentResult =
-        await departmentResponse.json();
+        /*
+         * If PM project has no assigned
+         * members, nothing should appear.
+         */
+        if (
+          projectMemberIds.length === 0
+        ) {
+          setMembers([]);
+          return;
+        }
 
-      const departments = Array.isArray(
-        departmentResult
-      )
-        ? departmentResult
-        : Array.isArray(departmentResult?.data)
-        ? departmentResult.data
-        : [];
+        const token =
+          getToken();
 
-      /*
-       * Get members from every department.
-       */
-      const memberRequests = departments.map(
-        async (department: {
-          id: number;
-        }) => {
-          try {
-            const response = await fetch(
-              `${ADMIN_DEPARTMENT_API_URL}/${department.id}/members`,
-              {
-                method: "GET",
-                headers: getHeaders(),
-              }
-            );
+        if (!token) {
+          throw new Error(
+            "Authentication token not found. Please log in again."
+          );
+        }
 
-            if (!response.ok) {
-              return [];
+        /*
+         * IMPORTANT:
+         *
+         * Same API used by PMProjects.tsx.
+         */
+        const response =
+          await fetch(
+            SUPERADMIN_USERS_URL,
+            {
+              method: "GET",
+              headers: {
+                "Content-Type":
+                  "application/json",
+
+                Authorization:
+                  `Bearer ${token}`,
+              },
             }
+          );
 
-            const result = await response.json();
-
-            return Array.isArray(result)
-              ? result
-              : Array.isArray(result?.data)
-              ? result.data
-              : [];
-          } catch {
-            return [];
-          }
+        if (
+          response.status === 401 ||
+          response.status === 403
+        ) {
+          throw new Error(
+            "Access denied while loading PM members. Please log in again."
+          );
         }
-      );
 
-      const memberResults =
-        await Promise.all(memberRequests);
+        if (!response.ok) {
+          const errorText =
+            await response.text();
 
-      const allMembers: Member[] =
-        memberResults.flat();
+          throw new Error(
+            errorText ||
+              `Failed to load PM members (${response.status})`
+          );
+        }
 
-      /*
-       * Only keep members assigned to the selected project.
-       */
-      const projectMemberIds =
-        project.teamMemberIds;
+        const result =
+          await response.json();
 
-      const projectMembers =
-        allMembers.filter((member) =>
-          projectMemberIds.includes(member.id)
+        /*
+         * Handle possible response formats.
+         */
+        const allMembers: Member[] =
+          Array.isArray(result)
+            ? result
+            : Array.isArray(
+                result?.data
+              )
+            ? result.data
+            : Array.isArray(
+                result?.users
+              )
+            ? result.users
+            : [];
+
+        console.log(
+          "PM members returned:",
+          allMembers
         );
 
-      /*
-       * Remove duplicate members.
-       */
-      const uniqueMembers = Array.from(
-        new Map(
-          projectMembers.map((member) => [
-            member.id,
-            member,
-          ])
-        ).values()
-      );
+        /*
+         * PMProjects only allows ACTIVE
+         * users to be selected.
+         *
+         * Keep exactly the same rule here.
+         */
+        const activeMembers =
+          allMembers.filter(
+            (member) =>
+              member.status
+                ?.toUpperCase() ===
+              "ACTIVE"
+          );
 
-      setMembers(uniqueMembers);
-    } catch (err) {
-      console.error(
-        "Error loading project members:",
-        err
-      );
+        console.log(
+          "Active PM members:",
+          activeMembers
+        );
 
-      setError(
-        err instanceof Error
-          ? err.message
-          : "Failed to load project members"
-      );
-    } finally {
-      setLoadingMembers(false);
-    }
-  };
+        /*
+         * IMPORTANT FIX:
+         *
+         * PM's teamMemberIds contain employeeId.
+         *
+         * Therefore:
+         *
+         * project.teamMemberIds
+         *             ↓
+         * member.employeeId
+         *
+         * NOT:
+         *
+         * member.id
+         */
+        const projectMembers =
+          activeMembers.filter(
+            (member) =>
+              projectMemberIds.includes(
+                String(
+                  member.employeeId
+                ).trim()
+              )
+          );
+
+        /*
+         * Remove duplicate employee IDs.
+         */
+        const uniqueMembers =
+          Array.from(
+            new Map(
+              projectMembers.map(
+                (member) => [
+                  String(
+                    member.employeeId
+                  ),
+                  member,
+                ]
+              )
+            ).values()
+          );
+
+        console.log(
+          "PM members available for Assign To:",
+          uniqueMembers
+        );
+
+        setMembers(
+          uniqueMembers
+        );
+      } catch (err) {
+        console.error(
+          "Error loading PM project members:",
+          err
+        );
+
+        setError(
+          err instanceof Error
+            ? err.message
+            : "Failed to load PM project members"
+        );
+
+        setMembers([]);
+      } finally {
+        setLoadingMembers(false);
+      }
+    };
 
   /* =========================================================
      FORM CHANGE
@@ -444,102 +607,150 @@ setBugs(sortedData);
         HTMLSelectElement
     >
   ) => {
-    const { name, value } = event.target;
+    const {
+      name,
+      value,
+    } = event.target;
 
-    setForm((previous) => ({
-      ...previous,
-      [name]: value,
-    }));
+    setForm(
+      (previous) => ({
+        ...previous,
+        [name]: value,
+      })
+    );
   };
 
   /* =========================================================
      PROJECT CHANGE
   ========================================================= */
 
-  const handleProjectChange = async (
-    event: React.ChangeEvent<HTMLSelectElement>
-  ) => {
-    const projectId = event.target.value;
+  const handleProjectChange =
+    async (
+      event: React.ChangeEvent<
+        HTMLSelectElement
+      >
+    ) => {
+      const projectId =
+        event.target.value;
 
-    /*
-     * Reset assignment whenever project changes.
-     *
-     * This prevents a member from the previous
-     * project remaining selected.
-     */
-    setForm((previous) => ({
-      ...previous,
-      projectId,
-      assignedTo: "",
-    }));
+      /*
+       * Clear previous assignee.
+       */
+      setForm(
+        (previous) => ({
+          ...previous,
+          projectId,
+          assignedTo: "",
+        })
+      );
 
-    setMemberSearch("");
+      setMemberSearch("");
 
-    setShowMemberDropdown(false);
+      setShowMemberDropdown(
+        false
+      );
 
-    if (!projectId) {
       setMembers([]);
-      return;
-    }
 
-    const selectedProject = projects.find(
-      (project) =>
-        String(project.id) === projectId
-    );
+      if (!projectId) {
+        return;
+      }
 
-    if (!selectedProject) {
-      setMembers([]);
-      return;
-    }
+      /*
+       * Find the selected PM project.
+       */
+      const selectedProject =
+        projects.find(
+          (project) =>
+            String(project.id) ===
+            String(projectId)
+        );
 
-    await loadMembersForProject(
-      selectedProject
-    );
-  };
+      if (!selectedProject) {
+        console.warn(
+          "Selected PM project not found:",
+          projectId
+        );
+
+        return;
+      }
+
+      console.log(
+        "Selected PM project:",
+        selectedProject
+      );
+
+      /*
+       * Now fetch only the members
+       * assigned to this PM project.
+       */
+      await loadMembersForProject(
+        selectedProject
+      );
+    };
 
   /* =========================================================
      MEMBER SEARCH
   ========================================================= */
 
-  const filteredMembers = useMemo(() => {
-    const search =
-      memberSearch.trim().toLowerCase();
+  const filteredMembers =
+    useMemo(() => {
+      const search =
+        memberSearch
+          .trim()
+          .toLowerCase();
 
-    if (!search) {
-      return members;
-    }
+      if (!search) {
+        return members;
+      }
 
-    return members.filter((member) => {
-      return (
-        member.fullName
-          ?.toLowerCase()
-          .includes(search) ||
-        member.employeeId
-          ?.toLowerCase()
-          .includes(search) ||
-        member.designation
-          ?.toLowerCase()
-          .includes(search) ||
-        member.email
-          ?.toLowerCase()
-          .includes(search)
+      return members.filter(
+        (member) => {
+          return (
+            member.name
+              ?.toLowerCase()
+              .includes(search) ||
+            String(
+              member.employeeId
+            )
+              .toLowerCase()
+              .includes(search) ||
+            member.designation
+              ?.toLowerCase()
+              .includes(search) ||
+            member.email
+              ?.toLowerCase()
+              .includes(search)
+          );
+        }
       );
-    });
-  }, [members, memberSearch]);
+    }, [
+      members,
+      memberSearch,
+    ]);
 
   /* =========================================================
      SELECT MEMBER
   ========================================================= */
 
-  const selectMember = (member: Member) => {
-    setForm((previous) => ({
-      ...previous,
-      assignedTo: member.fullName,
-    }));
+  const selectMember = (
+    member: Member
+  ) => {
+    setForm(
+      (previous) => ({
+        ...previous,
+        assignedTo:
+          member.name,
+      })
+    );
 
-    setMemberSearch(member.fullName);
+    setMemberSearch(
+      member.name
+    );
 
-    setShowMemberDropdown(false);
+    setShowMemberDropdown(
+      false
+    );
   };
 
   /* =========================================================
@@ -552,16 +763,20 @@ setBugs(sortedData);
 
     setForm({
       ...emptyForm,
-      bugId: `BUG-${String(
-        bugs.length + 1
-      ).padStart(3, "0")}`,
+
+      bugId:
+        `BUG-${String(
+          bugs.length + 1
+        ).padStart(3, "0")}`,
     });
 
     setMembers([]);
 
     setMemberSearch("");
 
-    setShowMemberDropdown(false);
+    setShowMemberDropdown(
+      false
+    );
 
     setShowForm(true);
   };
@@ -579,7 +794,9 @@ setBugs(sortedData);
 
     setMemberSearch("");
 
-    setShowMemberDropdown(false);
+    setShowMemberDropdown(
+      false
+    );
 
     setError("");
   };
@@ -596,6 +813,9 @@ setBugs(sortedData);
     setError("");
     setSuccess("");
 
+    /*
+     * Validate required fields.
+     */
     if (
       !form.bugId.trim() ||
       !form.bugTitle.trim() ||
@@ -615,44 +835,49 @@ setBugs(sortedData);
       setSaving(true);
 
       /*
-       * IMPORTANT:
-       *
-       * Backend QABugReport uses:
-       *
-       * title
-       * projectId
-       *
-       * NOT bugTitle.
+       * Backend expects title, not bugTitle.
        */
-      const response = await fetch(
-        BUG_API_URL,
-        {
-          method: "POST",
-          headers: getHeaders(),
-          body: JSON.stringify({
-            bugId: form.bugId.trim(),
+      const response =
+        await fetch(
+          BUG_API_URL,
+          {
+            method: "POST",
 
-            title: form.bugTitle.trim(),
+            headers:
+              getHeaders(),
 
-            projectId: Number(form.projectId),
+            body:
+              JSON.stringify({
+                bugId:
+                  form.bugId.trim(),
 
-            linkedTaskId:
-              form.linkedTaskId.trim(),
+                title:
+                  form.bugTitle.trim(),
 
-            environment: form.environment,
+                projectId:
+                  Number(
+                    form.projectId
+                  ),
 
-            severity: form.severity,
+                linkedTaskId:
+                  form.linkedTaskId.trim(),
 
-            assignedTo:
-              form.assignedTo.trim(),
+                environment:
+                  form.environment,
 
-            stepsToReproduce:
-              form.stepsToReproduce.trim(),
+                severity:
+                  form.severity,
 
-            status: "Open",
-          }),
-        }
-      );
+                assignedTo:
+                  form.assignedTo.trim(),
+
+                stepsToReproduce:
+                  form.stepsToReproduce.trim(),
+
+                status: "Open",
+              }),
+          }
+        );
 
       if (!response.ok) {
         const errorText =
@@ -665,8 +890,7 @@ setBugs(sortedData);
       }
 
       /*
-       * SUCCESS MESSAGE
-       *
+       * Success message.
        * Automatically disappears after 4 seconds.
        */
       setSuccess(
@@ -681,8 +905,14 @@ setBugs(sortedData);
 
       setMemberSearch("");
 
-      setShowMemberDropdown(false);
+      setShowMemberDropdown(
+        false
+      );
 
+      /*
+       * Refresh table so the newly
+       * created bug appears at top.
+       */
       await loadBugs();
     } catch (err) {
       console.error(
@@ -704,55 +934,81 @@ setBugs(sortedData);
      SEARCH BUGS
   ========================================================= */
 
-  const filteredBugs = useMemo(() => {
-    const search =
-      globalSearch.trim().toLowerCase();
+  const filteredBugs =
+    useMemo(() => {
+      const search =
+        globalSearch
+          .trim()
+          .toLowerCase();
 
-    if (!search) {
-      return bugs;
-    }
+      if (!search) {
+        return bugs;
+      }
 
-    return bugs.filter((bug) => {
-      const values = [
-        bug.bugId,
-        bug.title,
-        bug.linkedTaskId,
-        bug.environment,
-        bug.severity,
-        bug.assignedTo,
-        bug.status,
-        bug.stepsToReproduce,
-      ];
+      return bugs.filter(
+        (bug) => {
+          const values = [
+            bug.bugId,
+            bug.title,
+            bug.linkedTaskId,
+            bug.environment,
+            bug.severity,
+            bug.assignedTo,
+            bug.status,
+            bug.stepsToReproduce,
+          ];
 
-      return values.some((value) =>
-        String(value ?? "")
-          .toLowerCase()
-          .includes(search)
+          return values.some(
+            (value) =>
+              String(
+                value ?? ""
+              )
+                .toLowerCase()
+                .includes(search)
+          );
+        }
       );
-    });
-  }, [bugs, globalSearch]);
+    }, [
+      bugs,
+      globalSearch,
+    ]);
 
   /* =========================================================
      COUNTS
   ========================================================= */
 
-  const openCount = bugs.filter(
-    (bug) =>
-      (bug.status || "Open")
-        .toLowerCase() === "open"
-  ).length;
+  const openCount =
+    bugs.filter(
+      (bug) =>
+        (
+          bug.status ||
+          "Open"
+        )
+          .toLowerCase() ===
+        "open"
+    ).length;
 
-  const fixedCount = bugs.filter(
-    (bug) =>
-      (bug.status || "")
-        .toLowerCase() === "fixed"
-  ).length;
+  const fixedCount =
+    bugs.filter(
+      (bug) =>
+        (
+          bug.status ||
+          ""
+        )
+          .toLowerCase() ===
+        "fixed"
+    ).length;
 
-  const closedCount = bugs.filter(
-    (bug) =>
-      (bug.status || "")
-        .toLowerCase() === "closed"
-  ).length;
+  const closedCount =
+    bugs.filter(
+      (bug) =>
+        (
+          bug.status ||
+          ""
+        )
+          .toLowerCase() ===
+        "closed"
+    ).length;
 
   /* =========================================================
      FORMAT DATE
@@ -762,15 +1018,21 @@ setBugs(sortedData);
     bug: BugReport
   ) => {
     const value =
-      bug.createdAt || bug.filedDate;
+      bug.createdAt ||
+      bug.filedDate;
 
     if (!value) {
       return "—";
     }
 
-    const date = new Date(value);
+    const date =
+      new Date(value);
 
-    if (Number.isNaN(date.getTime())) {
+    if (
+      Number.isNaN(
+        date.getTime()
+      )
+    ) {
       return value;
     }
 
@@ -797,9 +1059,12 @@ setBugs(sortedData);
       return "—";
     }
 
-    const project = projects.find(
-      (item) => item.id === projectId
-    );
+    const project =
+      projects.find(
+        (item) =>
+          item.id ===
+          projectId
+      );
 
     if (!project) {
       return `Project ${projectId}`;
@@ -844,7 +1109,9 @@ setBugs(sortedData);
               ✓
             </span>
 
-            <span>{success}</span>
+            <span>
+              {success}
+            </span>
 
           </div>
 
@@ -902,7 +1169,11 @@ setBugs(sortedData);
 
           </div>
 
-          <form onSubmit={handleSubmit}>
+          <form
+            onSubmit={
+              handleSubmit
+            }
+          >
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
 
@@ -918,8 +1189,12 @@ setBugs(sortedData);
 
                 <input
                   name="bugId"
-                  value={form.bugId}
-                  onChange={handleChange}
+                  value={
+                    form.bugId
+                  }
+                  onChange={
+                    handleChange
+                  }
                   className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-red-400"
                   placeholder="BUG-090"
                 />
@@ -938,8 +1213,12 @@ setBugs(sortedData);
 
                 <input
                   name="bugTitle"
-                  value={form.bugTitle}
-                  onChange={handleChange}
+                  value={
+                    form.bugTitle
+                  }
+                  onChange={
+                    handleChange
+                  }
                   className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-red-400"
                   placeholder="Bug title"
                 />
@@ -958,9 +1237,15 @@ setBugs(sortedData);
 
                 <select
                   name="projectId"
-                  value={form.projectId}
-                  onChange={handleProjectChange}
-                  disabled={loadingProjects}
+                  value={
+                    form.projectId
+                  }
+                  onChange={
+                    handleProjectChange
+                  }
+                  disabled={
+                    loadingProjects
+                  }
                   className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-red-400 bg-white disabled:bg-slate-50"
                 >
 
@@ -973,11 +1258,20 @@ setBugs(sortedData);
                   {projects.map(
                     (project) => (
                       <option
-                        key={project.id}
-                        value={project.id}
+                        key={
+                          project.id
+                        }
+                        value={
+                          project.id
+                        }
                       >
-                        {project.projectCode} -{" "}
-                        {project.projectName}
+                        {
+                          project.projectCode
+                        }{" "}
+                        -{" "}
+                        {
+                          project.projectName
+                        }
                       </option>
                     )
                   )}
@@ -998,8 +1292,12 @@ setBugs(sortedData);
 
                 <input
                   name="linkedTaskId"
-                  value={form.linkedTaskId}
-                  onChange={handleChange}
+                  value={
+                    form.linkedTaskId
+                  }
+                  onChange={
+                    handleChange
+                  }
                   className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-red-400"
                   placeholder="T-044"
                 />
@@ -1018,8 +1316,12 @@ setBugs(sortedData);
 
                 <select
                   name="environment"
-                  value={form.environment}
-                  onChange={handleChange}
+                  value={
+                    form.environment
+                  }
+                  onChange={
+                    handleChange
+                  }
                   className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-red-400 bg-white"
                 >
 
@@ -1051,8 +1353,12 @@ setBugs(sortedData);
 
                 <select
                   name="severity"
-                  value={form.severity}
-                  onChange={handleChange}
+                  value={
+                    form.severity
+                  }
+                  onChange={
+                    handleChange
+                  }
                   className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-red-400 bg-white"
                 >
 
@@ -1088,13 +1394,24 @@ setBugs(sortedData);
 
                 <input
                   type="text"
-                  value={memberSearch}
-                  disabled={!form.projectId}
-                  onChange={(event) => {
+                  value={
+                    memberSearch
+                  }
+                  disabled={
+                    !form.projectId
+                  }
+                  onChange={(
+                    event
+                  ) => {
+
                     setMemberSearch(
                       event.target.value
                     );
 
+                    /*
+                     * Clear previous selection
+                     * while searching.
+                     */
                     setForm(
                       (previous) => ({
                         ...previous,
@@ -1105,8 +1422,10 @@ setBugs(sortedData);
                     setShowMemberDropdown(
                       true
                     );
+
                   }}
                   onFocus={() => {
+
                     if (
                       form.projectId
                     ) {
@@ -1114,6 +1433,7 @@ setBugs(sortedData);
                         true
                       );
                     }
+
                   }}
                   placeholder={
                     !form.projectId
@@ -1139,16 +1459,28 @@ setBugs(sortedData);
                         0 ? (
 
                         <div className="px-3 py-3 text-sm text-slate-400">
-                          No members found
+
+                          {members.length ===
+                          0
+                            ? "No PM members assigned to this project"
+                            : "No matching members found"}
+
                         </div>
 
                       ) : (
 
                         filteredMembers.map(
-                          (member) => (
+                          (
+                            member
+                          ) => (
+
                             <button
                               type="button"
-                              key={member.id}
+                              key={
+                                String(
+                                  member.employeeId
+                                )
+                              }
                               onClick={() =>
                                 selectMember(
                                   member
@@ -1158,15 +1490,23 @@ setBugs(sortedData);
                             >
 
                               <div className="text-sm font-medium text-slate-700">
-                                {member.fullName}
+                                {
+                                  member.name
+                                }
                               </div>
 
                               <div className="text-xs text-slate-400">
-                                {member.employeeId} ·{" "}
-                                {member.designation}
+                                {
+                                  member.employeeId
+                                }{" "}
+                                ·{" "}
+                                {
+                                  member.designation
+                                }
                               </div>
 
                             </button>
+
                           )
                         )
 
@@ -1194,7 +1534,9 @@ setBugs(sortedData);
                 value={
                   form.stepsToReproduce
                 }
-                onChange={handleChange}
+                onChange={
+                  handleChange
+                }
                 rows={4}
                 className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm outline-none resize-none focus:border-red-400"
                 placeholder="Enter steps to reproduce the bug..."
@@ -1210,7 +1552,9 @@ setBugs(sortedData);
 
               <button
                 type="submit"
-                disabled={saving}
+                disabled={
+                  saving
+                }
                 className="bg-red-500 hover:bg-red-600 disabled:opacity-60 text-white px-5 py-2.5 rounded-lg text-sm font-medium"
               >
                 {saving
@@ -1220,7 +1564,9 @@ setBugs(sortedData);
 
               <button
                 type="button"
-                onClick={closeForm}
+                onClick={
+                  closeForm
+                }
                 className="border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 px-5 py-2.5 rounded-lg text-sm"
               >
                 Cancel
@@ -1267,7 +1613,8 @@ setBugs(sortedData);
             Loading bug reports...
           </div>
 
-        ) : filteredBugs.length === 0 ? (
+        ) : filteredBugs.length ===
+          0 ? (
 
           <div className="py-16 text-center">
 
@@ -1340,12 +1687,17 @@ setBugs(sortedData);
             <tbody>
 
               {filteredBugs.map(
-                (bug, index) => {
+                (
+                  bug,
+                  index
+                ) => {
 
                   const status =
-                    bug.status || "Open";
+                    bug.status ||
+                    "Open";
 
                   return (
+
                     <tr
                       key={
                         bug.id ??
@@ -1357,7 +1709,9 @@ setBugs(sortedData);
                       {/* BUG ID */}
 
                       <td className="px-3 py-4 text-sm text-slate-600">
-                        {bug.bugId}
+                        {
+                          bug.bugId
+                        }
                       </td>
 
                       {/* TITLE */}
@@ -1371,7 +1725,9 @@ setBugs(sortedData);
                           </span>
 
                           <span className="text-sm text-slate-700">
-                            {bug.title}
+                            {
+                              bug.title
+                            }
                           </span>
 
                         </div>
@@ -1381,9 +1737,11 @@ setBugs(sortedData);
                       {/* PROJECT */}
 
                       <td className="px-3 py-4 text-sm text-slate-600">
-                        {getProjectName(
-                          bug.projectId
-                        )}
+                        {
+                          getProjectName(
+                            bug.projectId
+                          )
+                        }
                       </td>
 
                       {/* SEVERITY */}
@@ -1392,19 +1750,24 @@ setBugs(sortedData);
 
                         <span
                           className={`inline-flex rounded-md px-2 py-1 text-xs ${
-                            bug.severity?.toLowerCase() ===
-                              "critical"
+                            bug.severity
+                              ?.toLowerCase() ===
+                            "critical"
                               ? "bg-red-50 text-red-500"
-                              : bug.severity?.toLowerCase() ===
+                              : bug.severity
+                                  ?.toLowerCase() ===
                                 "high"
                               ? "bg-red-50 text-red-500"
-                              : bug.severity?.toLowerCase() ===
+                              : bug.severity
+                                  ?.toLowerCase() ===
                                 "medium"
                               ? "bg-orange-50 text-orange-500"
                               : "bg-green-50 text-green-600"
                           }`}
                         >
-                          {bug.severity}
+                          {
+                            bug.severity
+                          }
                         </span>
 
                       </td>
@@ -1414,7 +1777,9 @@ setBugs(sortedData);
                       <td className="px-3 py-4">
 
                         <span className="inline-flex rounded-md bg-red-50 px-2 py-1 text-xs text-red-500">
-                          {status}
+                          {
+                            status
+                          }
                         </span>
 
                       </td>
@@ -1422,30 +1787,39 @@ setBugs(sortedData);
                       {/* LINKED TASK */}
 
                       <td className="px-3 py-4 text-sm text-slate-600">
-                        {bug.linkedTaskId}
+                        {
+                          bug.linkedTaskId
+                        }
                       </td>
 
                       {/* ASSIGNEE */}
 
                       <td className="px-3 py-4 text-sm text-slate-600">
-                        {bug.assignedTo}
+                        {
+                          bug.assignedTo
+                        }
                       </td>
 
                       {/* ENVIRONMENT */}
 
                       <td className="px-3 py-4 text-sm text-slate-600">
-                        {bug.environment}
+                        {
+                          bug.environment
+                        }
                       </td>
 
                       {/* CREATED */}
 
                       <td className="px-3 py-4 text-sm text-slate-500 whitespace-nowrap">
-                        {formatDateTime(
-                          bug
-                        )}
+                        {
+                          formatDateTime(
+                            bug
+                          )
+                        }
                       </td>
 
                     </tr>
+
                   );
                 }
               )}
