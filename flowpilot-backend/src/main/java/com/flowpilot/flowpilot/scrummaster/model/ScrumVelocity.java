@@ -4,22 +4,20 @@ import jakarta.persistence.*;
 import lombok.*;
 
 @Entity
-@Table(name = "scrum_retrospectives")
+@Table(name = "scrum_velocity")
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class ScrumRetrospective {
+public class ScrumVelocity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     @Column(nullable = false)
-    private String category; // WENT_WELL or NEEDS_IMPROVEMENT
+    private String sprintName; // S5, S6, S12 etc
 
-    @Column(nullable = false, columnDefinition = "TEXT")
-    private String content;
-
-    private String sprintName;
+    private Integer points;
+    private Boolean isCurrent;
 }
