@@ -58,7 +58,10 @@ public class PMProject {
     @JoinTable(
             name = "pm_project_members",
             joinColumns = @JoinColumn(name = "project_id"),
-            inverseJoinColumns = @JoinColumn(name = "member_id")
+            inverseJoinColumns = @JoinColumn(
+                    name = "member_id",
+                    foreignKey = @jakarta.persistence.ForeignKey(jakarta.persistence.ConstraintMode.NO_CONSTRAINT)
+            )
     )
     private List<SuperAdminUser> teamMembers = new ArrayList<>();
 
