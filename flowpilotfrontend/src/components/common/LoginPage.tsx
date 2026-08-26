@@ -12,7 +12,6 @@ import {
   Users,
   Bell,
   LayoutGrid,
-  Lightbulb,
   ArrowLeft,
 } from 'lucide-react';
 
@@ -25,9 +24,9 @@ export const LoginPage: React.FC<LoginPageProps> = ({
   onBackToHome,
   onLoginSuccess,
 }) => {
-  const [selectedRole, setSelectedRole] = useState<string>('Super Admin');
-  const [email, setEmail] = useState<string>('superadmin@flowpilot.com');
-  const [password, setPassword] = useState<string>('SuperAdmin@123');
+  const [selectedRole, setSelectedRole] = useState<string>('');
+  const [email, setEmail] = useState<string>('');
+  const [password, setPassword] = useState<string>('');
 
   const roles = [
     {
@@ -35,63 +34,47 @@ export const LoginPage: React.FC<LoginPageProps> = ({
       name: 'Super Admin',
       subtitle: 'Full system control — all modules',
       icon: <ShieldCheck size={18} className="text-rose-400" />,
-      email: 'superadmin@flowpilot.com',
-      pass: 'SuperAdmin@123',
     },
     {
       id: 'admin',
       name: 'Admin',
       subtitle: 'User & department management',
       icon: <Settings size={18} className="text-purple-400" />,
-      email: 'admin@flowpilot.com',
-      pass: 'Admin@123',
     },
     {
       id: 'project-manager',
       name: 'Project Manager',
       subtitle: 'Projects, sprints & team oversight',
       icon: <FolderKanban size={18} className="text-amber-400" />,
-      email: 'pm@flowpilot.com',
-      pass: 'Admin@123',
     },
     {
       id: 'scrum-master',
       name: 'Scrum Master',
       subtitle: 'Sprint board, ceremonies & velocity',
       icon: <RefreshCw size={18} className="text-cyan-400" />,
-      email: 'sm@flowpilot.com',
-      pass: 'Admin@123',
     },
     {
       id: 'developer',
       name: 'Developer',
       subtitle: 'My tasks, sprint board & time log',
       icon: <Code2 size={18} className="text-emerald-400" />,
-      email: 'dev@flowpilot.com',
-      pass: 'Admin@123',
     },
     {
       id: 'qa-engineer',
       name: 'QA Engineer',
       subtitle: 'Test cases, bug reports & coverage',
       icon: <TestTube2 size={18} className="text-teal-400" />,
-      email: 'qa@flowpilot.com',
-      pass: 'Admin@123',
     },
     {
       id: 'viewer',
       name: 'Viewer',
       subtitle: 'Read-only: projects & reports',
       icon: <Eye size={18} className="text-slate-400" />,
-      email: 'viewer@flowpilot.com',
-      pass: 'Admin@123',
     },
   ];
 
   const handleRoleSelect = (role: typeof roles[0]) => {
     setSelectedRole(role.name);
-    setEmail(role.email);
-    setPassword(role.pass);
     setError('');
   };
 
@@ -102,6 +85,12 @@ export const LoginPage: React.FC<LoginPageProps> = ({
     e.preventDefault();
 
     setError('');
+
+    if (!selectedRole) {
+      setError('Please select your role before signing in');
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -291,7 +280,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
             </h2>
 
             <p className="text-xs text-slate-400">
-              Quick-select a role below to auto-fill demo credentials
+              Select your role and enter the credentials sent to you
             </p>
           </div>
 
@@ -386,23 +375,20 @@ export const LoginPage: React.FC<LoginPageProps> = ({
             )}
           </form>
 
-          {/* Demo Mode Notice Box */}
+          {/* Credential Notice */}
           <div className="mt-3 lg:mt-2 bg-[#0f1725]/80 border border-slate-800/80 rounded-2xl p-2.5 lg:p-2 flex items-start gap-3">
-            <Lightbulb
+            <Lock
               size={18}
               className="text-emerald-400 shrink-0 mt-0.5"
             />
 
             <div>
               <div className="text-xs font-bold text-emerald-400 mb-0.5">
-                DEMO MODE
+                SECURE LOGIN
               </div>
 
               <div className="text-[11px] text-slate-400 leading-normal">
-                Click any role card above to auto-fill credentials. Password for all accounts:{' '}
-                <span className="font-mono text-slate-200">
-                  Admin@123
-                </span>
+                Select your role and enter the email address and password sent to you.
               </div>
             </div>
           </div>

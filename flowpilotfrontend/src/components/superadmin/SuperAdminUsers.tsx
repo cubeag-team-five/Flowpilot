@@ -1036,16 +1036,16 @@ const SuperAdminUsers: React.FC = () => {
   };
 
   // ==========================================================
-  // DISABLE USER
+  // ENABLE / DISABLE USER
   // ==========================================================
 
-  const handleDisable = async (
-    employeeId: number
+  const handleStatusToggle = async (
+    user: SuperAdminUser
   ) => {
     try {
       const response =
         await fetch(
-          `${USERS_API}/${employeeId}/status`,
+          `${USERS_API}/${user.employeeId}/status`,
           {
             method: "PATCH",
             headers:
@@ -1081,23 +1081,27 @@ const SuperAdminUsers: React.FC = () => {
       setUsers(
         (previous) =>
           previous.map(
-            (user) =>
-              user.employeeId ===
-              employeeId
+            (userItem) =>
+              userItem.employeeId ===
+              user.employeeId
                 ? updatedUser
-                : user
+                : userItem
           )
       );
 
       showToast(
         "success",
         `${formatEmployeeId(
-          employeeId
-        )} disabled successfully.`
+          user.employeeId
+        )} ${
+          updatedUser.status === "Active"
+            ? "enabled"
+            : "disabled"
+        } successfully.`
       );
     } catch (err) {
       console.error(
-        "Disable user error:",
+        "Change user status error:",
         err
       );
 
@@ -1117,13 +1121,6 @@ const SuperAdminUsers: React.FC = () => {
   const handleDelete = async (
     user: SuperAdminUser
   ) => {
-    if (
-      user.status !==
-      "Inactive"
-    ) {
-      return;
-    }
-
     const confirmed =
       window.confirm(
         `Are you sure you want to permanently delete ${user.name}?`
@@ -1348,9 +1345,11 @@ const SuperAdminUsers: React.FC = () => {
 
       <main
         className="
-          px-8
+          px-4
           pb-10
           pt-7
+          sm:px-6
+          lg:px-8
         "
       >
 
@@ -1707,8 +1706,6 @@ const SuperAdminUsers: React.FC = () => {
 
           ) : users.length === 0 ? (
 
-            /* NO USERS */
-
             <div
               className="
                 flex
@@ -1723,8 +1720,6 @@ const SuperAdminUsers: React.FC = () => {
             </div>
 
           ) : filteredUsers.length === 0 ? (
-
-            /* NO SEARCH RESULT */
 
             <div
               className="
@@ -1784,12 +1779,16 @@ const SuperAdminUsers: React.FC = () => {
 
           ) : (
 
-            /* TABLE */
+            <>
+
+            {/* DESKTOP TABLE */}
 
             <div
               className="
+                hidden
                 w-full
                 overflow-x-auto
+                md:block
               "
             >
 
@@ -2066,46 +2065,58 @@ const SuperAdminUsers: React.FC = () => {
                               Edit
                             </button>
 
-                            {/* ACTIVE = DISABLE */}
+                            {/* ENABLE / DISABLE */}
+
+                            <button
+                              type="button"
+                              onClick={() =>
+                                handleStatusToggle(
+                                  user
+                                )
+                              }
+                              className={`
+                                inline-flex
+                                h-8
+                                items-center
+                                gap-1
+                                rounded-[7px]
+                                border
+                                px-2.5
+                                text-[11px]
+                                font-bold
+                                transition
+                                active:scale-95
+                                ${
+                                  user.status ===
+                                  "Active"
+                                    ? `
+                                      border-[#ffdba8]
+                                      bg-[#fffaf1]
+                                      text-[#d97900]
+                                      hover:bg-[#fff5df]
+                                    `
+                                    : `
+                                      border-[#b5ead4]
+                                      bg-[#f4fff9]
+                                      text-[#00a86b]
+                                      hover:bg-[#e9fff4]
+                                    `
+                                }
+                              `}
+                            >
+                              <Power
+                                size={12}
+                              />
+                              {user.status ===
+                              "Active"
+                                ? "Disable"
+                                : "Enable"}
+                            </button>
+
+                            {/* DELETE - ONLY FOR INACTIVE USERS */}
 
                             {user.status ===
-                            "Active" ? (
-
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  handleDisable(
-                                    user.employeeId
-                                  )
-                                }
-                                className="
-                                  inline-flex
-                                  h-8
-                                  items-center
-                                  gap-1
-                                  rounded-[7px]
-                                  border
-                                  border-[#ffdba8]
-                                  bg-[#fffaf1]
-                                  px-2.5
-                                  text-[11px]
-                                  font-bold
-                                  text-[#d97900]
-                                  transition
-                                  hover:bg-[#fff5df]
-                                  active:scale-95
-                                "
-                              >
-                                <Power
-                                  size={12}
-                                />
-                                Disable
-                              </button>
-
-                            ) : (
-
-                              /* INACTIVE = DELETE */
-
+                              "Inactive" && (
                               <button
                                 type="button"
                                 onClick={() =>
@@ -2136,7 +2147,6 @@ const SuperAdminUsers: React.FC = () => {
                                 />
                                 Delete
                               </button>
-
                             )}
 
                           </div>
@@ -2151,6 +2161,440 @@ const SuperAdminUsers: React.FC = () => {
               </table>
 
             </div>
+
+            {/* ==================================================
+                MOBILE USER CARDS
+                ================================================== */}
+
+            <div
+              className="
+                block
+                divide-y
+                divide-[#edf1f5]
+                md:hidden
+              "
+            >
+
+              {filteredUsers.map(
+                (user) => (
+                  <article
+                    key={user.employeeId}
+                    className="
+                      p-4
+                      transition
+                      active:bg-[#fcfdfe]
+                    "
+                  >
+
+                    {/* CARD HEADER */}
+
+                    <div
+                      className="
+                        flex
+                        items-start
+                        justify-between
+                        gap-3
+                      "
+                    >
+
+                      <div
+                        className="
+                          flex
+                          min-w-0
+                          items-center
+                          gap-3
+                        "
+                      >
+
+                        <div
+                          className="
+                            flex
+                            h-10
+                            w-10
+                            shrink-0
+                            items-center
+                            justify-center
+                            rounded-full
+                            bg-[#eefbf5]
+                            text-[12px]
+                            font-extrabold
+                            text-[#00a86b]
+                          "
+                        >
+                          {user.initials ||
+                            getInitials(user.name)}
+                        </div>
+
+                        <div className="min-w-0">
+                          <p
+                            className="
+                              truncate
+                              text-[14px]
+                              font-extrabold
+                              text-[#111827]
+                            "
+                          >
+                            {user.name}
+                          </p>
+
+                          <p
+                            className="
+                              mt-0.5
+                              text-[11px]
+                              font-medium
+                              text-[#66809f]
+                            "
+                          >
+                            {formatEmployeeId(
+                              user.employeeId
+                            )}
+                          </p>
+                        </div>
+
+                      </div>
+
+                      {user.status === "Active" ? (
+                        <span
+                          className="
+                            shrink-0
+                            rounded-[7px]
+                            bg-[#dff7ea]
+                            px-2.5
+                            py-1
+                            text-[10px]
+                            font-extrabold
+                            text-[#00864b]
+                          "
+                        >
+                          Active
+                        </span>
+                      ) : (
+                        <span
+                          className="
+                            shrink-0
+                            rounded-[7px]
+                            bg-[#edf0f3]
+                            px-2.5
+                            py-1
+                            text-[10px]
+                            font-extrabold
+                            text-[#718096]
+                          "
+                        >
+                          Inactive
+                        </span>
+                      )}
+
+                    </div>
+
+                    {/* CARD DETAILS */}
+
+                    <div
+                      className="
+                        mt-4
+                        grid
+                        grid-cols-1
+                        gap-3
+                        rounded-[10px]
+                        bg-[#f8fafc]
+                        p-3
+                      "
+                    >
+
+                      <div className="min-w-0">
+                        <p
+                          className="
+                            text-[9px]
+                            font-extrabold
+                            uppercase
+                            tracking-[0.04em]
+                            text-[#91a0b2]
+                          "
+                        >
+                          Email
+                        </p>
+
+                        <p
+                          className="
+                            mt-1
+                            break-all
+                            text-[12px]
+                            font-medium
+                            text-[#294766]
+                          "
+                        >
+                          {user.email}
+                        </p>
+                      </div>
+
+                      <div
+                        className="
+                          grid
+                          grid-cols-2
+                          gap-3
+                        "
+                      >
+
+                        <div className="min-w-0">
+                          <p
+                            className="
+                              text-[9px]
+                              font-extrabold
+                              uppercase
+                              tracking-[0.04em]
+                              text-[#91a0b2]
+                            "
+                          >
+                            Role
+                          </p>
+
+                          <span
+                            className="
+                              mt-1
+                              inline-flex
+                              max-w-full
+                              truncate
+                              rounded-[7px]
+                              bg-[#eef1f4]
+                              px-2
+                              py-1
+                              text-[10px]
+                              font-bold
+                              text-[#405a77]
+                            "
+                          >
+                            {user.role}
+                          </span>
+                        </div>
+
+                        <div className="min-w-0">
+                          <p
+                            className="
+                              text-[9px]
+                              font-extrabold
+                              uppercase
+                              tracking-[0.04em]
+                              text-[#91a0b2]
+                            "
+                          >
+                            Department
+                          </p>
+
+                          <p
+                            className="
+                              mt-1
+                              truncate
+                              text-[11px]
+                              font-medium
+                              text-[#294766]
+                            "
+                          >
+                            {user.department}
+                          </p>
+                        </div>
+
+                      </div>
+
+                      <div
+                        className="
+                          grid
+                          grid-cols-2
+                          gap-3
+                        "
+                      >
+
+                        <div className="min-w-0">
+                          <p
+                            className="
+                              text-[9px]
+                              font-extrabold
+                              uppercase
+                              tracking-[0.04em]
+                              text-[#91a0b2]
+                            "
+                          >
+                            Designation
+                          </p>
+
+                          <p
+                            className="
+                              mt-1
+                              truncate
+                              text-[11px]
+                              font-medium
+                              text-[#294766]
+                            "
+                          >
+                            {user.designation}
+                          </p>
+                        </div>
+
+                        <div className="min-w-0">
+                          <p
+                            className="
+                              text-[9px]
+                              font-extrabold
+                              uppercase
+                              tracking-[0.04em]
+                              text-[#91a0b2]
+                            "
+                          >
+                            Last Login
+                          </p>
+
+                          <p
+                            className="
+                              mt-1
+                              truncate
+                              text-[11px]
+                              font-medium
+                              text-[#91a0b2]
+                            "
+                          >
+                            {formatLastLogin(
+                              user.lastLogin
+                            )}
+                          </p>
+                        </div>
+
+                      </div>
+
+                    </div>
+
+                    {/* CARD ACTIONS */}
+
+                    <div
+                      className="
+                        mt-3
+                        grid
+                        grid-cols-2
+                        gap-2
+                      "
+                    >
+
+                      {/* EDIT */}
+
+                      <button
+                        type="button"
+                        onClick={() =>
+                          handleEdit(
+                            user.employeeId
+                          )
+                        }
+                        className="
+                          inline-flex
+                          h-9
+                          items-center
+                          justify-center
+                          gap-1.5
+                          rounded-[8px]
+                          border
+                          border-[#b5ead4]
+                          bg-[#f4fff9]
+                          px-3
+                          text-[11px]
+                          font-bold
+                          text-[#00a86b]
+                          transition
+                          hover:bg-[#e9fff4]
+                          active:scale-[0.98]
+                        "
+                      >
+                        <Pencil size={13} />
+                        Edit
+                      </button>
+
+                      {/* ENABLE / DISABLE */}
+
+                      <button
+                        type="button"
+                        onClick={() =>
+                          handleStatusToggle(
+                            user
+                          )
+                        }
+                        className={`
+                          inline-flex
+                          h-9
+                          items-center
+                          justify-center
+                          gap-1.5
+                          rounded-[8px]
+                          border
+                          px-3
+                          text-[11px]
+                          font-bold
+                          transition
+                          active:scale-[0.98]
+                          ${
+                            user.status ===
+                            "Active"
+                              ? `
+                                  border-[#ffdba8]
+                                  bg-[#fffaf1]
+                                  text-[#d97900]
+                                  hover:bg-[#fff5df]
+                                `
+                              : `
+                                  border-[#b5ead4]
+                                  bg-[#f4fff9]
+                                  text-[#00a86b]
+                                  hover:bg-[#e9fff4]
+                                `
+                          }
+                        `}
+                      >
+                        <Power size={13} />
+                        {user.status === "Active"
+                          ? "Disable"
+                          : "Enable"}
+                      </button>
+
+                      {/* DELETE - ONLY FOR INACTIVE USERS */}
+
+                      {user.status === "Inactive" && (
+                        <button
+                          type="button"
+                          onClick={() =>
+                            handleDelete(
+                              user
+                            )
+                          }
+                          className="
+                            col-span-2
+                            inline-flex
+                            h-9
+                            items-center
+                            justify-center
+                            gap-1.5
+                            rounded-[8px]
+                            border
+                            border-[#ffcaca]
+                            bg-[#fff7f7]
+                            px-3
+                            text-[11px]
+                            font-bold
+                            text-[#ef4444]
+                            transition
+                            hover:bg-[#fff0f0]
+                            active:scale-[0.98]
+                          "
+                        >
+                          <Trash2 size={13} />
+                          Delete
+                        </button>
+                      )}
+
+                    </div>
+
+                  </article>
+                )
+              )}
+
+            </div>
+
+            </>
+
           )}
 
         </div>
