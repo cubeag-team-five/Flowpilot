@@ -5,12 +5,21 @@ import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+
 @Service
 @RequiredArgsConstructor
 public class EmailService {
 
     private final JavaMailSender mailSender;
 
+
+    /*
+     * ============================================================
+     * WELCOME EMAIL
+     * ============================================================
+     */
     public void sendWelcomeEmail(
             String recipientEmail,
             String name,
@@ -58,4 +67,68 @@ public class EmailService {
 
         mailSender.send(message);
     }
+
+
+    /*
+     * ============================================================
+     * FAILED LOGIN SECURITY ALERT
+     * ============================================================
+     *
+     * This email is sent to the Super Administrator after
+     * 3 consecutive failed login attempts.
+     */
+    public void sendFailedLoginAlert(
+        String attemptedEmail,
+        String device,
+        String ipAddress,
+        String time
+) {
+
+    SimpleMailMessage message =
+            new SimpleMailMessage();
+
+    /*
+     * Super Administrator receives the security alert.
+     * Change this email if your actual Super Admin email
+     * is different.
+     */
+    message.setTo("nishadfulzele@gmail.com");
+
+    message.setSubject(
+            "FlowPilot Security Alert - 3 Failed Login Attempts"
+    );
+
+    message.setText(
+            "FlowPilot Security Alert\n\n" +
+
+            "⚠ 3 Failed Login Attempts\n\n" +
+
+            "There have been 3 consecutive failed login attempts " +
+            "on a FlowPilot account.\n\n" +
+
+            "Attempted Account\n" +
+            "-------------------------\n" +
+            "Email: " + attemptedEmail + "\n\n" +
+
+            "Device\n" +
+            "-------------------------\n" +
+            device + "\n\n" +
+
+            "IP Address\n" +
+            "-------------------------\n" +
+            ipAddress + "\n\n" +
+
+            "Time\n" +
+            "-------------------------\n" +
+            time + "\n\n" +
+
+            "If this activity was not authorized, please review " +
+            "the account and take appropriate security action.\n\n" +
+
+            "Regards,\n" +
+            "FlowPilot Security Team"
+    );
+
+    mailSender.send(message);
+}
 }

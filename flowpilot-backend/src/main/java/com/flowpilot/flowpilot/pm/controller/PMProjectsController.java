@@ -37,22 +37,20 @@ public class PMProjectsController {
     }
 
     /* =========================================================
-       GET ALL MEMBERS ASSIGNED TO PM PROJECTS
+   GET ALL MEMBERS ASSIGNED TO PM PROJECTS
 
-       Used by QA for the "Assign To" dropdown.
+   Used by QA for the "Assign To" dropdown.
+   Only members who are actually assigned to a PM project
+   will be returned.
+========================================================= */
 
-       Only members actually assigned to at least one
-       PM project will be returned.
-    ========================================================= */
+@GetMapping("/team-members")
+public ResponseEntity<List<Map<String, Object>>> getProjectTeamMembers() {
 
-    @GetMapping("/team-members")
-    public ResponseEntity<List<Map<String, Object>>>
-    getProjectTeamMembers() {
-
-        return ResponseEntity.ok(
-                projectService.getProjectTeamMembers()
-        );
-    }
+    return ResponseEntity.ok(
+            projectService.getProjectTeamMembers()
+    );
+}
 
     /* =========================================================
        GET ONE PROJECT
