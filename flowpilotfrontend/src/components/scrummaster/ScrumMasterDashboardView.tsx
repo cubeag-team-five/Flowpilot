@@ -1,10 +1,51 @@
-import React from 'react';
-import { FiAlertTriangle, FiArrowUpRight, FiCheck } from 'react-icons/fi';
+import React, { useState, useEffect } from 'react';
+import { FiAlertTriangle, FiArrowUpRight, FiCheck, FiFolder } from 'react-icons/fi';
 import { TYPE, SURFACE, STATUS, type StatusKey } from './scrumUI';
 
+interface PMProject {
+  id: number;
+  projectName?: string;
+  projectCode?: string;
+  name?: string;
+  code?: string;
+  status?: string;
+}
+
 export const ScrumMasterDashboardView: React.FC = () => {
+  const [projects, setProjects] = useState<PMProject[]>([]);
+  const [selectedProjectId, setSelectedProjectId] = useState<number | null>(null);
+  const [selectedProjectName, setSelectedProjectName] = useState<string>('IPMT Platform v2');
+  const [sprintGoal, setSprintGoal] = useState<string>(
+    'Deliver the core design system, task board enhancements, and mobile responsiveness for the IPMT Platform.'
+  );
+
+  useEffect(() => {
+    fetch('http://localhost:8080/api/pm/projects')
+      .then((res) => res.json())
+      .then((data: PMProject[]) => {
+        if (Array.isArray(data)) {
+          setProjects(data);
+          if (data.length > 0 && selectedProjectId === null) {
+            setSelectedProjectId(data[0].id);
+            setSelectedProjectName(data[0].projectName || data[0].name || 'IPMT Platform v2');
+          }
+        }
+      })
+      .catch((err) => console.error('Failed to fetch PM projects in dashboard:', err));
+  }, []);
+
+  const handleSelectProject = (id: number) => {
+    setSelectedProjectId(id);
+    const p = projects.find((item) => item.id === id);
+    if (p) {
+      const projName = p.projectName || p.name || `Project #${id}`;
+      setSelectedProjectName(projName);
+      setSprintGoal(`Execute sprint objectives & feature backlog deliverables for ${projName}.`);
+    }
+  };
+
   const kpis: { label: string; value: string; note: string; tone: StatusKey }[] = [
-    { label: 'Sprint', value: 'Sprint 12', note: 'IPMT Platform v2', tone: 'done' },
+    { label: 'Sprint', value: 'Sprint 12', note: selectedProjectName, tone: 'done' },
     { label: 'Days remaining', value: '14', note: 'of 21 total', tone: 'active' },
     { label: 'Tasks done', value: '7 / 18', note: '38% complete', tone: 'done' },
     { label: 'Blockers', value: '1', note: 'Needs resolution', tone: 'blocked' }
@@ -19,6 +60,41 @@ export const ScrumMasterDashboardView: React.FC = () => {
 
   return (
     <>
+      {/* Project Selector */}
+      <div className="flex items-center justify-between gap-4 mb-4 bg-white p-4 rounded-xl border border-slate-200 shadow-xs">
+        <div className="flex items-center gap-3">
+          <FiFolder className="text-emerald-600" size={20} />
+          <div>
+            <label htmlFor="dashboard-project-select" className="block text-xs font-medium text-slate-400 uppercase tracking-wider">
+              PM Project
+            </label>
+            <select
+              id="dashboard-project-select"
+              value={selectedProjectId || ''}
+              onChange={(e) => handleSelectProject(Number(e.target.value))}
+              className="mt-0.5 block w-64 rounded-lg border border-slate-300 bg-white py-1.5 px-2.5 text-sm font-medium text-slate-800 shadow-xs focus:border-emerald-500 focus:outline-none"
+            >
+              {projects.length === 0 ? (
+                <option value="">Default PM Project</option>
+              ) : (
+                projects.map((p) => {
+                  const name = p.projectName || p.name || `Project #${p.id}`;
+                  const code = p.projectCode || p.code || 'PRJ';
+                  return (
+                    <option key={p.id} value={p.id}>
+                      {name} ({code})
+                    </option>
+                  );
+                })
+              )}
+            </select>
+          </div>
+        </div>
+        <span className="text-xs font-medium text-emerald-700 bg-emerald-50 border border-emerald-200 px-3 py-1.5 rounded-lg">
+          Active PM Project Connected
+        </span>
+      </div>
+
       {/* Sprint health at a glance */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         {kpis.map((kpi) => (
@@ -36,7 +112,7 @@ export const ScrumMasterDashboardView: React.FC = () => {
         <div className={`${SURFACE.card} ${SURFACE.pad} flex flex-col`}>
           <div className={`${TYPE.eyebrow} text-emerald-600`}>Sprint goal</div>
           <p className={`${TYPE.title} text-slate-900 mt-3 leading-relaxed`}>
-            Deliver the core design system, task board enhancements, and mobile responsiveness for the IPMT Platform.
+            {sprintGoal}
           </p>
 
           <div className="mt-auto pt-5 space-y-3">

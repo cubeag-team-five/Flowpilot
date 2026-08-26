@@ -1,26 +1,29 @@
 package com.flowpilot.flowpilot.pm.service;
 
-import com.flowpilot.flowpilot.admin.model.AdminDepartmentMember;
-import com.flowpilot.flowpilot.admin.repository.AdminDepartmentMemberRepository;
-import com.flowpilot.flowpilot.pm.dto.PMProjectDto;
-import com.flowpilot.flowpilot.pm.model.PMProject;
-import com.flowpilot.flowpilot.pm.repository.PMProjectsRepository;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.ArrayList;
-import java.util.List;
+import com.flowpilot.flowpilot.pm.dto.PMProjectDto;
+import com.flowpilot.flowpilot.pm.model.PMProject;
+import com.flowpilot.flowpilot.pm.repository.PMProjectsRepository;
+import com.flowpilot.flowpilot.superadmin.model.SuperAdminUser;
+import com.flowpilot.flowpilot.superadmin.repository.SuperAdminUserRepository;
 
 @Service
 public class PMProjectsService {
 
     private final PMProjectsRepository projectRepository;
 
-    private final AdminDepartmentMemberRepository memberRepository;
+    private final SuperAdminUserRepository memberRepository;
 
     public PMProjectsService(
             PMProjectsRepository projectRepository,
-            AdminDepartmentMemberRepository memberRepository) {
+            SuperAdminUserRepository memberRepository) {
 
         this.projectRepository = projectRepository;
         this.memberRepository = memberRepository;
@@ -54,7 +57,8 @@ public class PMProjectsService {
     public PMProjectDto getProject(Long id) {
 
         PMProject project =
-                projectRepository.findById(id)
+                projectRepository
+                        .findById(id)
                         .orElseThrow(() ->
                                 new RuntimeException(
                                         "Project not found: " + id
@@ -62,6 +66,91 @@ public class PMProjectsService {
                         );
 
         return toDto(project);
+    }
+
+    /* =========================================================
+       GET PROJECT TEAM MEMBERS
+    ========================================================= */
+
+    @Transactional(readOnly = true)
+    public List<Map<String, Object>> getProjectTeamMembers() {
+
+        List<PMProject> projects =
+                projectRepository.findAll();
+
+        Map<Long, Map<String, Object>> uniqueMembers =
+                new LinkedHashMap<>();
+
+        for (PMProject project : projects) {
+
+            if (project.getTeamMembers() == null) {
+                continue;
+            }
+
+            for (SuperAdminUser member :
+                    project.getTeamMembers()) {
+
+                if (member == null || member.getEmployeeId() == null) {
+                    continue;
+                }
+
+                Map<String, Object> memberData =
+                        new LinkedHashMap<>();
+
+                /*
+                 * IMPORTANT:
+                 * Use database ID here.
+                 */
+                memberData.put(
+                        "id",
+                       member.getEmployeeId()
+                );
+
+                memberData.put(
+                        "employeeId",
+                        member.getEmployeeId()
+                );
+
+                memberData.put(
+                        "name",
+                        member.getName()
+                );
+
+                memberData.put(
+                        "email",
+                        member.getEmail()
+                );
+
+                memberData.put(
+                        "role",
+                        member.getRole()
+                );
+
+                memberData.put(
+                        "department",
+                        member.getDepartment()
+                );
+
+                memberData.put(
+                        "designation",
+                        member.getDesignation()
+                );
+
+                memberData.put(
+                        "status",
+                        member.getStatus()
+                );
+
+                uniqueMembers.put(
+                       member.getEmployeeId(),
+                        memberData
+                );
+            }
+        }
+
+        return new ArrayList<>(
+                uniqueMembers.values()
+        );
     }
 
     /* =========================================================
@@ -74,64 +163,56 @@ public class PMProjectsService {
 
         validateProject(dto);
 
-        if (projectRepository.existsByProjectCode(
-                dto.getProjectCode().trim())) {
+        String projectCode =
+                dto.getProjectCode().trim();
+
+        if (projectRepository.existsByProjectCode(projectCode)) {
 
             throw new RuntimeException(
-                    "Project code already exists: "
-                            + dto.getProjectCode()
+                    "Project code already exists: " + projectCode
             );
         }
 
         PMProject project =
                 new PMProject();
 
-        project.setProjectCode(
-                dto.getProjectCode().trim()
-        );
+        project.setProjectCode(projectCode);
 
         project.setProjectName(
                 dto.getProjectName().trim()
         );
 
-        project.setSprint(
-                dto.getSprint()
-        );
+        project.setSprint(dto.getSprint());
 
-        project.setBudget(
-                dto.getBudget()
-        );
+        project.setBudget(dto.getBudget());
 
-        project.setStartDate(
-                dto.getStartDate()
-        );
+        project.setStartDate(dto.getStartDate());
 
-        project.setEndDate(
-                dto.getEndDate()
-        );
+        project.setEndDate(dto.getEndDate());
 
-        project.setStatus(
-                dto.getStatus()
-        );
+        project.setStatus(dto.getStatus());
 
         project.setProgress(
                 dto.getProgress() == null
                         ? 0
-                        : dto.getProgress()
+                        : Math.min(
+                                100,
+                                Math.max(
+                                        0,
+                                        dto.getProgress()
+                                )
+                        )
         );
 
-        /* =========================================
-           MULTIPLE TEAM MEMBERS
-        ========================================= */
-
-        List<AdminDepartmentMember> members =
+        /*
+         * Get SuperAdmin users using their database IDs.
+         */
+        List<SuperAdminUser> members =
                 getMembersByIds(
                         dto.getTeamMemberIds()
                 );
 
-        project.setTeamMembers(
-                members
-        );
+        project.setTeamMembers(members);
 
         PMProject savedProject =
                 projectRepository.save(project);
@@ -151,38 +232,42 @@ public class PMProjectsService {
         validateProject(dto);
 
         PMProject existingProject =
-                projectRepository.findById(id)
+                projectRepository
+                        .findById(id)
                         .orElseThrow(() ->
                                 new RuntimeException(
                                         "Project not found: " + id
                                 )
                         );
 
-        /* =========================================
-           PROJECT CODE
-        ========================================= */
+        String newProjectCode =
+                dto.getProjectCode().trim();
+
+        /*
+         * PROJECT CODE
+         */
 
         if (!existingProject
                 .getProjectCode()
-                .equals(dto.getProjectCode())) {
+                .equals(newProjectCode)) {
 
-            if (projectRepository.existsByProjectCode(
-                    dto.getProjectCode().trim())) {
+            if (projectRepository
+                    .existsByProjectCode(newProjectCode)) {
 
                 throw new RuntimeException(
                         "Project code already exists: "
-                                + dto.getProjectCode()
+                                + newProjectCode
                 );
             }
 
             existingProject.setProjectCode(
-                    dto.getProjectCode().trim()
+                    newProjectCode
             );
         }
 
-        /* =========================================
-           BASIC DETAILS
-        ========================================= */
+        /*
+         * BASIC DETAILS
+         */
 
         existingProject.setProjectName(
                 dto.getProjectName().trim()
@@ -221,23 +306,19 @@ public class PMProjectsService {
             );
         }
 
-        /* =========================================
-           UPDATE MULTIPLE TEAM MEMBERS
-        ========================================= */
+        /*
+         * UPDATE TEAM MEMBERS
+         */
 
-        List<AdminDepartmentMember> members =
+        List<SuperAdminUser> members =
                 getMembersByIds(
                         dto.getTeamMemberIds()
                 );
 
-        existingProject.setTeamMembers(
-                members
-        );
+        existingProject.setTeamMembers(members);
 
         PMProject savedProject =
-                projectRepository.save(
-                        existingProject
-                );
+                projectRepository.save(existingProject);
 
         return toDto(savedProject);
     }
@@ -260,55 +341,20 @@ public class PMProjectsService {
     }
 
     /* =========================================================
-       VALIDATE
+       GET SUPERADMIN USERS BY DATABASE IDs
     ========================================================= */
 
-    private void validateProject(
-            PMProjectDto dto) {
-
-        if (dto == null) {
-
-            throw new RuntimeException(
-                    "Project data is required"
-            );
-        }
-
-        if (dto.getProjectCode() == null ||
-                dto.getProjectCode()
-                        .trim()
-                        .isEmpty()) {
-
-            throw new RuntimeException(
-                    "Project code is required"
-            );
-        }
-
-        if (dto.getProjectName() == null ||
-                dto.getProjectName()
-                        .trim()
-                        .isEmpty()) {
-
-            throw new RuntimeException(
-                    "Project name is required"
-            );
-        }
-    }
-
-    /* =========================================================
-       FIND MEMBERS
-    ========================================================= */
-
-    private List<AdminDepartmentMember> getMembersByIds(
+    private List<SuperAdminUser> getMembersByIds(
             List<Long> memberIds) {
+
+        List<SuperAdminUser> members =
+                new ArrayList<>();
 
         if (memberIds == null ||
                 memberIds.isEmpty()) {
 
-            return new ArrayList<>();
+            return members;
         }
-
-        List<AdminDepartmentMember> members =
-                new ArrayList<>();
 
         for (Long memberId : memberIds) {
 
@@ -316,14 +362,28 @@ public class PMProjectsService {
                 continue;
             }
 
-            AdminDepartmentMember member =
-                    memberRepository.findById(memberId)
+            SuperAdminUser member =
+                    memberRepository
+                            .findById(memberId)
                             .orElseThrow(() ->
                                     new RuntimeException(
-                                            "Admin department member not found: "
+                                            "SuperAdmin user not found: "
                                                     + memberId
                                     )
                             );
+
+            /*
+             * Check inactive users.
+             */
+            if (member.getStatus() != null &&
+                    member.getStatus()
+                            .equalsIgnoreCase("inactive")) {
+
+                throw new RuntimeException(
+                        "SuperAdmin user is inactive: "
+                                + memberId
+                );
+            }
 
             members.add(member);
         }
@@ -332,12 +392,47 @@ public class PMProjectsService {
     }
 
     /* =========================================================
+       VALIDATION
+    ========================================================= */
+
+    private void validateProject(
+            PMProjectDto dto) {
+
+        if (dto == null) {
+            throw new RuntimeException(
+                    "Project data cannot be null"
+            );
+        }
+
+        if (dto.getProjectCode() == null ||
+                dto.getProjectCode().trim().isEmpty()) {
+
+            throw new RuntimeException(
+                    "Project code is required"
+            );
+        }
+
+        if (dto.getProjectName() == null ||
+                dto.getProjectName().trim().isEmpty()) {
+
+            throw new RuntimeException(
+                    "Project name is required"
+            );
+        }
+
+        if (dto.getStartDate() != null &&
+                dto.getEndDate() != null &&
+                dto.getEndDate()
+                        .isBefore(dto.getStartDate())) {
+
+            throw new RuntimeException(
+                    "End date cannot be before start date"
+            );
+        }
+    }
+
+    /* =========================================================
        ENTITY -> DTO
-       
-       IMPORTANT:
-       We return only member IDs.
-       This prevents recursive JSON serialization
-       through AdminDepartment -> members.
     ========================================================= */
 
     private PMProjectDto toDto(
@@ -346,9 +441,7 @@ public class PMProjectsService {
         PMProjectDto dto =
                 new PMProjectDto();
 
-        dto.setId(
-                project.getId()
-        );
+        dto.setId(project.getId());
 
         dto.setProjectCode(
                 project.getProjectCode()
@@ -382,17 +475,28 @@ public class PMProjectsService {
                 project.getProgress()
         );
 
+        /*
+         * Return SuperAdminUser DATABASE IDs.
+         */
         List<Long> memberIds =
-                project.getTeamMembers()
-                        .stream()
-                        .map(
-                                AdminDepartmentMember::getId
-                        )
-                        .toList();
+                new ArrayList<>();
 
-        dto.setTeamMemberIds(
-                memberIds
-        );
+        if (project.getTeamMembers() != null) {
+
+            for (SuperAdminUser member :
+                    project.getTeamMembers()) {
+
+                if (member != null &&
+                       member.getEmployeeId() != null) {
+
+                    memberIds.add(
+                           member.getEmployeeId()
+                    );
+                }
+            }
+        }
+
+        dto.setTeamMemberIds(memberIds);
 
         return dto;
     }

@@ -18,6 +18,14 @@ public class QABugReport {
     @Column(nullable = false)
     private String title;
 
+    /* =========================================================
+       PROJECT
+       Stores the ID of the PM project selected in QA.
+    ========================================================= */
+
+    @Column(name = "project_id")
+    private Long projectId;
+
     @Column(name = "linked_task_id")
     private String linkedTaskId;
 
@@ -40,8 +48,13 @@ public class QABugReport {
     public QABugReport() {
     }
 
+    /* =========================================================
+       CREATE DATE + DEFAULT STATUS
+    ========================================================= */
+
     @PrePersist
     public void onCreate() {
+
         if (createdAt == null) {
             createdAt = LocalDateTime.now();
         }
@@ -50,6 +63,10 @@ public class QABugReport {
             status = "Open";
         }
     }
+
+    /* =========================================================
+       GETTERS / SETTERS
+    ========================================================= */
 
     public Long getId() {
         return id;
@@ -69,6 +86,18 @@ public class QABugReport {
 
     public void setTitle(String title) {
         this.title = title;
+    }
+
+    /* =========================================================
+       PROJECT ID
+    ========================================================= */
+
+    public Long getProjectId() {
+        return projectId;
+    }
+
+    public void setProjectId(Long projectId) {
+        this.projectId = projectId;
     }
 
     public String getLinkedTaskId() {

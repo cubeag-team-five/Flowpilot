@@ -10,15 +10,21 @@ import org.springframework.stereotype.Service;
 import com.flowpilot.flowpilot.developer.dto.DeveloperTimeLogDto;
 import com.flowpilot.flowpilot.developer.model.DeveloperTimeLog;
 import com.flowpilot.flowpilot.developer.repository.TimeLogRepository;
+import com.flowpilot.flowpilot.superadmin.service.SuperAdminAuditLogsService;
 
 @Service
 public class TimeLogService {
 
     private final TimeLogRepository timeLogRepository;
+    private final SuperAdminAuditLogsService auditLogsService;
 
 
-    public TimeLogService(TimeLogRepository timeLogRepository) {
+    public TimeLogService(
+            TimeLogRepository timeLogRepository,
+            SuperAdminAuditLogsService auditLogsService
+    ) {
         this.timeLogRepository = timeLogRepository;
+        this.auditLogsService = auditLogsService;
     }
 
 
@@ -82,6 +88,13 @@ public class TimeLogService {
         DeveloperTimeLog savedTimeLog =
                 timeLogRepository.save(timeLog);
 
+        auditLogsService.recordQuietly(
+                "TIME_LOGGED",
+                "TimeLog",
+                savedTimeLog.getId() != null
+                        ? String.valueOf(savedTimeLog.getId())
+                        : savedTimeLog.getTask()
+        );
 
         return convertToResponse(savedTimeLog);
     }
