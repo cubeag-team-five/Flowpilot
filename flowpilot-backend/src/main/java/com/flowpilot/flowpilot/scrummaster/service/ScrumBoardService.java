@@ -463,8 +463,11 @@ public class ScrumBoardService {
 
 
     /**
-     * Mirrors ScrumTask.initialsOf, which is package-private to the model
-     * package, so a member's avatar reads the same as their cards'.
+     * Mirrors ScrumTask.initialsOf so a member's avatar in the filter control
+     * reads the same as the initials on their cards. Kept as a local copy
+     * rather than a call to it because this one uppercases with Locale.ROOT:
+     * the member list is shared data, so it must not change shape with the
+     * server's locale.
      */
     private static String initialsOf(String name) {
 

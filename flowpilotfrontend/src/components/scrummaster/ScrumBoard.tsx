@@ -11,9 +11,12 @@ import {
   FiSliders,
   FiTrash2,
   FiX,
-  FiCalendar
+  FiCalendar,
+  FiChevronDown,
+  FiChevronUp
 } from 'react-icons/fi';
 import { TYPE, SURFACE, STATUS, COLUMN_TONE, PRIORITY_STYLE, LABEL_CHIP, FIELD } from './scrumUI';
+import { ScrumTaskDetail } from './ScrumTaskDetail';
 import {
   fetchBoard,
   fetchSprints,
@@ -234,6 +237,12 @@ export const ScrumBoard: React.FC = () => {
         }
     );
   }, [board]);
+
+  /** Every card on the board, for the dependency picker in the detail panel. */
+  const allCards = useMemo(
+    () => columns.flatMap((column) => column.cards),
+    [columns]
+  );
 
   const cardById = useMemo(() => {
     const map = new Map<number, Card>();
@@ -742,6 +751,7 @@ export const ScrumBoard: React.FC = () => {
                         key={card.id}
                         card={card}
                         members={board.members}
+                        siblings={allCards}
                         busy={busyId === card.id}
                         editing={editingId === card.id}
                         saving={saving}
@@ -782,6 +792,8 @@ export const ScrumBoard: React.FC = () => {
 const BoardCard: React.FC<{
   card: Card;
   members: Member[];
+  /** The rest of the board, offered as dependency targets in the detail panel. */
+  siblings: Card[];
   busy: boolean;
   editing: boolean;
   saving: boolean;
@@ -798,6 +810,7 @@ const BoardCard: React.FC<{
 }> = ({
   card,
   members,
+  siblings,
   busy,
   editing,
   saving,
@@ -812,6 +825,10 @@ const BoardCard: React.FC<{
   onEditCancel,
   onEditSubmit
 }) => {
+  // Detail is collapsed by default: mounting it fetches dependencies,
+  // attachments and comments, which is three requests nobody asked for yet.
+  const [showDetail, setShowDetail] = useState(false);
+
   const attention = needsAttention(card);
   const priorityStyle = PRIORITY_STYLE[card.priority];
 
@@ -911,6 +928,20 @@ const BoardCard: React.FC<{
 
             <span className="ml-auto flex items-center gap-0.5">
               <IconButton
+                label={
+                  showDetail
+                    ? `Hide detail for ${card.taskKey}`
+                    : `Show dependencies, files and comments for ${card.taskKey}`
+                }
+                disabled={busy}
+                onClick={() => setShowDetail((open) => !open)}
+                icon={
+                  showDetail
+                    ? <FiChevronUp size={13} aria-hidden="true" />
+                    : <FiChevronDown size={13} aria-hidden="true" />
+                }
+              />
+              <IconButton
                 label={`Edit ${card.taskKey}`}
                 disabled={busy}
                 onClick={onEditOpen}
@@ -951,6 +982,10 @@ const BoardCard: React.FC<{
           </select>
         </>
       )}
+          {showDetail && (
+            <ScrumTaskDetail card={card} members={members} siblings={siblings} />
+          )}
+
     </li>
   );
 };

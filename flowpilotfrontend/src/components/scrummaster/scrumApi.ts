@@ -574,3 +574,107 @@ export const fetchProject = (projectId: number) =>
 /** The sprint roster: the owning project's team (SRS Module 6 "Members"). */
 export const fetchProjectMembers = (projectId: number) =>
   request<ProjectMember[]>(`/projects/${projectId}/members`);
+
+// ============================================
+// DEPENDENCIES  (SRS Module 4)
+// ============================================
+
+export interface DependencyLink {
+  id: number;
+  taskId: number;
+  taskKey: string;
+  title: string;
+  status: TaskStatus;
+  done: boolean;
+}
+
+export interface Dependencies {
+  taskId: number;
+  taskKey: string;
+  /** Tasks this one is waiting on. */
+  blockedBy: DependencyLink[];
+  /** Tasks waiting on this one. */
+  blocking: DependencyLink[];
+  waiting: boolean;
+  unresolvedCount: number;
+}
+
+export const fetchDependencies = (taskId: number) =>
+  request<Dependencies>(`/dependencies/task/${taskId}`);
+
+export const addDependency = (taskId: number, dependsOnTaskId: number) =>
+  request<Dependencies>(`/dependencies/task/${taskId}`, {
+    method: 'POST',
+    body: JSON.stringify({ dependsOnTaskId })
+  });
+
+export const removeDependency = (linkId: number) =>
+  request<{ success: boolean }>(`/dependencies/${linkId}`, { method: 'DELETE' });
+
+// ============================================
+// ATTACHMENTS  (SRS Module 4)
+// ============================================
+
+export interface Attachment {
+  id: number;
+  taskId: number;
+  fileName: string;
+  contentType: string | null;
+  sizeBytes: number;
+  uploadedById: number | null;
+  uploadedByName: string | null;
+  uploadedByInitials: string;
+  uploadedAt: string;
+  /** Relative download path, served by the backend. */
+  downloadUrl: string;
+}
+
+export const fetchAttachments = (taskId: number) =>
+  request<Attachment[]>(`/attachments/task/${taskId}`);
+
+/**
+ * Multipart upload, so the JSON content-type the shared client sets must be
+ * dropped — the browser has to write its own boundary or the server cannot
+ * parse the parts.
+ */
+export const uploadAttachment = async (
+  taskId: number,
+  file: File,
+  uploadedById?: number | null
+): Promise<Attachment> => {
+  const token = localStorage.getItem('token');
+  const form = new FormData();
+  form.append('file', file);
+
+  if (uploadedById) {
+    form.append('uploadedById', String(uploadedById));
+  }
+
+  const response = await fetch(
+    `http://localhost:8080/api/scrummaster/attachments/task/${taskId}`,
+    {
+      method: 'POST',
+      headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+      body: form
+    }
+  );
+
+  if (!response.ok) {
+    let message = `Upload failed (${response.status})`;
+    try {
+      message = (await response.json())?.message ?? message;
+    } catch {
+      // A non-JSON body means the server rejected it before our handler ran
+    }
+    throw new Error(message);
+  }
+
+  return response.json() as Promise<Attachment>;
+};
+
+export const deleteAttachment = (attachmentId: number) =>
+  request<{ success: boolean }>(`/attachments/${attachmentId}`, { method: 'DELETE' });
+
+/** Absolute URL for an attachment, since downloads leave the API client. */
+export const attachmentUrl = (attachment: Attachment): string =>
+  `http://localhost:8080${attachment.downloadUrl}`;
