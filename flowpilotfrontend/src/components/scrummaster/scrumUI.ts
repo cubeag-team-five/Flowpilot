@@ -104,11 +104,11 @@ export const COLUMN_TONE = {
  * cannot happen visually. Ordered highest first for sorting.
  */
 export const PRIORITY_STYLE = {
-  HIGHEST: { chip: 'bg-rose-500/12 text-rose-700 border-rose-500/25', rank: 0, mark: '↑↑' },
-  HIGH:    { chip: 'bg-amber-500/12 text-amber-700 border-amber-500/25', rank: 1, mark: '↑' },
-  MEDIUM:  { chip: 'bg-slate-100 text-slate-600 border-slate-200', rank: 2, mark: '=' },
-  LOW:     { chip: 'bg-slate-50 text-slate-500 border-slate-200', rank: 3, mark: '↓' },
-  LOWEST:  { chip: 'bg-slate-50 text-slate-400 border-slate-200', rank: 4, mark: '↓↓' }
+  HIGHEST: { chip: 'bg-rose-500/12 text-rose-700 border-rose-500/25',   text: 'text-rose-600',   rank: 0, mark: '↑↑' },
+  HIGH:    { chip: 'bg-amber-500/12 text-amber-700 border-amber-500/25', text: 'text-amber-600',  rank: 1, mark: '↑'  },
+  MEDIUM:  { chip: 'bg-slate-100 text-slate-600 border-slate-200',       text: 'text-slate-400',  rank: 2, mark: '='  },
+  LOW:     { chip: 'bg-slate-50 text-slate-500 border-slate-200',        text: 'text-slate-300',  rank: 3, mark: '↓'  },
+  LOWEST:  { chip: 'bg-slate-50 text-slate-400 border-slate-200',        text: 'text-slate-300',  rank: 4, mark: '↓↓' }
 } as const;
 
 /**

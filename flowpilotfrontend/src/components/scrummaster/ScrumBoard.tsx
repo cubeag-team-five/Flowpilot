@@ -15,7 +15,7 @@ import {
   FiChevronDown,
   FiChevronUp
 } from 'react-icons/fi';
-import { TYPE, SURFACE, STATUS, COLUMN_TONE, PRIORITY_STYLE, LABEL_CHIP, FIELD } from './scrumUI';
+import { TYPE, SURFACE, STATUS, COLUMN_TONE, PRIORITY_STYLE, labelChip, FIELD } from './scrumUI';
 import { ScrumTaskDetail } from './ScrumTaskDetail';
 import {
   fetchBoard,
@@ -134,6 +134,19 @@ const draftToEdit = (draft: TaskDraft): TaskInput => ({
   clearLabels: draft.labels.trim() === ''
 });
 
+
+/**
+ * Due dates are shown short — "Sep 15" rather than the raw ISO date, which is
+ * three times the width for no extra meaning on a card this size. Parsed at
+ * local midnight so it does not slip a day west of Greenwich.
+ */
+const formatDue = (iso: string): string => {
+  const date = new Date(`${iso}T00:00:00`);
+
+  return Number.isNaN(date.getTime())
+    ? iso
+    : date.toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
+};
 
 /**
  * The API client throws the backend's message rather than a status code, so the
@@ -837,7 +850,8 @@ const BoardCard: React.FC<{
       draggable={dragEnabled && !editing && !busy}
       onDragStart={onDragStart}
       onDragEnd={onDragEnd}
-      className={`relative overflow-hidden ${SURFACE.card} ${SURFACE.padTight}
+      className={`group relative overflow-hidden ${SURFACE.card} p-3
+        transition-shadow hover:shadow-sm
         ${attention ? 'border-rose-500/25' : ''}
         ${dragging ? 'opacity-50' : ''}
         ${busy ? 'opacity-60' : ''}
@@ -859,29 +873,56 @@ const BoardCard: React.FC<{
         />
       ) : (
         <>
-          <div className="flex items-center gap-1.5 flex-wrap">
-            <span className={`${TYPE.code} text-slate-400`}>{card.taskKey}</span>
+          {/* Header: what it is and how big. Actions stay out of the resting state. */}
+          <div className="flex items-baseline gap-1.5">
             <span
-              className={`${TYPE.eyebrow} inline-flex items-center gap-0.5 border rounded px-1 py-0.5
-                ${priorityStyle.chip}`}
+              title={`Priority: ${PRIORITY_LABEL[card.priority]}`}
+              className={`${TYPE.meta} font-bold leading-none shrink-0 ${priorityStyle.text}`}
             >
               <span aria-hidden="true">{priorityStyle.mark}</span>
-              <span className="sr-only">Priority: </span>
-              {PRIORITY_LABEL[card.priority]}
+              <span className="sr-only">Priority {PRIORITY_LABEL[card.priority]}</span>
             </span>
-            <span className={`${TYPE.meta} text-slate-500 tabular-nums ml-auto`}>
-              {card.storyPoints}
-              <span className="sr-only"> story points</span>
-              <span aria-hidden="true">p</span>
+
+            <span className={`${TYPE.code} text-slate-400 whitespace-nowrap`}>{card.taskKey}</span>
+
+            {/*
+              Due date and points share the header's spare room, and both step
+              aside for the hover actions. Three items in the footer squeezed the
+              column name, and the column name has to stay fully readable.
+            */}
+            <span
+              className="ml-auto flex items-baseline gap-2 shrink-0 transition-opacity
+                group-hover:opacity-0 group-focus-within:opacity-0"
+            >
+              {card.dueDate && (
+                <span
+                  className={`${TYPE.meta} whitespace-nowrap
+                    ${card.overdue ? `${STATUS.blocked.text} font-medium` : 'text-slate-400'}`}
+                >
+                  {card.overdue && (
+                    <FiAlertTriangle size={11} aria-hidden="true" className="inline mr-0.5 -mt-px" />
+                  )}
+                  {formatDue(card.dueDate)}
+                  <span className="sr-only">{card.overdue ? ' — overdue' : ' — due date'}</span>
+                </span>
+              )}
+
+              <span className={`${TYPE.meta} text-slate-500 tabular-nums`}>
+                {card.storyPoints}
+                <span className="sr-only"> story points</span>
+                <span aria-hidden="true">p</span>
+              </span>
             </span>
           </div>
 
-          <p className={`${TYPE.body} font-medium text-slate-900 mt-1.5 break-words`}>{card.title}</p>
+          <p className={`${TYPE.body} font-medium text-slate-900 leading-snug mt-1 break-words`}>
+            {card.title}
+          </p>
 
           {card.labels.length > 0 && (
-            <ul className="flex flex-wrap gap-1 mt-1.5">
+            <ul className="flex flex-wrap gap-1 mt-2">
               {card.labels.map((chip) => (
-                <li key={chip} className={`${TYPE.eyebrow} ${LABEL_CHIP} normal-case tracking-normal`}>
+                <li key={chip} className={`${TYPE.meta} ${labelChip(chip)} leading-none py-1`}>
                   {chip}
                 </li>
               ))}
@@ -889,97 +930,108 @@ const BoardCard: React.FC<{
           )}
 
           {card.blockedReason && (
-            <p className={`${TYPE.meta} ${STATUS.blocked.text} flex items-start gap-1 mt-1.5`}>
-              <FiAlertTriangle size={12} aria-hidden="true" className="mt-0.5 shrink-0" />
-              <span className="break-words">Blocked: {card.blockedReason}</span>
+            <p className={`${TYPE.meta} ${STATUS.blocked.text} flex items-start gap-1 mt-2`}>
+              <FiAlertTriangle size={11} aria-hidden="true" className="mt-px shrink-0" />
+              <span className="break-words">{card.blockedReason}</span>
             </p>
           )}
 
-          {card.dueDate && (
-            <p
-              className={`${TYPE.meta} flex items-center gap-1 mt-1.5
-                ${card.overdue ? `${STATUS.blocked.text} font-medium` : 'text-slate-500'}`}
-            >
-              {card.overdue && <FiAlertTriangle size={12} aria-hidden="true" className="shrink-0" />}
-              {card.overdue ? `Overdue — due ${card.dueDate}` : `Due ${card.dueDate}`}
-            </p>
-          )}
-
-          <div className="flex items-center gap-1.5 flex-wrap mt-2.5">
+          {/* Footer: who, how long, when due, and where it can go next */}
+          <div className="flex items-center gap-2 mt-2.5 pt-2.5 border-t border-slate-100">
             <span
               title={card.assigneeName ?? 'Unassigned'}
               className={`w-6 h-6 rounded-full shrink-0 grid place-items-center ${TYPE.code}
                 font-semibold ${card.assigneeId === null
-                  ? 'bg-slate-50 text-slate-400 border border-dashed border-slate-300'
+                  ? 'bg-slate-50 text-slate-300 border border-dashed border-slate-300'
                   : 'bg-slate-100 text-slate-600'}`}
             >
-              <span aria-hidden="true">{card.assigneeId === null ? '–' : card.assigneeInitials}</span>
+              <span aria-hidden="true">{card.assigneeId === null ? '?' : card.assigneeInitials}</span>
               <span className="sr-only">{card.assigneeName ?? 'Unassigned'}</span>
             </span>
 
-            <span
-              className={`${TYPE.meta} inline-flex items-center gap-1 tabular-nums
-                ${card.stuck ? `${STATUS.blocked.text} font-medium` : 'text-slate-400'}`}
-            >
-              <FiClock size={11} aria-hidden="true" />
-              {card.daysInColumn}d
-              <span className="sr-only"> in this column</span>
-            </span>
+            {/* Ageing is only worth showing once a card has actually sat somewhere */}
+            {(card.daysInColumn > 0 || card.stuck) && (
+              <span
+                className={`${TYPE.meta} inline-flex items-center gap-1 tabular-nums shrink-0
+                  whitespace-nowrap
+                  ${card.stuck ? `${STATUS.blocked.text} font-medium` : 'text-slate-400'}`}
+              >
+                <FiClock size={11} aria-hidden="true" />
+                {card.daysInColumn}d
+                <span className="sr-only"> in this column</span>
+              </span>
+            )}
 
-            <span className="ml-auto flex items-center gap-0.5">
-              <IconButton
-                label={
-                  showDetail
-                    ? `Hide detail for ${card.taskKey}`
-                    : `Show dependencies, files and comments for ${card.taskKey}`
-                }
-                disabled={busy}
-                onClick={() => setShowDetail((open) => !open)}
-                icon={
-                  showDetail
-                    ? <FiChevronUp size={13} aria-hidden="true" />
-                    : <FiChevronDown size={13} aria-hidden="true" />
-                }
-              />
-              <IconButton
-                label={`Edit ${card.taskKey}`}
-                disabled={busy}
-                onClick={onEditOpen}
-                icon={<FiEdit2 size={13} aria-hidden="true" />}
-              />
-              <IconButton
-                label={`Clone ${card.taskKey}`}
-                disabled={busy}
-                onClick={() => void onClone(card)}
-                icon={<FiCopy size={13} aria-hidden="true" />}
-              />
-              <IconButton
-                label={`Delete ${card.taskKey}`}
-                disabled={busy}
-                danger
-                onClick={() => void onDelete(card)}
-                icon={<FiTrash2 size={13} aria-hidden="true" />}
-              />
-            </span>
+            {/*
+              Always visible and never disabled: this is the conforming
+              alternative to dragging, so keyboard and touch users must be able
+              to reach it at any time. Styled quietly so it does not shout.
+            */}
+            <label className="sr-only" htmlFor={`move-${card.id}`}>
+              Move {card.taskKey} to another column
+            </label>
+            <select
+              id={`move-${card.id}`}
+              value={card.status}
+              onChange={(event) => void onMove(card, event.target.value as TaskStatus)}
+              className={`${TYPE.meta} ml-auto shrink-0 cursor-pointer
+                rounded-md border border-transparent bg-transparent py-1 pl-1 pr-0.5
+                text-slate-500 hover:border-slate-200 hover:bg-slate-50
+                focus-visible:outline-2 focus-visible:outline-offset-1
+                focus-visible:outline-emerald-500`}
+            >
+              {TASK_STATUSES.map((status) => (
+                <option key={status} value={status}>
+                  {STATUS_LABEL[status]}
+                </option>
+              ))}
+            </select>
           </div>
 
-          {/* Always visible: the conforming path for keyboard and touch users */}
-          <label className="sr-only" htmlFor={`move-${card.id}`}>
-            Move {card.taskKey} to another column
-          </label>
-          <select
-            id={`move-${card.id}`}
-            value={card.status}
-            disabled={busy}
-            onChange={(event) => void onMove(card, event.target.value as TaskStatus)}
-            className={`${TYPE.meta} ${FIELD.select} w-full mt-2`}
+          {/*
+            Revealed on hover, and on keyboard focus so the icons are reachable
+            without a pointer. They overlay the points badge rather than taking
+            a permanent row, which is what made every card so tall.
+          */}
+          <span
+            className="absolute top-2 right-2 flex items-center gap-0.5 rounded-md bg-white/95
+              pl-1 opacity-0 transition-opacity group-hover:opacity-100
+              group-focus-within:opacity-100"
           >
-            {TASK_STATUSES.map((status) => (
-              <option key={status} value={status}>
-                {STATUS_LABEL[status]}
-              </option>
-            ))}
-          </select>
+            <IconButton
+              label={
+                showDetail
+                  ? `Hide detail for ${card.taskKey}`
+                  : `Show dependencies, files and comments for ${card.taskKey}`
+              }
+              disabled={busy}
+              onClick={() => setShowDetail((open) => !open)}
+              icon={
+                showDetail
+                  ? <FiChevronUp size={13} aria-hidden="true" />
+                  : <FiChevronDown size={13} aria-hidden="true" />
+              }
+            />
+            <IconButton
+              label={`Edit ${card.taskKey}`}
+              disabled={busy}
+              onClick={onEditOpen}
+              icon={<FiEdit2 size={13} aria-hidden="true" />}
+            />
+            <IconButton
+              label={`Clone ${card.taskKey}`}
+              disabled={busy}
+              onClick={() => void onClone(card)}
+              icon={<FiCopy size={13} aria-hidden="true" />}
+            />
+            <IconButton
+              label={`Delete ${card.taskKey}`}
+              disabled={busy}
+              danger
+              onClick={() => void onDelete(card)}
+              icon={<FiTrash2 size={13} aria-hidden="true" />}
+            />
+          </span>
         </>
       )}
           {showDetail && (
