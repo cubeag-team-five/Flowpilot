@@ -45,12 +45,23 @@ interface Draft {
 
 const emptyDraft: Draft = { memberId: '', yesterday: '', today: '', blocker: '' };
 
+
+/**
+ * The API client throws the backend's message rather than a status code, so the
+ * "no active sprint" 404 is recognised by its text. It is the normal state for
+ * a new team, not a fault, so it must not render as an error.
+ */
+const isNoActiveSprint = (message: string): boolean =>
+  message.toLowerCase().includes('no active sprint');
+
 export const ScrumStandups: React.FC = () => {
   const [data, setData] = useState<Standups | null>(null);
   const [date, setDate] = useState(todayIso());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
+  /** Row failures are kept apart from load failures, which gate the page. */
+  const [actionError, setActionError] = useState('');
   const [busyId, setBusyId] = useState<number | null>(null);
 
   const [draft, setDraft] = useState<Draft>(emptyDraft);
@@ -149,7 +160,7 @@ export const ScrumStandups: React.FC = () => {
     }
 
     setBusyId(entry.id);
-    setError('');
+    setActionError('');
     setNotice('');
 
     try {
@@ -157,7 +168,7 @@ export const ScrumStandups: React.FC = () => {
       setNotice('Entry removed.');
       await load(date);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not remove the entry');
+      setActionError(err instanceof Error ? err.message : 'Could not remove the entry');
     } finally {
       setBusyId(null);
     }
@@ -167,6 +178,28 @@ export const ScrumStandups: React.FC = () => {
     return (
       <div className={`${SURFACE.card} ${SURFACE.pad} ${TYPE.body} text-slate-500`}>
         Loading the standup…
+      </div>
+    );
+  }
+
+  // No running sprint is the expected state for a new team, not a failure
+  if (error && isNoActiveSprint(error)) {
+    return (
+      <div className={`${SURFACE.card} ${SURFACE.pad} max-w-2xl`}>
+        <div className="flex items-center gap-2">
+          <FiCalendar size={16} className="text-slate-400 shrink-0" aria-hidden="true" />
+          <h2 className={`${TYPE.title} text-slate-900`}>No sprint is running</h2>
+        </div>
+        <p className={`${TYPE.body} text-slate-600 mt-3 leading-relaxed`}>
+          Standup notes are recorded against a sprint. Start one under <span className="font-medium text-slate-900">Sprint Cycles</span> and the day&rsquo;s entries can be captured here.
+        </p>
+        <button
+          type="button"
+          onClick={() => void load(date)}
+          className={`${TYPE.meta} ${FIELD.button} ${FIELD.secondary} mt-4`}
+        >
+          <FiRefreshCw size={13} aria-hidden="true" /> Check again
+        </button>
       </div>
     );
   }
@@ -254,9 +287,13 @@ export const ScrumStandups: React.FC = () => {
         </div>
       )}
 
-      {notice && (
-        <p className={`${TYPE.meta} ${STATUS.done.text} font-medium`} aria-live="polite">
-          {notice}
+      <p className={`${TYPE.meta} ${STATUS.done.text} font-medium`} aria-live="polite">
+        {notice}
+      </p>
+
+      {actionError && (
+        <p className={`${TYPE.meta} ${STATUS.blocked.text} font-medium`} role="alert">
+          {actionError}
         </p>
       )}
 

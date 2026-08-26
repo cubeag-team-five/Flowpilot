@@ -1,5 +1,7 @@
 package com.flowpilot.flowpilot.scrummaster.service;
 
+import java.time.DayOfWeek;
+import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -95,8 +97,14 @@ public class ScrumMasterDashboardService {
 
     /**
      * Ceremonies follow a fixed cadence, so they are derived from the sprint
-     * window rather than stored: standup daily, review and retro at the close,
-     * next planning the working day after.
+     * window rather than stored: standup daily, review on the working day
+     * before the close, retro at the close, next planning the working day
+     * after.
+     *
+     * Both steps are working-day arithmetic, like every other date in this
+     * module. Raw calendar arithmetic scheduled a Friday-ending sprint's next
+     * planning on the Saturday, and a Monday-ending sprint's review on the
+     * Sunday — days nobody is in the office for.
      */
     private List<Map<String, String>> ceremonies(ScrumSprint sprint) {
 
@@ -108,7 +116,8 @@ public class ScrumMasterDashboardService {
 
             list.add(ceremony(
                     "Sprint review",
-                    sprint.getEndDate().minusDays(1).format(DAY_MONTH) + " · 3:00 PM",
+                    previousWorkingDay(sprint.getEndDate()).format(DAY_MONTH)
+                            + " · 3:00 PM",
                     "plan"
             ));
 
@@ -118,14 +127,35 @@ public class ScrumMasterDashboardService {
                     "test"
             ));
 
+            // plusWorkingDays counts its own start as day 1, so day 2 is the
+            // first working day after the sprint closes
             list.add(ceremony(
                     "Next sprint planning",
-                    sprint.getEndDate().plusDays(1).format(DAY_MONTH) + " · 9:00 AM",
+                    ScrumWorkingDays.plusWorkingDays(sprint.getEndDate(), 2)
+                            .format(DAY_MONTH) + " · 9:00 AM",
                     "active"
             ));
         }
 
         return list;
+    }
+
+    /**
+     * The working day before `date`. Stepping back one calendar day is not
+     * enough on its own: from a Monday that lands on the Sunday, and from a
+     * Sunday on the Saturday. At most two extra steps are ever needed.
+     */
+    private LocalDate previousWorkingDay(LocalDate date) {
+
+        LocalDate previous = date.minusDays(1);
+
+        while (previous.getDayOfWeek() == DayOfWeek.SATURDAY
+                || previous.getDayOfWeek() == DayOfWeek.SUNDAY) {
+
+            previous = previous.minusDays(1);
+        }
+
+        return previous;
     }
 
     private Map<String, String> ceremony(String name, String when, String tone) {

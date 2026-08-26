@@ -140,13 +140,20 @@ public class ScrumBoardService {
 
             ScrumTask.Status status = column.getKey();
 
+            // The column's real contents, before any filter is applied. A WIP
+            // limit is a property of the column, not of who is looking at it,
+            // so a breach must not vanish the moment someone filters
+            List<ScrumTaskDto.Card> columnCards = allCards.stream()
+                    .filter(card -> status.name().equals(card.status()))
+                    .toList();
+
             // Every column is always emitted, even when a filter empties it —
             // a column that vanishes cannot be dropped onto
             List<ScrumTaskDto.Card> cards = visibleCards.stream()
                     .filter(card -> status.name().equals(card.status()))
                     .toList();
 
-            int columnPoints = cards.stream()
+            int columnPoints = columnCards.stream()
                     .mapToInt(card -> card.storyPoints() == null ? 0 : card.storyPoints())
                     .sum();
 
@@ -156,15 +163,18 @@ public class ScrumBoardService {
                     new ScrumBoardDto.Column(
                             status.name(),
                             column.getValue(),
-                            cards.size(),
+                            columnCards.size(),
                             columnPoints,
                             wipLimit,
-                            wipLimit != null && cards.size() > wipLimit,
+                            wipLimit != null && columnCards.size() > wipLimit,
+                            // visibleCards is a subset of allCards, so the
+                            // difference is exactly what the filter is hiding
+                            columnCards.size() - cards.size(),
                             cards
                     )
             );
 
-            totalTasks += cards.size();
+            totalTasks += columnCards.size();
             totalPoints += columnPoints;
         }
 
@@ -172,8 +182,8 @@ public class ScrumBoardService {
                 sprint.getId(),
                 sprint.getName(),
                 sprint.getStatus() == null ? null : sprint.getStatus().name(),
-                // Header totals count the filtered cards so they always equal
-                // the sum of the columns shown underneath them
+                // Unfiltered, so the sprint's task and point counts read the
+                // same here as they do on the sprint and analytics screens
                 totalTasks,
                 totalPoints,
                 availableLabels,
@@ -206,14 +216,11 @@ public class ScrumBoardService {
                 .orElseThrow(() -> new ScrumNotFoundException(
                         "Task " + taskId + " not found."));
 
-        String blockedReason = trimToNull(request.blockedReason());
-
-        // A blocker nobody can read is a blocker nobody can clear, so the
-        // reason is mandatory on the way into BLOCKED
-        if (target == ScrumTask.Status.BLOCKED && blockedReason == null) {
-            throw new ScrumValidationException(
-                    "A reason is required when blocking a task.");
-        }
+        // One rule, one implementation: ScrumTaskService owns the BLOCKED
+        // invariant, so a drag on the board and a PATCH on the task cannot end
+        // up enforcing different things about the same column
+        String blockedReason = taskService.resolveBlockedReason(
+                task, target, request.blockedReason());
 
         // moveTo maintains enteredStatusAt and completedAt, and clears the
         // stale reason when the card leaves BLOCKED
@@ -256,7 +263,14 @@ public class ScrumBoardService {
     }
 
 
-    /** Upserts one column's limit and hands back the board it applies to. */
+    /**
+     * Upserts one column's limit and hands back the board it applies to.
+     *
+     * The limit reads exactly three ways, as WipLimitRequest documents: null or
+     * 0 clears the limit and is stored as null, so the read path never has to
+     * tell the two apart; a positive number sets it; a negative number is a
+     * ScrumValidationException rather than a silent "unlimited".
+     */
     @Transactional
     public ScrumBoardDto.Response setWipLimit(
             ScrumBoardDto.WipLimitRequest request,
@@ -278,8 +292,6 @@ public class ScrumBoardService {
                     "WIP limit cannot be negative: " + limit);
         }
 
-        // 0 and null both mean unlimited; store the one form so the read path
-        // never has to decide which of the two it is looking at
         Integer stored = (limit == null || limit == 0) ? null : limit;
 
         ScrumWipLimit wipLimit = wipLimitRepository.findByStatus(status)
@@ -389,16 +401,23 @@ public class ScrumBoardService {
     }
 
 
-    /** Substring match on key or title — how people actually hunt for a card. */
+    /**
+     * Substring match on key, title or description — the three fields the
+     * board's search box promises, so the placeholder and the query agree.
+     */
     private static boolean matchesSearch(ScrumTaskDto.Card card, String lowerSearch) {
 
-        if (card.taskKey() != null
-                && card.taskKey().toLowerCase(Locale.ROOT).contains(lowerSearch)) {
-            return true;
-        }
+        return containsIgnoreCase(card.taskKey(), lowerSearch)
+                || containsIgnoreCase(card.title(), lowerSearch)
+                || containsIgnoreCase(card.description(), lowerSearch);
+    }
 
-        return card.title() != null
-                && card.title().toLowerCase(Locale.ROOT).contains(lowerSearch);
+
+    /** Null-safe, case-insensitive containment; the search term arrives lowered. */
+    private static boolean containsIgnoreCase(String value, String lowerSearch) {
+
+        return value != null
+                && value.toLowerCase(Locale.ROOT).contains(lowerSearch);
     }
 
 

@@ -41,6 +41,19 @@ public class ScrumTaskController {
 
     // ============================================
     // GET
+    // Every task, in key order
+    //
+    // GET /api/scrummaster/tasks
+    // ============================================
+    @GetMapping
+    public ResponseEntity<List<ScrumTaskDto.Card>> getTasks() {
+
+        return ResponseEntity.ok(taskService.listTasks());
+    }
+
+
+    // ============================================
+    // GET
     // People a task can be assigned to
     //
     // GET /api/scrummaster/tasks/members

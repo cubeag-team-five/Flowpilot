@@ -41,13 +41,23 @@ public class ScrumSprintDto {
             List<Long> backlogTaskIds
     ) {}
 
+    /**
+     * A PATCH body, so a null field means "leave this alone" — which on its own
+     * makes clearing a field impossible to express: an emptied goal, end date
+     * or capacity arrives as null and would be silently discarded while the
+     * request still reported success. The clear flags say "make this null" out
+     * loud, and each one wins over the value sent beside it.
+     */
     public record UpdateRequest(
             String name,
             String goal,
             LocalDate startDate,
             LocalDate endDate,
             Integer capacityPoints,
-            Long projectId
+            Long projectId,
+            Boolean clearGoal,
+            Boolean clearEndDate,
+            Boolean clearCapacity
     ) {}
 
     public record CompleteResult(

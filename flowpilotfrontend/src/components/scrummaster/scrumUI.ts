@@ -111,9 +111,42 @@ export const PRIORITY_STYLE = {
   LOWEST:  { chip: 'bg-slate-50 text-slate-400 border-slate-200', rank: 4, mark: '↓↓' }
 } as const;
 
-/** Label chips stay neutral so they never compete with status colour. */
-export const LABEL_CHIP =
-  'bg-slate-100 text-slate-600 border border-slate-200 rounded px-1.5 py-0.5';
+/**
+ * Colour labels (SRS Module 5).
+ *
+ * A label's colour is derived from its own text, so "backend" is the same hue
+ * on every card and across every sprint without anyone configuring it. The
+ * palette is deliberately muted: status colour has to stay the loudest thing
+ * on the board, and a rainbow of labels would drown it.
+ */
+const LABEL_PALETTE = [
+  'bg-sky-50 text-sky-700 border-sky-200',
+  'bg-violet-50 text-violet-700 border-violet-200',
+  'bg-amber-50 text-amber-700 border-amber-200',
+  'bg-teal-50 text-teal-700 border-teal-200',
+  'bg-fuchsia-50 text-fuchsia-700 border-fuchsia-200',
+  'bg-lime-50 text-lime-700 border-lime-200',
+  'bg-cyan-50 text-cyan-700 border-cyan-200',
+  'bg-rose-50 text-rose-700 border-rose-200'
+] as const;
+
+/** Neutral base every label chip shares. */
+export const LABEL_CHIP = 'border rounded px-1.5 py-0.5';
+
+/** Stable colour for a label, from a small case-insensitive string hash. */
+export const labelColour = (label: string): string => {
+  let hash = 0;
+
+  for (let i = 0; i < label.length; i++) {
+    // Same shape as Java's String.hashCode, kept simple and deterministic
+    hash = (hash * 31 + label.toLowerCase().charCodeAt(i)) | 0;
+  }
+
+  return LABEL_PALETTE[Math.abs(hash) % LABEL_PALETTE.length];
+};
+
+/** Full class string for a label chip, colour included. */
+export const labelChip = (label: string): string => `${LABEL_CHIP} ${labelColour(label)}`;
 
 /** Shared form control styling, so every Scrum Master form matches. */
 export const FIELD = {

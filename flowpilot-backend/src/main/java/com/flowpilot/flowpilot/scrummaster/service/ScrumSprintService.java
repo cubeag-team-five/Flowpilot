@@ -143,7 +143,12 @@ public class ScrumSprintService {
             // With no start date there is nothing to add the days to; the
             // sprint stays open-ended until someone schedules it
             if (startDate != null) {
-                endDate = startDate.plusDays(duration);
+
+                // durationDays is working days, the unit every read path in
+                // this module reports. Adding calendar days here made a
+                // 14-day sprint read back as 11 working days and stretched
+                // the burndown ideal line over a window nobody planned.
+                endDate = ScrumWorkingDays.plusWorkingDays(startDate, duration);
             }
         }
 
@@ -190,7 +195,11 @@ public class ScrumSprintService {
             sprint.setName(requireName(request.name()));
         }
 
-        if (request.goal() != null) {
+        // clearGoal is the explicit erase, so it beats any goal sent alongside
+        // it — otherwise "clear" and "rewrite" would race
+        if (Boolean.TRUE.equals(request.clearGoal())) {
+            sprint.setGoal(null);
+        } else if (request.goal() != null) {
             sprint.setGoal(trimToNull(request.goal()));
         }
 
@@ -201,17 +210,26 @@ public class ScrumSprintService {
                         ? sprint.getStartDate()
                         : request.startDate();
 
-        LocalDate endDate =
-                request.endDate() == null
-                        ? sprint.getEndDate()
-                        : request.endDate();
+        // Same precedence for the end date: clearing reopens the window, which
+        // is how a sprint whose dates were entered wrongly gets rescheduled
+        LocalDate endDate;
+
+        if (Boolean.TRUE.equals(request.clearEndDate())) {
+            endDate = null;
+        } else if (request.endDate() != null) {
+            endDate = request.endDate();
+        } else {
+            endDate = sprint.getEndDate();
+        }
 
         requireOrderedDates(startDate, endDate);
 
         sprint.setStartDate(startDate);
         sprint.setEndDate(endDate);
 
-        if (request.capacityPoints() != null) {
+        if (Boolean.TRUE.equals(request.clearCapacity())) {
+            sprint.setCapacityPoints(null);
+        } else if (request.capacityPoints() != null) {
             sprint.setCapacityPoints(validCapacity(request.capacityPoints()));
         }
 
@@ -243,6 +261,9 @@ public class ScrumSprintService {
                             + " and cannot be started again");
         }
 
+        // The friendly pre-check: it names the sprint standing in the way. It
+        // is check-then-act though, so requireSoleActiveSprint re-reads after
+        // the write to catch a rival start that slipped past this point.
         Optional<ScrumSprint> running =
                 sprintRepository.findFirstByStatus(ScrumSprint.Status.ACTIVE);
 
@@ -257,13 +278,25 @@ public class ScrumSprintService {
             sprint.setStartDate(LocalDate.now());
         }
 
+        // An active sprint with no end date has no window: durationOf and
+        // remaining both return 0, the burndown ideal line collapses onto the
+        // axis and the header reads "0 days left" on day one. Two working
+        // weeks is the module's default cadence, so start day plus ten
+        // working days gives a real window to burn down against.
+        if (sprint.getEndDate() == null) {
+            sprint.setEndDate(
+                    ScrumWorkingDays.plusWorkingDays(sprint.getStartDate(), 10));
+        }
+
         // The commitment is whatever is in the sprint right now. Frozen here so
         // anything added later shows up as added scope rather than vanishing
         // into a total that quietly grew to match.
         sprint.setCommittedPoints(pointsInSprint(sprint.getId()));
         sprint.setStatus(ScrumSprint.Status.ACTIVE);
 
-        ScrumSprint started = sprintRepository.save(sprint);
+        ScrumSprint started = sprintRepository.saveAndFlush(sprint);
+
+        requireSoleActiveSprint(started);
 
         // Day-zero point, so the burndown has a real starting height instead of
         // beginning at whatever the first nightly cron run happened to catch
@@ -434,6 +467,20 @@ public class ScrumSprintService {
                             + " Complete it before deleting it");
         }
 
+        // A completed sprint is the delivery record, and deleting one corrupts
+        // it twice over: its DONE cards land back in the product backlog still
+        // marked DONE, where planning can pull them into a new sprint and count
+        // them as delivered a second time, and its snapshots, standups and
+        // retro notes — the velocity history — are erased with it.
+        if (sprint.getStatus() == ScrumSprint.Status.COMPLETED) {
+            throw new ScrumValidationException(
+                    label(sprint) + " has been completed and is the delivery"
+                            + " record for that work: its finished cards,"
+                            + " burndown history, standups and retrospective"
+                            + " notes are what velocity is measured from."
+                            + " Only a planned sprint can be deleted");
+        }
+
         ScrumSprintDto.Response deleted = toResponse(sprint);
 
         // Tasks outlive the sprint — they are the work, not a detail of the
@@ -496,8 +543,8 @@ public class ScrumSprintService {
                 sprint.getStartDate(),
                 sprint.getEndDate(),
                 sprint.getStatus() == null ? null : sprint.getStatus().name(),
-                // Same arithmetic the create request uses for durationDays, so
-                // a sprint created with 14 days reads back as 14
+                // Working days, the same unit createSprint reads durationDays
+                // in, so a sprint planned as 14 days reads back as 14
                 sprint.getTotalDays(),
                 sprint.getDaysRemaining(),
                 sprint.getDaysElapsed(),
@@ -573,6 +620,43 @@ public class ScrumSprintService {
         }
 
         taskRepository.save(task);
+    }
+
+    /**
+     * Verifies, after this sprint has been written as ACTIVE, that it is the
+     * only ACTIVE sprint — and stands down if it is not.
+     *
+     * The guard in startSprint reads before it writes, so two starts arriving
+     * together can both find no active sprint and both write one. Five other
+     * services then ask findFirstByStatus which sprint is active, with no
+     * ordering to make them agree, so each can answer with a different one:
+     * the board, the burndown and the dashboard describe different sprints,
+     * which is a worse outcome than refusing one of the two starts.
+     *
+     * The real fix is a partial unique index on status where status = 'ACTIVE',
+     * which the database can enforce without a race. This only narrows the
+     * window — a competing transaction that has not committed yet is invisible
+     * here — so it is a safety net under that index, not a substitute for it.
+     */
+    private void requireSoleActiveSprint(ScrumSprint started) {
+
+        List<ScrumSprint> active = sprintRepository
+                .findByStatusOrderBySprintNumberDesc(ScrumSprint.Status.ACTIVE);
+
+        if (active.size() <= 1) {
+            return;
+        }
+
+        // Reverted explicitly rather than left to the rollback this exception
+        // triggers, so the in-memory entity matches what the caller is told
+        started.setStatus(ScrumSprint.Status.PLANNED);
+        started.setCommittedPoints(null);
+        sprintRepository.save(started);
+
+        throw new ScrumValidationException(
+                "Another sprint was started at the same moment and won,"
+                        + " so " + midLabel(started) + " stays planned."
+                        + " Reload to see which sprint is active");
     }
 
     /** Reads the id off the lazy proxy without loading the sprint. */

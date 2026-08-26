@@ -28,7 +28,7 @@ import jakarta.persistence.UniqueConstraint;
  */
 @Entity
 @Table(
-    name = "scrum_standup_entries",
+    name = "scrum_standups",
     uniqueConstraints = @UniqueConstraint(
         name = "uk_scrum_standup_member_day",
         columnNames = { "sprint_id", "member_id", "standup_date" }

@@ -14,6 +14,7 @@ import {
   addToSprint,
   completeSprint,
   fetchBoard,
+  fetchProjects,
   createSprint,
   deleteSprint,
   fetchBacklog,
@@ -22,6 +23,7 @@ import {
   startSprint,
   updateSprint,
   type Card,
+  type Project,
   type Sprint,
   type SprintStatus
 } from './scrumApi';
@@ -64,6 +66,7 @@ interface SprintDraft {
   durationDays: string;
   endDate: string;
   capacityPoints: string;
+  projectId: string;
 }
 
 const emptyDraft = (): SprintDraft => ({
@@ -73,12 +76,14 @@ const emptyDraft = (): SprintDraft => ({
   endMode: 'duration',
   durationDays: '14',
   endDate: '',
-  capacityPoints: ''
+  capacityPoints: '',
+  projectId: ''
 });
 
 export const ScrumSprints: React.FC = () => {
   const [sprints, setSprints] = useState<Sprint[]>([]);
   const [backlog, setBacklog] = useState<Card[]>([]);
+  const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
@@ -97,9 +102,16 @@ export const ScrumSprints: React.FC = () => {
     setError('');
 
     try {
-      const [sprintList, backlogList] = await Promise.all([fetchSprints(), fetchBacklog()]);
+      const [sprintList, backlogList, projectList] = await Promise.all([
+        fetchSprints(),
+        fetchBacklog(),
+        // A sprint belongs to a project (SRS section 14). The list is the PM
+        // module's, read-only, so a renamed project renames here too.
+        fetchProjects().catch(() => [])
+      ]);
       setSprints(sprintList);
       setBacklog(backlogList);
+      setProjects(projectList);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not load sprints');
     } finally {
@@ -119,6 +131,17 @@ export const ScrumSprints: React.FC = () => {
         .reduce((sum, task) => sum + task.storyPoints, 0),
     [backlog, picked]
   );
+
+  /** Shown under the picker so the roster consequence is visible up front. */
+  const selectedProject = projects.find((p) => String(p.id) === draft.projectId) ?? null;
+
+  /** Sprints carry a project id; the name lives in the PM module. */
+  const projectNameOf = (projectId: number | null): string | null => {
+    if (projectId === null) return null;
+
+    const found = projects.find((p) => p.id === projectId);
+    return found ? (found.name ?? found.code ?? `Project ${projectId}`) : `Project ${projectId}`;
+  };
 
   const capacity = Number(draft.capacityPoints) || 0;
   const overCapacity = capacity > 0 && pickedPoints > capacity;
@@ -159,6 +182,7 @@ export const ScrumSprints: React.FC = () => {
         endDate: draft.endMode === 'date' ? draft.endDate || null : null,
         durationDays: draft.endMode === 'duration' ? Number(draft.durationDays) || null : null,
         capacityPoints: draft.capacityPoints === '' ? null : Number(draft.capacityPoints),
+        projectId: draft.projectId === '' ? null : Number(draft.projectId),
         backlogTaskIds: picked
       });
 
@@ -235,7 +259,8 @@ export const ScrumSprints: React.FC = () => {
       endMode: 'date',
       durationDays: '',
       endDate: sprint.endDate ?? '',
-      capacityPoints: sprint.capacityPoints === null ? '' : String(sprint.capacityPoints)
+      capacityPoints: sprint.capacityPoints === null ? '' : String(sprint.capacityPoints),
+      projectId: sprint.projectId === null ? '' : String(sprint.projectId)
     });
   };
 
@@ -248,7 +273,8 @@ export const ScrumSprints: React.FC = () => {
           goal: editDraft.goal.trim() || null,
           startDate: editDraft.startDate || null,
           endDate: editDraft.endDate || null,
-          capacityPoints: editDraft.capacityPoints === '' ? null : Number(editDraft.capacityPoints)
+          capacityPoints: editDraft.capacityPoints === '' ? null : Number(editDraft.capacityPoints),
+          projectId: editDraft.projectId === '' ? null : Number(editDraft.projectId)
         }),
       `${sprint.name} updated.`
     );
@@ -336,6 +362,36 @@ export const ScrumSprints: React.FC = () => {
                 className={`${TYPE.body} ${FIELD.input}`}
               />
             </div>
+          </div>
+
+          <div>
+            <label className={`${TYPE.eyebrow} text-slate-400 block mb-1.5`} htmlFor="sprint-project">
+              Project
+            </label>
+            <select
+              id="sprint-project"
+              value={draft.projectId}
+              onChange={(event) => setDraft({ ...draft, projectId: event.target.value })}
+              className={`${TYPE.body} ${FIELD.input} cursor-pointer`}
+            >
+              <option value="">Not linked to a project</option>
+              {projects.map((project) => (
+                <option key={project.id} value={project.id}>
+                  {project.code ? `${project.code} — ` : ''}{project.name ?? 'Unnamed'}
+                  {project.status ? ` (${project.status})` : ''}
+                </option>
+              ))}
+            </select>
+            {selectedProject && (
+              <p className={`${TYPE.meta} text-slate-500 mt-1.5`}>
+                {selectedProject.memberCount === 0
+                  ? 'This project has no team members recorded yet, so the sprint roster will be empty.'
+                  : `Sprint roster comes from this project's team: ${selectedProject.members
+                      .map((member) => member.name ?? member.email)
+                      .filter(Boolean)
+                      .join(', ')}`}
+              </p>
+            )}
           </div>
 
           <div>
@@ -558,6 +614,25 @@ export const ScrumSprints: React.FC = () => {
                         />
                       </div>
 
+                      <div>
+                        <label className={`${TYPE.eyebrow} text-slate-400 block mb-1.5`} htmlFor={`edit-project-${sprint.id}`}>
+                          Project
+                        </label>
+                        <select
+                          id={`edit-project-${sprint.id}`}
+                          value={editDraft.projectId}
+                          onChange={(event) => setEditDraft({ ...editDraft, projectId: event.target.value })}
+                          className={`${TYPE.body} ${FIELD.input} cursor-pointer`}
+                        >
+                          <option value="">Not linked to a project</option>
+                          {projects.map((project) => (
+                            <option key={project.id} value={project.id}>
+                              {project.code ? `${project.code} — ` : ''}{project.name ?? 'Unnamed'}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
                       <div className="grid grid-cols-2 gap-3">
                         <div>
                           <label className={`${TYPE.eyebrow} text-slate-400 block mb-1.5`} htmlFor={`edit-start-${sprint.id}`}>
@@ -624,6 +699,12 @@ export const ScrumSprints: React.FC = () => {
                           {sprint.capacityPoints !== null && ` of ${sprint.capacityPoints}p capacity`}
                           {sprint.committedPoints !== null && ` · committed ${sprint.committedPoints}p`}
                         </p>
+
+                        {projectNameOf(sprint.projectId) !== null && (
+                          <p className={`${TYPE.meta} ${STATUS.plan.text} font-medium mt-1`}>
+                            {projectNameOf(sprint.projectId)}
+                          </p>
+                        )}
 
                         {sprint.overCapacity && (
                           <p className={`${TYPE.meta} ${STATUS.blocked.text} font-medium mt-1`}>

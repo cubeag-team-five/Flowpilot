@@ -24,14 +24,13 @@ import jakarta.persistence.Table;
  *
  * Action items are the only kind that carry an owner and a due date, because
  * they are the only kind that must actually happen.
- *
- * Table name is scrum_retro_notes rather than scrum_retrospectives: another
- * module already owns scrum_retrospectives on the shared database with
- * non-null category/content columns. Renaming avoids a collision without
- * touching their schema.
+
+ * Shares the scrum_retrospectives table with the earlier schema built for this
+ * module. Its category/content columns are left in place but unmapped, since
+ * kind/text carry the same meaning with an enum behind them.
  */
 @Entity
-@Table(name = "scrum_retro_notes")
+@Table(name = "scrum_retrospectives")
 public class ScrumRetrospective {
 
     public enum Kind {

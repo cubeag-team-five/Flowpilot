@@ -114,9 +114,21 @@ public class ScrumTask {
     @Column(name = "entered_status_at", nullable = false)
     private LocalDateTime enteredStatusAt;
 
-    /** Set the first time the task reaches DONE; cleared if it reopens. */
+    /**
+     * Set the first time the task reaches DONE and never cleared afterwards.
+     * See moveTo: this timestamp is the only record of when the work was
+     * actually finished, so a reopen is recorded in reopenCount instead.
+     */
     @Column(name = "completed_at")
     private LocalDateTime completedAt;
+
+    /**
+     * How many times the card has left DONE. Because completedAt keeps the
+     * first completion, this counter is the only trace a reopen leaves, and it
+     * is what tells a clean first-time close apart from work that bounced.
+     */
+    @Column(name = "reopen_count", nullable = false, columnDefinition = "integer default 0")
+    private int reopenCount;
 
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
@@ -150,11 +162,25 @@ public class ScrumTask {
         if (this.status == Status.DONE && this.completedAt == null) {
             this.completedAt = LocalDateTime.now();
         }
+
+        // reopen_count is NOT NULL and starts at zero. A primitive is already
+        // zero, so the only thing left to normalise is a negative value
+        // arriving through the setter
+        if (this.reopenCount < 0) {
+            this.reopenCount = 0;
+        }
     }
 
     /**
-     * Moves the card, restarts its ageing clock, and maintains completedAt.
-     * Always use this instead of setStatus so the metrics stay truthful.
+     * Moves the card, restarts its ageing clock, and maintains the completion
+     * trail. Always use this instead of setStatus so the metrics stay truthful.
+     *
+     * completedAt records the first time the card reached DONE and is never
+     * cleared. Wiping it on a reopen made the next close look like the work
+     * had run from creation to that day, and because velocity re-derives a
+     * closed sprint from live rows, reopening one card inside a COMPLETED
+     * sprint rewrote that sprint's bar and could flip its success verdict.
+     * Leaving DONE bumps reopenCount instead, so the bounce is still visible.
      */
     public void moveTo(Status newStatus) {
 
@@ -162,16 +188,21 @@ public class ScrumTask {
             return;
         }
 
+        Status previous = this.status;
+
         this.status = newStatus;
         this.enteredStatusAt = LocalDateTime.now();
 
         if (newStatus == Status.DONE) {
-            // First completion wins, so reopened-then-closed work is not double counted
+
+            // First completion wins, so reopened-then-closed work is not
+            // double counted in completion time
             if (this.completedAt == null) {
                 this.completedAt = LocalDateTime.now();
             }
-        } else {
-            this.completedAt = null;
+
+        } else if (previous == Status.DONE) {
+            this.reopenCount++;
         }
 
         if (newStatus != Status.BLOCKED) {
@@ -201,7 +232,10 @@ public class ScrumTask {
                 && this.dueDate.isBefore(LocalDate.now());
     }
 
-    /** Hours from creation to completion, or null while unfinished. */
+    /**
+     * Hours from creation to the first completion, or null while unfinished.
+     * A card that reopened and closed again still reports that first run.
+     */
     public Double getCompletionHours() {
 
         if (this.completedAt == null || this.createdAt == null) {
@@ -373,6 +407,14 @@ public class ScrumTask {
 
     public void setCompletedAt(LocalDateTime completedAt) {
         this.completedAt = completedAt;
+    }
+
+    public int getReopenCount() {
+        return reopenCount;
+    }
+
+    public void setReopenCount(int reopenCount) {
+        this.reopenCount = reopenCount;
     }
 
     public LocalDateTime getCreatedAt() {

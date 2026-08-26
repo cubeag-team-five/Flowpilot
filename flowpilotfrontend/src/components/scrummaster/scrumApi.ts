@@ -506,3 +506,71 @@ export const fetchAnalytics = (sprintId?: number) =>
   request<Analytics>(`/analytics${query({ sprintId })}`);
 
 export const fetchDashboard = () => request<Dashboard>('/dashboard');
+
+// ============================================
+// TASK COMMENTS  (SRS Module 4)
+// ============================================
+
+export interface TaskComment {
+  id: number;
+  taskId: number;
+  authorId: number | null;
+  authorName: string | null;
+  authorInitials: string;
+  body: string;
+  createdAt: string;
+  editedAt: string | null;
+  edited: boolean;
+}
+
+export const fetchComments = (taskId: number) =>
+  request<TaskComment[]>(`/comments/task/${taskId}`);
+
+export const addComment = (taskId: number, body: string, authorId?: number | null) =>
+  request<TaskComment>(`/comments/task/${taskId}`, {
+    method: 'POST',
+    body: JSON.stringify({ body, authorId: authorId ?? null })
+  });
+
+export const editComment = (commentId: number, body: string) =>
+  request<TaskComment>(`/comments/${commentId}`, {
+    method: 'PATCH',
+    body: JSON.stringify({ body })
+  });
+
+export const deleteComment = (commentId: number) =>
+  request<{ success: boolean }>(`/comments/${commentId}`, { method: 'DELETE' });
+
+// ============================================
+// PROJECTS  (read-only bridge to the PM module)
+// ============================================
+
+export interface ProjectMember {
+  id: number;
+  name: string | null;
+  email: string | null;
+  employeeId: string | null;
+  designation: string | null;
+  initials: string;
+}
+
+export interface Project {
+  id: number;
+  code: string | null;
+  name: string | null;
+  status: string | null;
+  progress: number | null;
+  startDate: string | null;
+  endDate: string | null;
+  memberCount: number;
+  members: ProjectMember[];
+}
+
+export const fetchProjects = () => request<Project[]>('/projects');
+
+export const fetchProject = (projectId: number) =>
+  request<Project>(`/projects/${projectId}`);
+
+/** The sprint roster: the owning project's team (SRS Module 6 "Members"). */
+export const fetchProjectMembers = (projectId: number) =>
+  request<ProjectMember[]>(`/projects/${projectId}/members`);

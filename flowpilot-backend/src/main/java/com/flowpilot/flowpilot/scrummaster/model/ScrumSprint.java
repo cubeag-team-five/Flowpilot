@@ -104,13 +104,47 @@ public class ScrumSprint {
         return ScrumWorkingDays.durationOf(this.startDate, this.endDate);
     }
 
-    /** Working days already spent. */
+    /**
+     * Working days already spent.
+     *
+     * Status decides which window to measure, because a sprint is not a
+     * calendar. A COMPLETED sprint is history: its elapsed count is the whole
+     * window even when it was closed early, since measuring against today
+     * kept it climbing for months after the sprint stopped existing. A PLANNED
+     * sprint has not started, so nothing is spent yet however long ago its
+     * nominal start date was.
+     */
     public int getDaysElapsed() {
+
+        if (this.status == Status.COMPLETED) {
+            return getTotalDays();
+        }
+
+        if (this.status == Status.PLANNED) {
+            return 0;
+        }
+
         return ScrumWorkingDays.elapsed(this.startDate, this.endDate);
     }
 
-    /** Working days left before the sprint ends. */
+    /**
+     * Working days left before the sprint ends.
+     *
+     * The mirror of getDaysElapsed: nothing is left in a COMPLETED sprint, and
+     * a PLANNED one still has its whole window ahead of it. Counting from
+     * today in either case made a sprint closed early look like it was still
+     * running, and drained a planned sprint before anyone started it.
+     */
     public int getDaysRemaining() {
+
+        if (this.status == Status.COMPLETED) {
+            return 0;
+        }
+
+        if (this.status == Status.PLANNED) {
+            return getTotalDays();
+        }
+
         return ScrumWorkingDays.remaining(this.startDate, this.endDate);
     }
 

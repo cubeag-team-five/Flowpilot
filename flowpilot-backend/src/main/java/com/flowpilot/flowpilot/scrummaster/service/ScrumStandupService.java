@@ -70,7 +70,11 @@ public class ScrumStandupService {
 
         ScrumSprint sprint = resolveSprint(sprintId);
 
-        LocalDate standupDate = date == null ? LocalDate.now() : date;
+        // "Today" has to be the sprint's today, not the JVM host's: on a
+        // server in another zone the morning standup opens on a date the sprint
+        // does not consider today, so it reads as empty while the entries sit
+        // under the real one
+        LocalDate standupDate = date == null ? ScrumWorkingDays.today() : date;
 
         List<ScrumStandup> standups =
                 standupRepository.findBySprintIdAndStandupDateOrderByIdAsc(
@@ -136,8 +140,11 @@ public class ScrumStandupService {
                 .orElseThrow(() -> new ScrumNotFoundException(
                         "Member " + request.memberId() + " was not found."));
 
+        // Same clock as the read path. Any other and a save with no date given
+        // lands on a different day than the screen it was typed into, so the
+        // entry disappears from the standup that created it
         LocalDate standupDate = request.standupDate() == null
-                ? LocalDate.now()
+                ? ScrumWorkingDays.today()
                 : request.standupDate();
 
         String yesterday = trimToNull(request.yesterday());
@@ -168,7 +175,9 @@ public class ScrumStandupService {
             standup.setStandupDate(standupDate);
 
         } else {
-            standup.setUpdatedAt(LocalDateTime.now());
+            // Stamped in the module's zone too, so an edit's timestamp cannot
+            // date from a different day than the entry it belongs to
+            standup.setUpdatedAt(LocalDateTime.now(ScrumWorkingDays.ZONE));
         }
 
         // Blank is stored as null so ScrumStandup.isBlocked stays the single

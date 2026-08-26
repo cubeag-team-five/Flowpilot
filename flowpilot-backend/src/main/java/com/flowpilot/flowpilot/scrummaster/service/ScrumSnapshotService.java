@@ -62,8 +62,19 @@ public class ScrumSnapshotService {
      */
     @Transactional
     public void captureToday(Long sprintId) {
+        captureOn(requireSprint(sprintId), ScrumWorkingDays.today());
+    }
 
-        ScrumSprint sprint = requireSprint(sprintId);
+
+    /**
+     * Records a sprint's position as it stands right now, stamped with the
+     * given date.
+     *
+     * The date is a parameter rather than always "today" because a backfill has
+     * to place its one point inside the sprint it describes; every live capture
+     * passes ScrumWorkingDays.today().
+     */
+    private void captureOn(ScrumSprint sprint, LocalDate date) {
 
         int total = pointsInSprint(sprint.getId());
         int completed = donePointsInSprint(sprint.getId());
@@ -72,14 +83,12 @@ public class ScrumSnapshotService {
         // could otherwise drive remaining below zero and bend the chart
         int remaining = Math.max(0, total - completed);
 
-        LocalDate today = ScrumWorkingDays.today();
-
         ScrumBurndownSnapshot snapshot = snapshotRepository
-                .findBySprintIdAndSnapshotDate(sprint.getId(), today)
+                .findBySprintIdAndSnapshotDate(sprint.getId(), date)
                 .orElseGet(ScrumBurndownSnapshot::new);
 
         snapshot.setSprintId(sprint.getId());
-        snapshot.setSnapshotDate(today);
+        snapshot.setSnapshotDate(date);
         snapshot.setRemainingPoints(remaining);
         snapshot.setCompletedPoints(completed);
         snapshot.setTotalPoints(total);
@@ -107,7 +116,14 @@ public class ScrumSnapshotService {
      * calls simply join it — which is just as well, since a self-invocation
      * would bypass the proxy and get no transaction of its own.
      */
-    @Scheduled(cron = "0 55 23 * * *")
+    // The zone must stay equal to ScrumWorkingDays.ZONE. The trigger fires at
+    // 23:55 in the zone given here, while the row it writes is dated with
+    // ScrumWorkingDays.today(); on a host running in any other zone those two
+    // disagree, so the nightly row lands on the neighbouring day — or a second
+    // time on a day already recorded, overwriting it. @Scheduled needs a
+    // constant expression, so the ZoneId cannot be read from ScrumWorkingDays
+    // directly: if that zone ever moves, this string moves with it.
+    @Scheduled(cron = "0 55 23 * * *", zone = "Asia/Kolkata")
     @Transactional
     public void captureAllActive() {
 
@@ -129,11 +145,20 @@ public class ScrumSnapshotService {
     // ============================================
 
     /**
-     * Writes today's snapshot only when a sprint has none at all.
+     * Writes one snapshot only when a sprint has none at all.
      *
      * A sprint started after tonight's cron run has no history yet, and a chart
      * with zero points renders as an empty box that reads like a bug. One
      * genuine measured point is both honest and enough to draw.
+     *
+     * The point is dated today clamped into the sprint's own window rather than
+     * today unconditionally: a sprint that closed last month would otherwise
+     * gain a measurement dated weeks after it ended, which the burndown's
+     * working-day scale cannot place and which claims the sprint was still
+     * being tracked after it stopped existing.
+     *
+     * Only write flows call this. The analytics read path must not write at
+     * all, so it no longer asks for a backfill.
      */
     @Transactional
     public void backfillIfEmpty(Long sprintId) {
@@ -148,7 +173,29 @@ public class ScrumSnapshotService {
             return;
         }
 
-        captureToday(sprint.getId());
+        captureOn(sprint, withinWindow(ScrumWorkingDays.today(), sprint));
+    }
+
+
+    /**
+     * `date` pulled inside a sprint's window: earlier than the start becomes
+     * the start, later than the end becomes the end. An unset bound is open, so
+     * a sprint with no dates yet keeps the date it was given.
+     */
+    private LocalDate withinWindow(LocalDate date, ScrumSprint sprint) {
+
+        LocalDate start = sprint.getStartDate();
+        LocalDate end = sprint.getEndDate();
+
+        if (start != null && date.isBefore(start)) {
+            return start;
+        }
+
+        if (end != null && date.isAfter(end)) {
+            return end;
+        }
+
+        return date;
     }
 
 

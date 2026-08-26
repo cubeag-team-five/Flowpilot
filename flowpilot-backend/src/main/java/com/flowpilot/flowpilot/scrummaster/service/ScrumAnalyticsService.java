@@ -72,13 +72,19 @@ public class ScrumAnalyticsService {
     // ============================================
     ScrumAnalyticsDto.Burndown buildBurndown(ScrumSprint sprint) {
 
+        boolean closed = sprint.getStatus() == ScrumSprint.Status.COMPLETED;
+
         // A running sprint's last point must agree with the live KPI row, so
-        // today is re-captured on read (captureToday upserts). A closed sprint
-        // is history and stays exactly as it was recorded.
+        // today is re-captured on read. That is a correction, not an addition:
+        // captureToday upserts, and today is inside a running sprint's window.
+        //
+        // Nothing else is written from here. A PLANNED or COMPLETED sprint has
+        // no "today" of its own to record, so a write would invent a point
+        // outside the sprint window — dated now for a sprint that ended months
+        // ago — from a request that only asked to read. Whatever history exists
+        // is reported as it stands; an empty series is honest.
         if (sprint.getStatus() == ScrumSprint.Status.ACTIVE) {
             snapshotService.captureToday(sprint.getId());
-        } else {
-            snapshotService.backfillIfEmpty(sprint.getId());
         }
 
         List<ScrumBurndownSnapshot> snapshots =
@@ -99,10 +105,16 @@ public class ScrumAnalyticsService {
 
         for (ScrumBurndownSnapshot snapshot : snapshots) {
 
-            int dayNumber = sprint.getStartDate() == null
-                    ? series.size() + 1
-                    : Math.max(1, ScrumWorkingDays.dayNumber(
-                            sprint.getStartDate(), snapshot.getSnapshotDate()));
+            int dayNumber = plotDay(sprint, snapshot.getSnapshotDate(), series.size());
+
+            // A snapshot the sprint's working-day scale cannot place is left
+            // out rather than pulled to day 1. Clamping stacked a row recorded
+            // before the sprint began — a legacy backfill, or a start date
+            // edited afterwards — on top of the genuine first day, so the chart
+            // opened with two different heights claiming to be day 1.
+            if (dayNumber < 1) {
+                continue;
+            }
 
             series.add(new ScrumAnalyticsDto.DayPoint(
                     snapshot.getSnapshotDate(),
@@ -118,16 +130,38 @@ public class ScrumAnalyticsService {
         int donePoints = nullSafe(taskRepository.sumStoryPointsForSprintByStatus(
                 sprint.getId(), ScrumTask.Status.DONE));
 
-        // Remaining is scope minus completed. Deriving it from the commitment
-        // instead would hide mid-sprint additions entirely.
-        int remaining = Math.max(0, totalPoints - donePoints);
+        // For a sprint still in flight, remaining is scope minus completed.
+        // Deriving it from the commitment instead would hide mid-sprint
+        // additions entirely.
+        int liveRemaining = Math.max(0, totalPoints - donePoints);
 
-        int todayNumber = sprint.getStartDate() == null
-                ? Math.max(1, series.size())
-                : Math.max(1, ScrumWorkingDays.dayNumber(
-                        sprint.getStartDate(), ScrumWorkingDays.today()));
+        // The last row in the history, which for a closed sprint is the
+        // position captured as it was closed. It is taken from the full history
+        // rather than from the plotted series on purpose: a sprint completed
+        // after its nominal end date has its truest final measurement just
+        // outside the window, where the chart cannot draw it.
+        ScrumBurndownSnapshot closing = snapshots.isEmpty()
+                ? null
+                : snapshots.get(snapshots.size() - 1);
 
-        int behind = remaining - idealRemaining(committed, todayNumber, duration);
+        // A closed sprint's outcome is what was recorded on its last day, which
+        // live rows can no longer reproduce: completing a sprint carries the
+        // unfinished cards out of it, so total minus done collapses to zero and
+        // a sprint that delivered half its commitment reported nothing left to
+        // do.
+        int remaining = closed && closing != null
+                ? Math.max(0, nullSafe(closing.getRemainingPoints()))
+                : liveRemaining;
+
+        // A closed sprint is judged at its own final day. Judging it against
+        // today compares it to an ideal line that bottomed out at zero the
+        // moment the sprint ended, so any sprint whose leftovers were tidied
+        // away afterwards read as "on track".
+        int evaluationDay = closed
+                ? duration
+                : todayNumber(sprint, series.size());
+
+        int behind = remaining - idealRemaining(committed, evaluationDay, duration);
 
         return new ScrumAnalyticsDto.Burndown(
                 sprint.getId(),
@@ -145,19 +179,63 @@ public class ScrumAnalyticsService {
     }
 
     /**
+     * The working-day ordinal a snapshot is drawn at, or 0 when it cannot be
+     * drawn at all.
+     *
+     * Zero means "not on this sprint's chart": either the date falls outside
+     * the sprint window, or the window holds it but the working-day scale does
+     * not (a sprint whose start date is itself a weekend). With no start date
+     * there is no scale, so stored order is the only ordering available.
+     */
+    private int plotDay(ScrumSprint sprint, LocalDate date, int alreadyPlotted) {
+
+        if (sprint.getStartDate() == null) {
+            return alreadyPlotted + 1;
+        }
+
+        if (!isWithin(date, sprint.getStartDate(), sprint.getEndDate())) {
+            return 0;
+        }
+
+        return ScrumWorkingDays.dayNumber(sprint.getStartDate(), date);
+    }
+
+    /** The sprint's own count of today, for a sprint not yet closed. */
+    private int todayNumber(ScrumSprint sprint, int plotted) {
+
+        if (sprint.getStartDate() == null) {
+            return Math.max(1, plotted);
+        }
+
+        return Math.max(1, ScrumWorkingDays.dayNumber(
+                sprint.getStartDate(), ScrumWorkingDays.today()));
+    }
+
+    /**
      * Where a perfectly paced sprint would be at the end of a given day.
      * Day 1 starts at the full commitment; the final day lands on zero.
      */
-    private int idealRemaining(int committed, int dayNumber, int duration) {
+    private int idealRemaining(Integer committed, int dayNumber, int duration) {
 
+        int total = committed == null ? 0 : Math.max(0, committed);
+
+        if (total == 0) {
+            return 0;
+        }
+
+        // A one-day sprint has no descent to draw: all of its work is due on
+        // the single day it has, so the ideal at the end of that day is zero.
+        // Returning the full commitment held the ideal line flat at the top,
+        // and a one-day sprint that delivered everything was reported as ahead
+        // of a target it had in fact exactly met.
         if (duration <= 1) {
-            return committed;
+            return 0;
         }
 
         double fraction = (double) (dayNumber - 1) / (duration - 1);
-        int ideal = (int) Math.round(committed * (1.0 - fraction));
+        int ideal = (int) Math.round(total * (1.0 - fraction));
 
-        return Math.max(0, Math.min(committed, ideal));
+        return Math.max(0, Math.min(total, ideal));
     }
 
 
@@ -255,30 +333,36 @@ public class ScrumAnalyticsService {
         List<ScrumSprint> closed = sprintRepository
                 .findByStatusOrderBySprintNumberDesc(ScrumSprint.Status.COMPLETED);
 
-        Integer successRate = null;
+        int assessed = 0;
+        int met = 0;
 
-        if (!closed.isEmpty()) {
+        for (ScrumSprint past : closed) {
 
-            int met = 0;
+            Integer commitment = past.getCommittedPoints();
 
-            for (ScrumSprint past : closed) {
-
-                int committed = past.getCommittedPoints() == null ? 0 : past.getCommittedPoints();
-                int achieved = nullSafe(taskRepository.sumStoryPointsForSprintByStatus(
-                        past.getId(), ScrumTask.Status.DONE));
-
-                // A sprint with no commitment recorded cannot be judged against
-                // one, so it counts as met rather than as a failure.
-                boolean hit = committed == 0
-                        || (achieved * 100) >= (committed * SUCCESS_THRESHOLD_PERCENT);
-
-                if (hit) {
-                    met++;
-                }
+            // A sprint with no commitment recorded cannot be judged against
+            // one, so it is left out of the rate on both sides. Counting it as
+            // met while still counting it in the denominator handed it a free
+            // success and pulled the rate towards 100% — a team whose sprints
+            // were never given a commitment scored perfectly.
+            if (commitment == null || commitment <= 0) {
+                continue;
             }
 
-            successRate = (int) Math.round((met * 100.0) / closed.size());
+            assessed++;
+
+            int achieved = nullSafe(taskRepository.sumStoryPointsForSprintByStatus(
+                    past.getId(), ScrumTask.Status.DONE));
+
+            if ((achieved * 100) >= (commitment * SUCCESS_THRESHOLD_PERCENT)) {
+                met++;
+            }
         }
+
+        // Null rather than zero: nothing judgeable is not a 0% record
+        Integer successRate = assessed == 0
+                ? null
+                : (int) Math.round((met * 100.0) / assessed);
 
         return new ScrumAnalyticsDto.Kpis(
                 (int) done,
@@ -286,7 +370,9 @@ public class ScrumAnalyticsService {
                 (int) overdue,
                 leadHours == null ? null : Math.round(leadHours * 10.0) / 10.0,
                 successRate,
-                closed.size()
+                // What the rate is actually a share of. Reporting every closed
+                // sprint here overstated the sample the percentage came from.
+                assessed
         );
     }
 
@@ -408,7 +494,11 @@ public class ScrumAnalyticsService {
         return Character.toUpperCase(spaced.charAt(0)) + spaced.substring(1);
     }
 
-    /** Unused date guard kept explicit for readers of the burndown code. */
+    /**
+     * Whether a date sits inside a sprint window, an unset bound being open.
+     * The burndown uses it to drop snapshots it cannot place on the sprint's
+     * working-day scale.
+     */
     static boolean isWithin(LocalDate date, LocalDate start, LocalDate end) {
 
         return date != null

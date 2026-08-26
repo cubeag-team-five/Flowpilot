@@ -94,6 +94,42 @@ public class ScrumTaskService {
 
 
     // ============================================
+    // LIST ALL
+    // Every task, whether or not it is in a sprint
+    // ============================================
+
+    /**
+     * All tasks in key order.
+     *
+     * Sorted here rather than through a new repository method: the keys are
+     * zero padded (T-001), so plain string ordering is already numeric, and a
+     * hand-edited row with no key must not decide where its card lands.
+     */
+    // toCard reads the lazily fetched sprint, so the mapping has to run inside
+    // an open session no matter how open-in-view is configured
+    @Transactional(readOnly = true)
+    public List<ScrumTaskDto.Card> listTasks() {
+
+        List<ScrumTask> tasks = new ArrayList<>(taskRepository.findAll());
+
+        tasks.sort(
+                Comparator.comparing(
+                        ScrumTask::getTaskKey,
+                        Comparator.nullsLast(String.CASE_INSENSITIVE_ORDER)
+                )
+        );
+
+        List<ScrumTaskDto.Card> cards = new ArrayList<>(tasks.size());
+
+        for (ScrumTask task : tasks) {
+            cards.add(toCard(task));
+        }
+
+        return cards;
+    }
+
+
+    // ============================================
     // BACKLOG
     // Tasks not yet pulled into any sprint
     // ============================================
@@ -198,25 +234,10 @@ public class ScrumTaskService {
                         ? task.getStatus()
                         : parseStatus(request.status());
 
-        String blockedReason = trimToNull(request.blockedReason());
-
-        if (blockedReason != null
-                && targetStatus != ScrumTask.Status.BLOCKED) {
-
-            throw new ScrumValidationException(
-                    "blockedReason can only be set while the task is BLOCKED,"
-                            + " but this task would be " + targetStatus
-            );
-        }
-
-        if (blockedReason != null
-                && blockedReason.length() > MAX_BLOCKED_REASON_LENGTH) {
-
-            throw new ScrumValidationException(
-                    "Blocked reason must be "
-                            + MAX_BLOCKED_REASON_LENGTH + " characters or fewer"
-            );
-        }
+        // The same invariant the board's drag-and-drop move enforces, so a
+        // PATCH cannot open a hole the board endpoint keeps closed
+        String blockedReason =
+                resolveBlockedReason(task, targetStatus, request.blockedReason());
 
         if (request.title() != null) {
             task.setTitle(requireTitle(request.title()));
@@ -343,6 +364,78 @@ public class ScrumTaskService {
         taskRepository.delete(task);
 
         return deleted;
+    }
+
+
+    // ============================================
+    // SHARED RULES
+    // Public: the board service enforces these too
+    // ============================================
+
+    /**
+     * The module's single BLOCKED invariant, applied by both this service's
+     * update and the board's drag-and-drop move so the two cannot drift.
+     *
+     * A card that ends up BLOCKED must carry a reason — a blocker nobody can
+     * read is a blocker nobody can clear — and a reason offered against any
+     * other column is rejected rather than accepted and then dropped, because
+     * moveTo wipes it on the way out and the caller would otherwise be told
+     * text was saved that no longer exists.
+     *
+     * @param task         the task being changed, for the reason it already carries
+     * @param targetStatus the status the task will hold once the change applies
+     * @param rawReason    the reason supplied with this change; may be null or blank
+     * @return the reason to store after the move: the trimmed new text, the
+     *         standing reason of an already blocked card, or null when the
+     *         target column is not BLOCKED
+     */
+    public String resolveBlockedReason(
+            ScrumTask task,
+            ScrumTask.Status targetStatus,
+            String rawReason
+    ) {
+
+        String reason = trimToNull(rawReason);
+
+        if (targetStatus != ScrumTask.Status.BLOCKED) {
+
+            if (reason != null) {
+
+                throw new ScrumValidationException(
+                        "blockedReason can only be set while the task is BLOCKED,"
+                                + " but this task would be " + targetStatus
+                );
+            }
+
+            return null;
+        }
+
+        if (reason == null) {
+
+            // A card already sitting in BLOCKED still explains itself, so an
+            // edit that leaves the status alone need not restate the reason
+            String standing =
+                    task != null && task.getStatus() == ScrumTask.Status.BLOCKED
+                            ? trimToNull(task.getBlockedReason())
+                            : null;
+
+            if (standing == null) {
+                throw new ScrumValidationException(
+                        "A reason is required when blocking a task.");
+            }
+
+            return standing;
+        }
+
+        if (reason.length() > MAX_BLOCKED_REASON_LENGTH) {
+
+            throw new ScrumValidationException(
+                    "Blocked reason must be "
+                            + MAX_BLOCKED_REASON_LENGTH + " characters or fewer"
+            );
+        }
+
+        return reason;
     }
 
 
