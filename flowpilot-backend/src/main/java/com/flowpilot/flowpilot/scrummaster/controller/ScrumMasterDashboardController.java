@@ -1,32 +1,29 @@
 package com.flowpilot.flowpilot.scrummaster.controller;
 
-import com.flowpilot.flowpilot.scrummaster.dto.ScrumDashboardDto;
-import com.flowpilot.flowpilot.scrummaster.service.ScrumMasterDashboardService;
+import java.util.Map;
 
-import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.CrossOrigin;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+import com.flowpilot.flowpilot.scrummaster.service.ScrumMasterDashboardService;
 
 @RestController
 @RequestMapping("/api/scrummaster/dashboard")
-@RequiredArgsConstructor
 @CrossOrigin(origins = "http://localhost:5173")
 public class ScrumMasterDashboardController {
 
-    private final ScrumMasterDashboardService dashboardService;
+    private final ScrumMasterDashboardService service;
+
+    public ScrumMasterDashboardController(ScrumMasterDashboardService service) {
+        this.service = service;
+    }
 
     @GetMapping
-    public ResponseEntity<ScrumDashboardDto> getDashboardData() {
-        return ResponseEntity.ok(dashboardService.getDashboardData());
-    }
+    public ResponseEntity<Map<String, Object>> getDashboard() {
 
-    @PatchMapping("/blockers/{id}/escalate")
-    public ResponseEntity<ScrumDashboardDto.BlockerDto> escalateBlocker(@PathVariable Long id) {
-        return ResponseEntity.ok(dashboardService.escalateBlocker(id));
-    }
-
-    @PatchMapping("/blockers/{id}/resolve")
-    public ResponseEntity<ScrumDashboardDto.BlockerDto> resolveBlocker(@PathVariable Long id) {
-        return ResponseEntity.ok(dashboardService.resolveBlocker(id));
+        return ResponseEntity.ok(service.getDashboard());
     }
 }
