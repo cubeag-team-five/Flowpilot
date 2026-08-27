@@ -26,15 +26,16 @@ jobs:
 
       - name: Merge dev branch
         run: |
-          if git ls-remote --heads origin develop | grep -q develop; then
-            TARGET_BRANCH="develop"
-          else
-            TARGET_BRANCH="main"
-          fi
+          TARGET_BRANCH="develop"
           
-          git fetch origin "$TARGET_BRANCH"
-          git checkout "$TARGET_BRANCH"
-          git pull origin "$TARGET_BRANCH"
-          git merge origin/${{ github.ref_name }} --no-edit -X theirs
-          git push origin "$TARGET_BRANCH"
+          # Fetch all branches explicitly
+          git fetch origin "+refs/heads/*:refs/remotes/origin/*"
 
+          # Switch to target branch or create it locally tracking origin
+          git checkout -B "$TARGET_BRANCH" "origin/$TARGET_BRANCH"
+          
+          # Merge the pushed dev branch into target branch
+          git merge "origin/${{ github.ref_name }}" --no-edit -m "Auto-merge ${{ github.ref_name }} into $TARGET_BRANCH" -X theirs
+          
+          # Push the merged target branch back to origin
+          git push origin "$TARGET_BRANCH"
