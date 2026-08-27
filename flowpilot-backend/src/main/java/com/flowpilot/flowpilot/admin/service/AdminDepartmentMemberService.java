@@ -1,133 +1,189 @@
 package com.flowpilot.flowpilot.admin.service;
 
+import com.flowpilot.flowpilot.admin.dto.AdminDepartmentMemberDto;
 import com.flowpilot.flowpilot.admin.model.AdminDepartment;
 import com.flowpilot.flowpilot.admin.model.AdminDepartmentMember;
 import com.flowpilot.flowpilot.admin.repository.AdminDepartmentMemberRepository;
 import com.flowpilot.flowpilot.admin.repository.AdminDepartmentsRepository;
+
+import com.flowpilot.flowpilot.superadmin.model.SuperAdminUser;
+import com.flowpilot.flowpilot.superadmin.repository.SuperAdminUserRepository;
+
+import lombok.RequiredArgsConstructor;
+
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
 @Service
+@RequiredArgsConstructor
+@Transactional
 public class AdminDepartmentMemberService {
 
     private final AdminDepartmentMemberRepository memberRepository;
+
     private final AdminDepartmentsRepository departmentRepository;
 
-    public AdminDepartmentMemberService(
-            AdminDepartmentMemberRepository memberRepository,
-            AdminDepartmentsRepository departmentRepository) {
+    /*
+     * We READ users created/managed by SuperAdmin.
+     *
+     * We are not modifying SuperAdmin files.
+     */
+    private final SuperAdminUserRepository superAdminUserRepository;
 
-        this.memberRepository = memberRepository;
-        this.departmentRepository = departmentRepository;
-    }
 
-    public List<AdminDepartmentMember> getMembers(Long departmentId) {
+    // =========================================================
+    // GET MEMBERS
+    // =========================================================
+
+    @Transactional(readOnly = true)
+    public List<AdminDepartmentMember> getMembers(
+            Long departmentId
+    ) {
 
         AdminDepartment department =
                 departmentRepository.findById(departmentId)
                         .orElseThrow(() ->
                                 new IllegalArgumentException(
-                                        "Department not found"
-                                ));
+                                        "Department not found."
+                                )
+                        );
 
         return memberRepository.findByDepartment(department);
     }
 
+
+    // =========================================================
+    // ADD MEMBER
+    // =========================================================
+
     public AdminDepartmentMember addMember(
             Long departmentId,
-            AdminDepartmentMember member) {
+            AdminDepartmentMemberDto dto
+    ) {
+
+        if (departmentId == null) {
+
+            throw new IllegalArgumentException(
+                    "Department is required."
+            );
+        }
+
+        if (dto == null ||
+                dto.getEmployeeId() == null) {
+
+            throw new IllegalArgumentException(
+                    "Employee is required."
+            );
+        }
+
+
+        // =====================================================
+        // FIND DEPARTMENT
+        // =====================================================
 
         AdminDepartment department =
                 departmentRepository.findById(departmentId)
                         .orElseThrow(() ->
                                 new IllegalArgumentException(
-                                        "Department not found"
-                                ));
+                                        "Department not found."
+                                )
+                        );
 
-        /*
-         * Generate employee ID automatically.
-         *
-         * Example:
-         * EMP009 -> EMP010
-         * EMP010 -> EMP011
-         */
-        AdminDepartmentMember lastMember =
-                memberRepository.findTopByOrderByEmployeeIdDesc();
 
-        int nextNumber = 1;
+        // =====================================================
+        // FIND SUPERADMIN USER
+        // =====================================================
 
-        if (lastMember != null &&
-                lastMember.getEmployeeId() != null) {
+        SuperAdminUser user =
+                superAdminUserRepository.findById(
+                        dto.getEmployeeId()
+                )
+                .orElseThrow(() ->
+                        new IllegalArgumentException(
+                                "Selected user was not found."
+                        )
+                );
 
-            String lastEmployeeId =
-                    lastMember.getEmployeeId();
 
-            if (lastEmployeeId.startsWith("EMP")) {
+        // =====================================================
+        // CHECK USER STATUS
+        // =====================================================
 
-                try {
-                    int lastNumber =
-                            Integer.parseInt(
-                                    lastEmployeeId.substring(3)
-                            );
+        if (!Boolean.TRUE.equals(user.getActive())) {
 
-                    nextNumber = lastNumber + 1;
-
-                } catch (NumberFormatException ignored) {
-                    // Keep nextNumber as 1
-                }
-            }
+            throw new IllegalArgumentException(
+                    "Inactive users cannot be added as department members."
+            );
         }
 
-        String employeeId =
-                String.format("EMP%03d", nextNumber);
 
-        member.setId(null);
+        // =====================================================
+        // PREVENT DUPLICATE MEMBER
+        // =====================================================
+
+        String employeeId =
+                String.valueOf(
+                        user.getEmployeeId()
+                );
+
+        if (
+                memberRepository
+                        .existsByDepartmentAndEmployeeId(
+                                department,
+                                employeeId
+                        )
+        ) {
+
+            throw new IllegalArgumentException(
+                    "This user is already a member of the department."
+            );
+        }
+
+
+        // =====================================================
+        // CREATE MEMBER FROM SUPERADMIN USER
+        // =====================================================
+
+        AdminDepartmentMember member =
+                new AdminDepartmentMember();
+
         member.setDepartment(department);
 
-        // Employee ID is generated by backend
-        member.setEmployeeId(employeeId);
+        member.setFullName(
+                user.getName()
+        );
+
+        member.setEmail(
+                user.getEmail()
+        );
+
+        member.setEmployeeId(
+                employeeId
+        );
+
+        member.setDesignation(
+                user.getDesignation()
+        );
+
+
+        // =====================================================
+        // SAVE
+        // =====================================================
 
         return memberRepository.save(member);
     }
 
-    public AdminDepartmentMember updateMember(
-            Long departmentId,
-            Long memberId,
-            AdminDepartmentMember updatedMember) {
 
-        AdminDepartment department =
-                departmentRepository.findById(departmentId)
-                        .orElseThrow(() ->
-                                new IllegalArgumentException(
-                                        "Department not found"
-                                ));
-
-        AdminDepartmentMember existingMember =
-                memberRepository.findById(memberId)
-                        .orElseThrow(() ->
-                                new IllegalArgumentException(
-                                        "Member not found"
-                                ));
-
-        existingMember.setDepartment(department);
-        existingMember.setFullName(
-                updatedMember.getFullName()
-        );
-        existingMember.setEmail(
-                updatedMember.getEmail()
-        );
-
-        /*
-         * Do NOT update employee ID.
-         *
-         * Employee ID is permanent once generated.
-         */
-        
-        existingMember.setDesignation(
-                updatedMember.getDesignation()
-        );
-
-        return memberRepository.save(existingMember);
-    }
+    // =========================================================
+    // UPDATE MEMBER
+    // =========================================================
+    /*
+     * You previously wanted member editing removed.
+     *
+     * Therefore this method should NOT be used.
+     *
+     * Keep the endpoint removed from the controller.
+     */
 }
