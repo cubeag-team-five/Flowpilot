@@ -1905,8 +1905,8 @@ const SuperAdminUsers: React.FC = () => {
                               className="
                                 truncate
                                 text-[14px]
-                                font-extrabold
-                                text-[#111827]
+                               font-semibold
+                               text-[#111827]
                               "
                             >
                               {user.name}
@@ -2230,7 +2230,7 @@ const SuperAdminUsers: React.FC = () => {
                             className="
                               truncate
                               text-[14px]
-                              font-extrabold
+                              font-semibold
                               text-[#111827]
                             "
                           >
