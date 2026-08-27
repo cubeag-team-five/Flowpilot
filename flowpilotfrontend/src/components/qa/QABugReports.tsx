@@ -84,140 +84,114 @@ const emptyForm: BugForm = {
    GET CURRENT USER
 ========================================================= */
 
-const getCurrentUser =
-  (): StoredUser | null => {
+const getCurrentUser = (): StoredUser | null => {
+  const keys = [
+    "currentUser",
+    "user",
+    "auth",
+    "userData",
+    "loggedInUser",
+  ];
 
-    const keys = [
-      "currentUser",
-      "user",
-      "auth",
-      "userData",
-      "loggedInUser",
-    ];
+  for (const key of keys) {
+    const value =
+      localStorage.getItem(key) ||
+      sessionStorage.getItem(key);
 
-    for (const key of keys) {
-
-      const value =
-        localStorage.getItem(key) ||
-        sessionStorage.getItem(key);
-
-      if (!value) {
-        continue;
-      }
-
-      try {
-
-        const parsed =
-          JSON.parse(value);
-
-        const user =
-          parsed?.user ??
-          parsed?.data?.user ??
-          parsed?.data ??
-          parsed;
-
-        if (
-          user?.id ||
-          user?.userId ||
-          user?.employeeId ||
-          user?.name ||
-          user?.fullName ||
-          user?.username ||
-          user?.email
-        ) {
-          return user;
-        }
-
-      } catch {
-        // Continue.
-      }
+    if (!value) {
+      continue;
     }
 
-    const fallback: StoredUser = {
-      id:
-        localStorage.getItem(
-          "userId"
-        ) ||
-        localStorage.getItem(
-          "id"
-        ) ||
-        undefined,
+    try {
+      const parsed = JSON.parse(value);
 
-      userId:
-        localStorage.getItem(
-          "userId"
-        ) ||
-        undefined,
+      const user =
+        parsed?.user ??
+        parsed?.data?.user ??
+        parsed?.data ??
+        parsed;
 
-      employeeId:
-        localStorage.getItem(
-          "employeeId"
-        ) ||
-        undefined,
+      if (
+        user?.id ||
+        user?.userId ||
+        user?.employeeId ||
+        user?.name ||
+        user?.fullName ||
+        user?.username ||
+        user?.email
+      ) {
+        return user;
+      }
+    } catch {
+      // Continue searching.
+    }
+  }
 
-      name:
-        localStorage.getItem(
-          "name"
-        ) ||
-        localStorage.getItem(
-          "fullName"
-        ) ||
-        localStorage.getItem(
-          "username"
-        ) ||
-        undefined,
+  const fallback: StoredUser = {
+    id:
+      localStorage.getItem("userId") ||
+      localStorage.getItem("id") ||
+      sessionStorage.getItem("userId") ||
+      sessionStorage.getItem("id") ||
+      undefined,
 
-      fullName:
-        localStorage.getItem(
-          "fullName"
-        ) ||
-        undefined,
+    userId:
+      localStorage.getItem("userId") ||
+      sessionStorage.getItem("userId") ||
+      undefined,
 
-      username:
-        localStorage.getItem(
-          "username"
-        ) ||
-        undefined,
+    employeeId:
+      localStorage.getItem("employeeId") ||
+      sessionStorage.getItem("employeeId") ||
+      undefined,
 
-      email:
-        localStorage.getItem(
-          "email"
-        ) ||
-        undefined,
-    };
+    name:
+      localStorage.getItem("name") ||
+      localStorage.getItem("fullName") ||
+      localStorage.getItem("username") ||
+      sessionStorage.getItem("name") ||
+      sessionStorage.getItem("fullName") ||
+      sessionStorage.getItem("username") ||
+      undefined,
 
-    const hasUser =
-      Object.values(
-        fallback
-      ).some(
-        (value) =>
-          value !== undefined &&
-          value !== null &&
-          String(value).trim() !== ""
-      );
+    fullName:
+      localStorage.getItem("fullName") ||
+      sessionStorage.getItem("fullName") ||
+      undefined,
 
-    return hasUser
-      ? fallback
-      : null;
+    username:
+      localStorage.getItem("username") ||
+      sessionStorage.getItem("username") ||
+      undefined,
+
+    email:
+      localStorage.getItem("email") ||
+      sessionStorage.getItem("email") ||
+      undefined,
   };
 
+  const hasUser = Object.values(fallback).some(
+    (value) =>
+      value !== undefined &&
+      value !== null &&
+      String(value).trim() !== ""
+  );
+
+  return hasUser ? fallback : null;
+};
+
 /* =========================================================
-   CURRENT USER DISPLAY NAME
+   USER NAME
 ========================================================= */
 
 const getUserName = (
   user: StoredUser | null
 ): string => {
-
-  if (!user) {
-    return "";
-  }
-
   return (
-    user.name ||
-    user.fullName ||
-    user.username ||
-    user.email ||
+    user?.name ||
+    user?.fullName ||
+    user?.username ||
+    user?.email ||
     ""
   ).trim();
 };
@@ -226,8 +200,7 @@ const getUserName = (
    TOKEN
 ========================================================= */
 
-const getToken = () => {
-
+const getToken = (): string => {
   const keys = [
     "token",
     "accessToken",
@@ -238,7 +211,6 @@ const getToken = () => {
   ];
 
   for (const key of keys) {
-
     const localToken =
       localStorage.getItem(key);
 
@@ -269,7 +241,6 @@ const getToken = () => {
   ];
 
   for (const key of objectKeys) {
-
     const value =
       localStorage.getItem(key) ||
       sessionStorage.getItem(key);
@@ -279,9 +250,7 @@ const getToken = () => {
     }
 
     try {
-
-      const parsed =
-        JSON.parse(value);
+      const parsed = JSON.parse(value);
 
       const token =
         parsed?.token ||
@@ -292,15 +261,13 @@ const getToken = () => {
         parsed?.user?.token;
 
       if (token) {
-
         return String(token).replace(
           /^Bearer\s+/i,
           ""
         );
       }
-
     } catch {
-      // Continue.
+      // Continue searching.
     }
   }
 
@@ -308,33 +275,27 @@ const getToken = () => {
 };
 
 /* =========================================================
-   HEADERS
+   COMMON HEADERS
 ========================================================= */
 
 const getHeaders = () => {
-
-  const token =
-    getToken();
+  const token = getToken();
 
   return {
-    "Content-Type":
-      "application/json",
-
+    "Content-Type": "application/json",
     ...(token
       ? {
-          Authorization:
-            `Bearer ${token}`,
+          Authorization: `Bearer ${token}`,
         }
       : {}),
   };
 };
 
 /* =========================================================
-   COMPONENT
+   GLOBAL QA SEARCH
 ========================================================= */
 
 const QABugReports: React.FC = () => {
-
   const [bugs, setBugs] =
     useState<BugReport[]>([]);
 
@@ -351,9 +312,7 @@ const QABugReports: React.FC = () => {
     useState(false);
 
   const [form, setForm] =
-    useState<BugForm>(
-      emptyForm
-    );
+    useState<BugForm>(emptyForm);
 
   const [showForm, setShowForm] =
     useState(false);
@@ -379,33 +338,14 @@ const QABugReports: React.FC = () => {
   const [globalSearch, setGlobalSearch] =
     useState("");
 
-  const [currentUser, setCurrentUser] =
-    useState<StoredUser | null>(
-      null
-    );
-
   /* =========================================================
-     LOAD CURRENT USER
+     GLOBAL SEARCH LISTENER
   ========================================================= */
 
   useEffect(() => {
-
-    setCurrentUser(
-      getCurrentUser()
-    );
-
-  }, []);
-
-  /* =========================================================
-     GLOBAL QA SEARCH
-  ========================================================= */
-
-  useEffect(() => {
-
     const handleGlobalSearch = (
       event: Event
     ) => {
-
       const customEvent =
         event as CustomEvent<string>;
 
@@ -420,13 +360,11 @@ const QABugReports: React.FC = () => {
     );
 
     return () => {
-
       window.removeEventListener(
         "qa-global-search",
         handleGlobalSearch
       );
     };
-
   }, []);
 
   /* =========================================================
@@ -434,62 +372,52 @@ const QABugReports: React.FC = () => {
   ========================================================= */
 
   useEffect(() => {
-
     if (!success) {
       return;
     }
 
     const timer =
-      window.setTimeout(
-        () => {
-          setSuccess("");
-        },
-        4000
-      );
+      window.setTimeout(() => {
+        setSuccess("");
+      }, 4000);
 
     return () => {
-      window.clearTimeout(
-        timer
-      );
+      window.clearTimeout(timer);
     };
-
   }, [success]);
 
   /* =========================================================
-     LOAD BUGS
-  ========================================================= */
+     LOAD ONLY CURRENT USER'S BUGS
+========================================================= */
 
   const loadBugs = async () => {
-
     try {
-
       setLoading(true);
       setError("");
 
       const user =
         getCurrentUser();
 
-      setCurrentUser(user);
-
       const createdBy =
         getUserName(user);
 
       /*
-       * =====================================================
-       * IMPORTANT
-       *
-       * Load bugs specifically created by the
-       * currently logged-in QA user.
-       * =====================================================
+       * No logged-in user = no personal bugs.
        */
-
       if (!createdBy) {
-
         setBugs([]);
-
         return;
       }
 
+      /*
+       * IMPORTANT:
+       *
+       * We use CREATED BY, not ASSIGNED TO.
+       *
+       * Therefore a bug filed by Nishad appears
+       * in Nishad's Bug Reports even when it is
+       * assigned to another person.
+       */
       const response =
         await fetch(
           `${BUG_API_URL}/by-creator?createdBy=${encodeURIComponent(
@@ -502,7 +430,6 @@ const QABugReports: React.FC = () => {
         );
 
       if (!response.ok) {
-
         const errorText =
           await response.text();
 
@@ -515,21 +442,16 @@ const QABugReports: React.FC = () => {
       const result =
         await response.json();
 
-      const data =
-        Array.isArray(
-          result
-        )
+      const data: BugReport[] =
+        Array.isArray(result)
           ? result
-          : Array.isArray(
-              result?.data
-            )
+          : Array.isArray(result?.data)
           ? result.data
           : [];
 
       const sortedData =
         [...data].sort(
           (a, b) => {
-
             const dateA =
               new Date(
                 a.createdAt ||
@@ -548,12 +470,8 @@ const QABugReports: React.FC = () => {
           }
         );
 
-      setBugs(
-        sortedData
-      );
-
+      setBugs(sortedData);
     } catch (err) {
-
       console.error(
         "Error loading bugs:",
         err
@@ -566,9 +484,7 @@ const QABugReports: React.FC = () => {
       );
 
       setBugs([]);
-
     } finally {
-
       setLoading(false);
     }
   };
@@ -578,12 +494,8 @@ const QABugReports: React.FC = () => {
   ========================================================= */
 
   const loadProjects = async () => {
-
     try {
-
-      setLoadingProjects(
-        true
-      );
+      setLoadingProjects(true);
 
       const response =
         await fetch(
@@ -595,7 +507,6 @@ const QABugReports: React.FC = () => {
         );
 
       if (!response.ok) {
-
         const errorText =
           await response.text();
 
@@ -608,23 +519,15 @@ const QABugReports: React.FC = () => {
       const result =
         await response.json();
 
-      const data =
-        Array.isArray(
-          result
-        )
+      const data: Project[] =
+        Array.isArray(result)
           ? result
-          : Array.isArray(
-              result?.data
-            )
+          : Array.isArray(result?.data)
           ? result.data
           : [];
 
-      setProjects(
-        data
-      );
-
+      setProjects(data);
     } catch (err) {
-
       console.error(
         "Error loading projects:",
         err
@@ -635,12 +538,8 @@ const QABugReports: React.FC = () => {
           ? err.message
           : "Failed to load projects"
       );
-
     } finally {
-
-      setLoadingProjects(
-        false
-      );
+      setLoadingProjects(false);
     }
   };
 
@@ -649,27 +548,20 @@ const QABugReports: React.FC = () => {
   ========================================================= */
 
   useEffect(() => {
-
     loadBugs();
     loadProjects();
-
   }, []);
 
   /* =========================================================
-     LOAD PROJECT MEMBERS
+     LOAD MEMBERS FOR PROJECT
   ========================================================= */
 
   const loadMembersForProject =
     async (
       project: Project
     ) => {
-
       try {
-
-        setLoadingMembers(
-          true
-        );
-
+        setLoadingMembers(true);
         setError("");
         setMembers([]);
 
@@ -680,21 +572,15 @@ const QABugReports: React.FC = () => {
           )
             .map(
               (id) =>
-                String(
-                  id
-                ).trim()
+                String(id).trim()
             )
-            .filter(
-              Boolean
-            );
+            .filter(Boolean);
 
         if (
           projectMemberIds.length ===
           0
         ) {
-
           setMembers([]);
-
           return;
         }
 
@@ -702,7 +588,6 @@ const QABugReports: React.FC = () => {
           getToken();
 
         if (!token) {
-
           throw new Error(
             "Authentication token not found. Please log in again."
           );
@@ -723,19 +608,15 @@ const QABugReports: React.FC = () => {
           );
 
         if (
-          response.status ===
-            401 ||
-          response.status ===
-            403
+          response.status === 401 ||
+          response.status === 403
         ) {
-
           throw new Error(
             "Access denied while loading PM members. Please log in again."
           );
         }
 
         if (!response.ok) {
-
           const errorText =
             await response.text();
 
@@ -749,17 +630,11 @@ const QABugReports: React.FC = () => {
           await response.json();
 
         const allMembers: Member[] =
-          Array.isArray(
-            result
-          )
+          Array.isArray(result)
             ? result
-            : Array.isArray(
-                result?.data
-              )
+            : Array.isArray(result?.data)
             ? result.data
-            : Array.isArray(
-                result?.users
-              )
+            : Array.isArray(result?.users)
             ? result.users
             : [];
 
@@ -798,9 +673,7 @@ const QABugReports: React.FC = () => {
         setMembers(
           uniqueMembers
         );
-
       } catch (err) {
-
         console.error(
           "Error loading PM project members:",
           err
@@ -813,12 +686,8 @@ const QABugReports: React.FC = () => {
         );
 
         setMembers([]);
-
       } finally {
-
-        setLoadingMembers(
-          false
-        );
+        setLoadingMembers(false);
       }
     };
 
@@ -833,7 +702,6 @@ const QABugReports: React.FC = () => {
         HTMLSelectElement
     >
   ) => {
-
     const {
       name,
       value,
@@ -857,7 +725,6 @@ const QABugReports: React.FC = () => {
         HTMLSelectElement
       >
     ) => {
-
       const projectId =
         event.target.value;
 
@@ -880,12 +747,8 @@ const QABugReports: React.FC = () => {
       const selectedProject =
         projects.find(
           (project) =>
-            String(
-              project.id
-            ) ===
-            String(
-              projectId
-            )
+            String(project.id) ===
+            String(projectId)
         );
 
       if (!selectedProject) {
@@ -898,12 +761,11 @@ const QABugReports: React.FC = () => {
     };
 
   /* =========================================================
-     MEMBER SEARCH
+     FILTER MEMBERS
   ========================================================= */
 
   const filteredMembers =
     useMemo(() => {
-
       const search =
         memberSearch
           .trim()
@@ -930,7 +792,6 @@ const QABugReports: React.FC = () => {
             ?.toLowerCase()
             .includes(search)
       );
-
     }, [
       members,
       memberSearch,
@@ -943,7 +804,6 @@ const QABugReports: React.FC = () => {
   const selectMember = (
     member: Member
   ) => {
-
     setForm(
       (previous) => ({
         ...previous,
@@ -966,13 +826,11 @@ const QABugReports: React.FC = () => {
   ========================================================= */
 
   const openForm = () => {
-
     setError("");
     setSuccess("");
 
     setForm({
       ...emptyForm,
-
       bugId:
         `BUG-${String(
           bugs.length + 1
@@ -993,7 +851,6 @@ const QABugReports: React.FC = () => {
   ========================================================= */
 
   const closeForm = () => {
-
     setShowForm(false);
     setForm(emptyForm);
     setMembers([]);
@@ -1009,7 +866,6 @@ const QABugReports: React.FC = () => {
   const handleSubmit = async (
     event: React.FormEvent<HTMLFormElement>
   ) => {
-
     event.preventDefault();
 
     setError("");
@@ -1023,7 +879,6 @@ const QABugReports: React.FC = () => {
       !form.assignedTo.trim() ||
       !form.stepsToReproduce.trim()
     ) {
-
       setError(
         "Please fill all required fields."
       );
@@ -1034,11 +889,13 @@ const QABugReports: React.FC = () => {
     const user =
       getCurrentUser();
 
+    /*
+     * This is the person who FILED the bug.
+     */
     const createdBy =
       getUserName(user);
 
     if (!createdBy) {
-
       setError(
         "Unable to identify the logged-in user. Please login again."
       );
@@ -1047,7 +904,6 @@ const QABugReports: React.FC = () => {
     }
 
     try {
-
       setSaving(true);
 
       const response =
@@ -1085,8 +941,9 @@ const QABugReports: React.FC = () => {
                   form.assignedTo.trim(),
 
                 /*
-                 * IMPORTANT:
-                 * Save the person who filed the bug.
+                 * CRITICAL:
+                 * Store the current logged-in
+                 * QA user as the bug creator.
                  */
                 createdBy:
                   createdBy,
@@ -1101,7 +958,6 @@ const QABugReports: React.FC = () => {
         );
 
       if (!response.ok) {
-
         const errorText =
           await response.text();
 
@@ -1115,22 +971,17 @@ const QABugReports: React.FC = () => {
         "Bug successfully added."
       );
 
-      setShowForm(
-        false
-      );
-
-      setForm(
-        emptyForm
-      );
-
+      setShowForm(false);
+      setForm(emptyForm);
       setMembers([]);
       setMemberSearch("");
       setShowMemberDropdown(false);
 
+      /*
+       * Reload only the current user's bugs.
+       */
       await loadBugs();
-
     } catch (err) {
-
       console.error(
         "Error saving bug:",
         err
@@ -1141,20 +992,17 @@ const QABugReports: React.FC = () => {
           ? err.message
           : "Failed to save bug report"
       );
-
     } finally {
-
       setSaving(false);
     }
   };
 
   /* =========================================================
-     SEARCH BUGS
+     SEARCH CURRENT USER'S BUGS
   ========================================================= */
 
   const filteredBugs =
     useMemo(() => {
-
       const search =
         globalSearch
           .trim()
@@ -1166,7 +1014,6 @@ const QABugReports: React.FC = () => {
 
       return bugs.filter(
         (bug) => {
-
           const values = [
             bug.bugId,
             bug.title,
@@ -1189,7 +1036,6 @@ const QABugReports: React.FC = () => {
           );
         }
       );
-
     }, [
       bugs,
       globalSearch,
@@ -1233,13 +1079,12 @@ const QABugReports: React.FC = () => {
     ).length;
 
   /* =========================================================
-     FORMAT DATE
+     DATE
   ========================================================= */
 
   const formatDateTime = (
     bug: BugReport
   ) => {
-
     const value =
       bug.createdAt ||
       bug.filedDate;
@@ -1278,7 +1123,6 @@ const QABugReports: React.FC = () => {
   const getProjectName = (
     projectId?: number
   ) => {
-
     if (!projectId) {
       return "—";
     }
@@ -1397,6 +1241,8 @@ const QABugReports: React.FC = () => {
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
 
+              {/* BUG ID */}
+
               <div>
 
                 <label className="block mb-2 text-xs font-medium text-slate-600">
@@ -1417,6 +1263,8 @@ const QABugReports: React.FC = () => {
 
               </div>
 
+              {/* BUG TITLE */}
+
               <div>
 
                 <label className="block mb-2 text-xs font-medium text-slate-600">
@@ -1436,6 +1284,8 @@ const QABugReports: React.FC = () => {
                 />
 
               </div>
+
+              {/* PROJECT */}
 
               <div>
 
@@ -1464,9 +1314,7 @@ const QABugReports: React.FC = () => {
                   </option>
 
                   {projects.map(
-                    (
-                      project
-                    ) => (
+                    (project) => (
                       <option
                         key={
                           project.id
@@ -1475,9 +1323,13 @@ const QABugReports: React.FC = () => {
                           project.id
                         }
                       >
-                        {project.projectCode}{" "}
+                        {
+                          project.projectCode
+                        }{" "}
                         -{" "}
-                        {project.projectName}
+                        {
+                          project.projectName
+                        }
                       </option>
                     )
                   )}
@@ -1485,6 +1337,8 @@ const QABugReports: React.FC = () => {
                 </select>
 
               </div>
+
+              {/* LINKED TASK */}
 
               <div>
 
@@ -1505,6 +1359,8 @@ const QABugReports: React.FC = () => {
                 />
 
               </div>
+
+              {/* ENVIRONMENT */}
 
               <div>
 
@@ -1538,6 +1394,8 @@ const QABugReports: React.FC = () => {
                 </select>
 
               </div>
+
+              {/* SEVERITY */}
 
               <div>
 
@@ -1576,6 +1434,8 @@ const QABugReports: React.FC = () => {
 
               </div>
 
+              {/* ASSIGN TO */}
+
               <div className="relative">
 
                 <label className="block mb-2 text-xs font-medium text-slate-600">
@@ -1599,9 +1459,7 @@ const QABugReports: React.FC = () => {
                     );
 
                     setForm(
-                      (
-                        previous
-                      ) => ({
+                      (previous) => ({
                         ...previous,
                         assignedTo:
                           "",
@@ -1617,7 +1475,6 @@ const QABugReports: React.FC = () => {
                     if (
                       form.projectId
                     ) {
-
                       setShowMemberDropdown(
                         true
                       );
@@ -1638,22 +1495,28 @@ const QABugReports: React.FC = () => {
                     <div className="absolute z-50 mt-1 w-full max-h-56 overflow-y-auto rounded-lg border border-slate-200 bg-white shadow-lg">
 
                       {loadingMembers ? (
+
                         <div className="px-3 py-3 text-sm text-slate-400">
                           Loading members...
                         </div>
+
                       ) : filteredMembers.length ===
                         0 ? (
+
                         <div className="px-3 py-3 text-sm text-slate-400">
+
                           {members.length ===
                           0
                             ? "No PM members assigned to this project"
                             : "No matching members found"}
+
                         </div>
+
                       ) : (
+
                         filteredMembers.map(
-                          (
-                            member
-                          ) => (
+                          (member) => (
+
                             <button
                               type="button"
                               key={String(
@@ -1684,8 +1547,10 @@ const QABugReports: React.FC = () => {
                               </div>
 
                             </button>
+
                           )
                         )
+
                       )}
 
                     </div>
@@ -1694,6 +1559,8 @@ const QABugReports: React.FC = () => {
               </div>
 
             </div>
+
+            {/* STEPS */}
 
             <div className="mt-4">
 
@@ -1715,6 +1582,8 @@ const QABugReports: React.FC = () => {
               />
 
             </div>
+
+            {/* BUTTONS */}
 
             <div className="flex gap-2 mt-5">
 
@@ -1872,11 +1741,15 @@ const QABugReports: React.FC = () => {
                       className="border-b border-slate-100 last:border-b-0 hover:bg-slate-50"
                     >
 
+                      {/* BUG ID */}
+
                       <td className="px-3 py-4 text-sm text-slate-600">
                         {
                           bug.bugId
                         }
                       </td>
+
+                      {/* TITLE */}
 
                       <td className="px-3 py-4">
 
@@ -1896,6 +1769,8 @@ const QABugReports: React.FC = () => {
 
                       </td>
 
+                      {/* PROJECT */}
+
                       <td className="px-3 py-4 text-sm text-slate-600">
                         {
                           getProjectName(
@@ -1903,6 +1778,8 @@ const QABugReports: React.FC = () => {
                           )
                         }
                       </td>
+
+                      {/* SEVERITY */}
 
                       <td className="px-3 py-4">
 
@@ -1930,6 +1807,8 @@ const QABugReports: React.FC = () => {
 
                       </td>
 
+                      {/* STATUS */}
+
                       <td className="px-3 py-4">
 
                         <span className="inline-flex rounded-md bg-red-50 px-2 py-1 text-xs text-red-500">
@@ -1940,11 +1819,15 @@ const QABugReports: React.FC = () => {
 
                       </td>
 
+                      {/* LINKED TASK */}
+
                       <td className="px-3 py-4 text-sm text-slate-600">
                         {
                           bug.linkedTaskId
                         }
                       </td>
+
+                      {/* ASSIGNEE */}
 
                       <td className="px-3 py-4 text-sm text-slate-600">
                         {
@@ -1952,11 +1835,15 @@ const QABugReports: React.FC = () => {
                         }
                       </td>
 
+                      {/* ENVIRONMENT */}
+
                       <td className="px-3 py-4 text-sm text-slate-600">
                         {
                           bug.environment
                         }
                       </td>
+
+                      {/* CREATED */}
 
                       <td className="px-3 py-4 text-sm text-slate-500 whitespace-nowrap">
                         {
@@ -1975,6 +1862,7 @@ const QABugReports: React.FC = () => {
             </tbody>
 
           </table>
+
         )}
 
       </div>
