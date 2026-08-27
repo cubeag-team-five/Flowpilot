@@ -76,6 +76,25 @@ export const TASK_STATUSES = [
 
 export type TaskStatus = (typeof TASK_STATUSES)[number];
 
+/**
+ * The statuses that get their own board column.
+ *
+ * Review is deliberately absent. Eight columns left each one too narrow to
+ * read a card without truncating the title, so Review's cards ride in the
+ * Testing column instead. Review is still a first-class status everywhere
+ * else — it stays in every card's move dropdown and in the analytics — so no
+ * task becomes unreachable by losing its column.
+ */
+export const BOARD_COLUMNS: readonly TaskStatus[] = [
+  'BACKLOG',
+  'SPRINT_READY',
+  'TODO',
+  'IN_PROGRESS',
+  'TESTING',
+  'DONE',
+  'BLOCKED'
+];
+
 export const PRIORITIES = ['LOWEST', 'LOW', 'MEDIUM', 'HIGH', 'HIGHEST'] as const;
 
 export type Priority = (typeof PRIORITIES)[number];
