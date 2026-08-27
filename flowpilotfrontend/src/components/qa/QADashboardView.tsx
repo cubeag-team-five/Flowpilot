@@ -1,4 +1,8 @@
-import { useCallback, useEffect, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useState,
+} from "react";
 import axios from "axios";
 
 interface TestCase {
@@ -9,27 +13,61 @@ interface TestCase {
   linkedTask: string;
   priority: string;
   status: string;
-  assignedTo?: string;
+  assignedTo?: string | number;
+  assignedToId?: string | number;
+  assignedUserId?: string | number;
   project?: string;
   createdAt?: string;
+  scrumTaskId?: number;
+  projectId?: number;
+}
+
+interface BugReport {
+  id?: number;
+  bugId: string;
+  title: string;
+  projectId?: number;
+  linkedTaskId: string;
+  environment: string;
+  severity: string;
+  assignedTo?: string | number;
+  stepsToReproduce: string;
+  status?: string;
+  createdAt?: string;
+  filedDate?: string;
 }
 
 interface StoredUser {
   id?: string | number;
   userId?: string | number;
+  employeeId?: string | number;
   name?: string;
   fullName?: string;
   username?: string;
   email?: string;
 }
 
-const API_URL =
+const TEST_CASE_API =
   "http://localhost:8080/api/qa/test-cases";
 
-const normalize = (value: unknown) =>
-  String(value ?? "")
+const BUG_API =
+  "http://localhost:8080/api/qa/bugs";
+
+/* =========================================================
+   NORMALIZE
+========================================================= */
+
+const normalize = (
+  value: unknown
+): string => {
+  return String(value ?? "")
     .trim()
     .toLowerCase();
+};
+
+/* =========================================================
+   GET CURRENT USER
+========================================================= */
 
 const getCurrentUser = (): StoredUser | null => {
   const keys = [
@@ -41,17 +79,28 @@ const getCurrentUser = (): StoredUser | null => {
   ];
 
   for (const key of keys) {
-    const value = localStorage.getItem(key);
+    const value =
+      localStorage.getItem(key) ||
+      sessionStorage.getItem(key);
 
-    if (!value) continue;
+    if (!value) {
+      continue;
+    }
 
     try {
-      const parsed = JSON.parse(value);
-      const user = parsed?.user ?? parsed;
+      const parsed =
+        JSON.parse(value);
+
+      const user =
+        parsed?.user ??
+        parsed?.data?.user ??
+        parsed?.data ??
+        parsed;
 
       if (
         user?.id ||
         user?.userId ||
+        user?.employeeId ||
         user?.name ||
         user?.fullName ||
         user?.username ||
@@ -64,8 +113,61 @@ const getCurrentUser = (): StoredUser | null => {
     }
   }
 
-  return null;
+  const user: StoredUser = {
+    id:
+      localStorage.getItem("userId") ||
+      localStorage.getItem("id") ||
+      sessionStorage.getItem("userId") ||
+      sessionStorage.getItem("id") ||
+      undefined,
+
+    userId:
+      localStorage.getItem("userId") ||
+      sessionStorage.getItem("userId") ||
+      undefined,
+
+    employeeId:
+      localStorage.getItem("employeeId") ||
+      sessionStorage.getItem("employeeId") ||
+      undefined,
+
+    name:
+      localStorage.getItem("name") ||
+      localStorage.getItem("fullName") ||
+      sessionStorage.getItem("name") ||
+      sessionStorage.getItem("fullName") ||
+      undefined,
+
+    fullName:
+      localStorage.getItem("fullName") ||
+      sessionStorage.getItem("fullName") ||
+      undefined,
+
+    username:
+      localStorage.getItem("username") ||
+      sessionStorage.getItem("username") ||
+      undefined,
+
+    email:
+      localStorage.getItem("email") ||
+      sessionStorage.getItem("email") ||
+      undefined,
+  };
+
+  const hasUser =
+    Object.values(user).some(
+      (value) =>
+        value !== undefined &&
+        value !== null &&
+        String(value).trim() !== ""
+    );
+
+  return hasUser ? user : null;
 };
+
+/* =========================================================
+   TOKEN
+========================================================= */
 
 const getAuthToken = (): string | null => {
   const keys = [
@@ -74,47 +176,105 @@ const getAuthToken = (): string | null => {
     "accessToken",
     "authToken",
     "access_token",
+    "jwtToken",
   ];
 
   for (const key of keys) {
-    const value = localStorage.getItem(key);
+    const value =
+      localStorage.getItem(key) ||
+      sessionStorage.getItem(key);
 
     if (value) {
-      return value.replace(/^Bearer\s+/i, "");
+      return value.replace(
+        /^Bearer\s+/i,
+        ""
+      );
+    }
+  }
+
+  const objectKeys = [
+    "currentUser",
+    "user",
+    "auth",
+    "userData",
+    "loggedInUser",
+  ];
+
+  for (const key of objectKeys) {
+    const value =
+      localStorage.getItem(key) ||
+      sessionStorage.getItem(key);
+
+    if (!value) {
+      continue;
+    }
+
+    try {
+      const parsed =
+        JSON.parse(value);
+
+      const token =
+        parsed?.token ||
+        parsed?.jwt ||
+        parsed?.accessToken ||
+        parsed?.access_token ||
+        parsed?.user?.token;
+
+      if (token) {
+        return String(token).replace(
+          /^Bearer\s+/i,
+          ""
+        );
+      }
+    } catch {
+      // Continue.
     }
   }
 
   return null;
 };
 
-const getAxiosConfig = () => {
-  const token = getAuthToken();
+/* =========================================================
+   AXIOS CONFIG
+========================================================= */
 
-  if (!token) return {};
+const getAxiosConfig = () => {
+  const token =
+    getAuthToken();
+
+  if (!token) {
+    return {};
+  }
 
   return {
     headers: {
-      Authorization: `Bearer ${token}`,
-      "Content-Type": "application/json",
+      Authorization:
+        `Bearer ${token}`,
+      "Content-Type":
+        "application/json",
     },
   };
 };
 
+/* =========================================================
+   USER MATCH
+========================================================= */
+
 const belongsToUser = (
-  testCase: TestCase,
+  assignedTo: unknown,
   user: StoredUser | null
-) => {
-  if (!user || !testCase.assignedTo) {
+): boolean => {
+  if (!user || assignedTo == null) {
     return false;
   }
 
-  const assigned = normalize(
-    testCase.assignedTo
-  );
+  const assigned =
+    normalize(assignedTo);
 
   const values = [
     user.id,
     user.userId,
+    user.employeeId,
     user.name,
     user.fullName,
     user.username,
@@ -128,12 +288,24 @@ const belongsToUser = (
     )
     .map(normalize);
 
-  return values.includes(assigned);
+  return values.includes(
+    assigned
+  );
 };
+
+/* =========================================================
+   COMPONENT
+========================================================= */
 
 const QADashboardView = () => {
   const [testTasks, setTestTasks] =
     useState<TestCase[]>([]);
+
+  const [openBugs, setOpenBugs] =
+    useState(0);
+
+  const [currentUser, setCurrentUser] =
+    useState<StoredUser | null>(null);
 
   const [loading, setLoading] =
     useState(true);
@@ -141,75 +313,181 @@ const QADashboardView = () => {
   const [error, setError] =
     useState("");
 
-  const loadDashboard = useCallback(
-    async () => {
+  /* =======================================================
+     LOAD DASHBOARD
+  ======================================================= */
+
+  const loadDashboard =
+    useCallback(async () => {
       try {
         setLoading(true);
         setError("");
 
-        const user = getCurrentUser();
+        const user =
+          getCurrentUser();
 
-        const response =
-          await axios.get<TestCase[]>(
-            API_URL,
+        setCurrentUser(user);
+
+        /*
+         * GET TEST CASES
+         *
+         * QATestCaseService automatically synchronizes
+         * Scrum Master tasks before returning the records.
+         */
+        const [
+          testResponse,
+          bugResponse,
+        ] = await Promise.all([
+          axios.get(
+            TEST_CASE_API,
             getAxiosConfig()
+          ),
+
+          axios.get(
+            BUG_API,
+            getAxiosConfig()
+          ),
+        ]);
+
+        /* =================================================
+           TEST CASE DATA
+        ================================================= */
+
+        const testResult =
+          testResponse.data;
+
+        const allTests: TestCase[] =
+          Array.isArray(testResult)
+            ? testResult
+            : Array.isArray(
+                testResult?.data
+              )
+            ? testResult.data
+            : Array.isArray(
+                testResult?.testCases
+              )
+            ? testResult.testCases
+            : [];
+
+        /*
+         * ONLY CURRENT USER'S TESTS
+         */
+        const myTests =
+          allTests.filter(
+            (test) =>
+              belongsToUser(
+                test.assignedTo,
+                user
+              )
           );
 
-        const all =
-          response.data || [];
+        /* =================================================
+           BUG DATA
+        ================================================= */
 
-        const mine = all.filter(
-          (testCase) =>
-            belongsToUser(
-              testCase,
-              user
-            )
+        const bugResult =
+          bugResponse.data;
+
+        const allBugs: BugReport[] =
+          Array.isArray(bugResult)
+            ? bugResult
+            : Array.isArray(
+                bugResult?.data
+              )
+            ? bugResult.data
+            : [];
+
+        /*
+         * ONLY CURRENT USER'S OPEN BUGS
+         */
+        const myOpenBugs =
+          allBugs.filter(
+            (bug) =>
+              belongsToUser(
+                bug.assignedTo,
+                user
+              ) &&
+              normalize(
+                bug.status ||
+                "Open"
+              ) === "open"
+          ).length;
+
+        setTestTasks(
+          myTests
         );
 
-        setTestTasks(mine);
-      } catch (err) {
+        setOpenBugs(
+          myOpenBugs
+        );
+      } catch (err: any) {
         console.error(
           "Failed to load QA dashboard:",
           err
         );
 
-        setError(
-          "Failed to load dashboard data."
-        );
+        if (
+          err?.response?.status ===
+          401
+        ) {
+          setError(
+            "Authentication required. Please login again."
+          );
+        } else if (
+          err?.response?.status ===
+          403
+        ) {
+          setError(
+            "Access denied. Please login again."
+          );
+        } else {
+          setError(
+            "Failed to load dashboard data."
+          );
+        }
+
+        setTestTasks([]);
+        setOpenBugs(0);
       } finally {
         setLoading(false);
       }
-    },
-    []
-  );
+    }, []);
 
   useEffect(() => {
     loadDashboard();
   }, [loadDashboard]);
 
+  /* =========================================================
+     COUNTS
+  ========================================================= */
+
   const testsInProgress =
     testTasks.filter(
       (task) =>
-        task.status === "In Testing"
+        normalize(
+          task.status
+        ) === "in testing"
     ).length;
 
   const testsPassed =
     testTasks.filter(
       (task) =>
-        task.status === "Passed"
+        normalize(
+          task.status
+        ) === "passed"
     ).length;
 
-  const totalTests = testTasks.length;
+  const totalTests =
+    testTasks.length;
 
   const passRate =
     totalTests > 0
       ? Math.round(
-          (testsPassed / totalTests) *
-            100
+          (testsPassed /
+            totalTests) *
+          100
         )
       : 0;
-
-  const openBugs = 0;
 
   return (
     <div className="w-full">
@@ -237,36 +515,54 @@ const QADashboardView = () => {
       ===================================================== */}
 
       <div className="grid grid-cols-2 gap-[10px] xl:grid-cols-4">
+
         {[
           {
-            label: "Tests in Progress",
-            value: String(
-              testsInProgress
-            ),
-            sub: "Active testing tasks",
+            label:
+              "Tests in Progress",
+            value:
+              String(
+                testsInProgress
+              ),
+            sub:
+              "Active testing tasks",
             subColor:
               "text-[#32d583]",
           },
+
           {
-            label: "Tests Passed",
-            value: String(
-              testsPassed
-            ),
-            sub: "Your completed tests",
+            label:
+              "Tests Passed",
+            value:
+              String(
+                testsPassed
+              ),
+            sub:
+              "Your completed tests",
             subColor:
               "text-[#32d583]",
           },
+
           {
-            label: "Open Bugs",
-            value: String(openBugs),
-            sub: "Assigned to you",
+            label:
+              "Open Bugs",
+            value:
+              String(
+                openBugs
+              ),
+            sub:
+              "Assigned to you",
             subColor:
               "text-[#ff3b3b]",
           },
+
           {
-            label: "Pass Rate",
-            value: `${passRate}%`,
-            sub: "Your test pass rate",
+            label:
+              "Pass Rate",
+            value:
+              `${passRate}%`,
+            sub:
+              "Your test pass rate",
             subColor:
               "text-[#32d583]",
           },
@@ -326,6 +622,7 @@ const QADashboardView = () => {
             </p>
           </div>
         ))}
+
       </div>
 
       {/* =====================================================
@@ -343,7 +640,7 @@ const QADashboardView = () => {
       >
 
         {/* ===================================================
-            TEST TASKS
+            MY TEST TASK STATUS
         =================================================== */}
 
         <div
@@ -357,7 +654,9 @@ const QADashboardView = () => {
             shadow-[0_2px_8px_rgba(17,24,39,0.05)]
           "
         >
+
           <div className="px-[20px] pt-[20px]">
+
             <h2
               className="
                 text-[12px]
@@ -367,6 +666,7 @@ const QADashboardView = () => {
             >
               My Test Task Status
             </h2>
+
           </div>
 
           <div className="mt-[5px] px-[20px] pb-[5px]">
@@ -388,7 +688,9 @@ const QADashboardView = () => {
               testTasks.map(
                 (task, index) => (
                   <div
-                    key={task.id}
+                    key={
+                      task.id
+                    }
                     className={`
                       flex
                       h-[59px]
@@ -402,7 +704,9 @@ const QADashboardView = () => {
                       }
                     `}
                   >
+
                     <div className="flex min-w-0 items-center">
+
                       <span
                         className={`
                           mr-[11px]
@@ -411,11 +715,14 @@ const QADashboardView = () => {
                           shrink-0
                           rounded-full
                           ${
-                            task.status ===
-                            "Passed"
+                            normalize(
+                              task.status
+                            ) === "passed"
                               ? "bg-[#20c978]"
-                              : task.status ===
-                                "In Testing"
+                              : normalize(
+                                  task.status
+                                ) ===
+                                "in testing"
                               ? "bg-[#f5a000]"
                               : "bg-[#9aa8bb]"
                           }
@@ -423,6 +730,7 @@ const QADashboardView = () => {
                       />
 
                       <div className="min-w-0">
+
                         <p
                           className="
                             truncate
@@ -442,9 +750,11 @@ const QADashboardView = () => {
                           "
                         >
                           {task.type} ·{" "}
-                          {task.testId}
+                          {task.linkedTask}
                         </p>
+
                       </div>
+
                     </div>
 
                     <span
@@ -457,11 +767,14 @@ const QADashboardView = () => {
                         text-[9px]
                         font-medium
                         ${
-                          task.status ===
-                          "Passed"
+                          normalize(
+                            task.status
+                          ) === "passed"
                             ? "bg-[#eafaf2] text-[#25c979]"
-                            : task.status ===
-                              "In Testing"
+                            : normalize(
+                                task.status
+                              ) ===
+                              "in testing"
                             ? "bg-[#fff6e7] text-[#e99a00]"
                             : "bg-[#f4f6f8] text-[#9aa8bb]"
                         }
@@ -470,14 +783,17 @@ const QADashboardView = () => {
                       {task.status ||
                         "Pending"}
                     </span>
+
                   </div>
                 )
               )}
+
           </div>
+
         </div>
 
         {/* ===================================================
-            CURRENT USER INFO
+            QA SUMMARY
         =================================================== */}
 
         <div
@@ -491,7 +807,9 @@ const QADashboardView = () => {
             shadow-[0_2px_8px_rgba(17,24,39,0.05)]
           "
         >
+
           <div className="px-[20px] pt-[20px]">
+
             <h2
               className="
                 text-[12px]
@@ -501,13 +819,39 @@ const QADashboardView = () => {
             >
               QA Summary
             </h2>
+
           </div>
 
           <div className="px-[20px] pt-[15px]">
 
             {(() => {
               const user =
+                currentUser ||
                 getCurrentUser();
+
+              const userName =
+                user?.name ||
+                user?.fullName ||
+                user?.username ||
+                user?.email ||
+                "QA User";
+
+              const initials =
+                userName
+                  .split(" ")
+                  .filter(Boolean)
+                  .map(
+                    (part) =>
+                      part.charAt(
+                        0
+                      )
+                  )
+                  .join("")
+                  .substring(
+                    0,
+                    2
+                  )
+                  .toUpperCase();
 
               return (
                 <>
@@ -521,6 +865,7 @@ const QADashboardView = () => {
                       border-[#eeeeee]
                     "
                   >
+
                     <div
                       className="
                         h-10
@@ -535,46 +880,39 @@ const QADashboardView = () => {
                         text-white
                       "
                     >
-                      {(user?.name ||
-                        user?.fullName ||
-                        user?.username ||
-                        "QA")
-                        .split(" ")
-                        .map(
-                          (part) =>
-                            part[0]
-                        )
-                        .join("")
-                        .substring(0, 2)
-                        .toUpperCase()}
+                      {initials}
                     </div>
 
                     <div>
+
                       <p className="text-[12px] font-semibold text-[#111827]">
-                        {user?.name ||
-                          user?.fullName ||
-                          user?.username ||
-                          "QA User"}
+                        {userName}
                       </p>
 
                       <p className="text-[9px] text-[#a1a8b3]">
                         QA Engineer
                       </p>
+
                     </div>
+
                   </div>
 
                   <div className="grid grid-cols-2 gap-3 pt-4">
+
                     <div className="rounded-[8px] bg-[#f8fafc] p-3">
+
                       <p className="text-[9px] text-[#8d98a8]">
                         Total Tasks
                       </p>
 
                       <p className="mt-1 text-[18px] font-semibold text-[#111827]">
-                        {testTasks.length}
+                        {totalTests}
                       </p>
+
                     </div>
 
                     <div className="rounded-[8px] bg-[#f8fafc] p-3">
+
                       <p className="text-[9px] text-[#8d98a8]">
                         Passed
                       </p>
@@ -582,13 +920,18 @@ const QADashboardView = () => {
                       <p className="mt-1 text-[18px] font-semibold text-[#20c978]">
                         {testsPassed}
                       </p>
+
                     </div>
+
                   </div>
                 </>
               );
             })()}
+
           </div>
+
         </div>
+
       </div>
     </div>
   );

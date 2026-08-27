@@ -9,14 +9,19 @@ interface TestCase {
   linkedTask: string;
   priority: string;
   status: string;
-  assignedTo?: string;
+  assignedTo?: string | number;
+  assignedToId?: string | number;
+  assignedUserId?: string | number;
   project?: string;
   createdAt?: string;
+  scrumTaskId?: number;
+  projectId?: number;
 }
 
 interface StoredUser {
   id?: string | number;
   userId?: string | number;
+  employeeId?: string | number;
   name?: string;
   fullName?: string;
   username?: string;
@@ -26,11 +31,9 @@ interface StoredUser {
 const API_URL =
   "http://localhost:8080/api/qa/test-cases";
 
-/*
- * ---------------------------------------------------------
- * GET LOGGED-IN USER
- * ---------------------------------------------------------
- */
+/* =========================================================
+   GET LOGGED-IN USER
+========================================================= */
 
 const getCurrentUser = (): StoredUser | null => {
   const keys = [
@@ -44,48 +47,80 @@ const getCurrentUser = (): StoredUser | null => {
   for (const key of keys) {
     const value = localStorage.getItem(key);
 
-    if (!value) continue;
+    if (!value) {
+      continue;
+    }
 
     try {
       const parsed = JSON.parse(value);
-      const user = parsed?.user ?? parsed;
+
+      const user =
+        parsed?.user ??
+        parsed?.data?.user ??
+        parsed?.data ??
+        parsed;
 
       if (
+        user?.id ||
+        user?.userId ||
+        user?.employeeId ||
         user?.name ||
         user?.fullName ||
         user?.username ||
-        user?.email ||
-        user?.id ||
-        user?.userId
+        user?.email
       ) {
         return user;
       }
     } catch {
-      // Continue.
+      // Continue searching.
     }
   }
 
-  return {
-    name:
-      localStorage.getItem("name") ||
-      localStorage.getItem("username") ||
-      undefined,
+  const id =
+    localStorage.getItem("userId") ||
+    localStorage.getItem("id") ||
+    undefined;
 
-    username:
-      localStorage.getItem("username") ||
-      undefined,
+  const employeeId =
+    localStorage.getItem("employeeId") ||
+    undefined;
 
-    email:
-      localStorage.getItem("email") ||
-      undefined,
-  };
+  const name =
+    localStorage.getItem("name") ||
+    localStorage.getItem("fullName") ||
+    localStorage.getItem("username") ||
+    undefined;
+
+  const username =
+    localStorage.getItem("username") ||
+    undefined;
+
+  const email =
+    localStorage.getItem("email") ||
+    undefined;
+
+  if (
+    id ||
+    employeeId ||
+    name ||
+    username ||
+    email
+  ) {
+    return {
+      id,
+      employeeId,
+      name,
+      username,
+      email,
+    };
+  }
+
+  return null;
 };
 
-/*
- * ---------------------------------------------------------
- * TOKEN
- * ---------------------------------------------------------
- */
+/* =========================================================
+   TOKEN
+========================================================= */
 
 const getAuthToken = (): string | null => {
   const keys = [
@@ -94,13 +129,19 @@ const getAuthToken = (): string | null => {
     "accessToken",
     "authToken",
     "access_token",
+    "jwtToken",
   ];
 
   for (const key of keys) {
-    const value = localStorage.getItem(key);
+    const value =
+      localStorage.getItem(key) ||
+      sessionStorage.getItem(key);
 
     if (value) {
-      return value.replace(/^Bearer\s+/i, "");
+      return value.replace(
+        /^Bearer\s+/i,
+        ""
+      );
     }
   }
 
@@ -109,12 +150,17 @@ const getAuthToken = (): string | null => {
     "user",
     "auth",
     "userData",
+    "loggedInUser",
   ];
 
   for (const key of objectKeys) {
-    const value = localStorage.getItem(key);
+    const value =
+      localStorage.getItem(key) ||
+      sessionStorage.getItem(key);
 
-    if (!value) continue;
+    if (!value) {
+      continue;
+    }
 
     try {
       const parsed = JSON.parse(value);
@@ -133,12 +179,16 @@ const getAuthToken = (): string | null => {
         );
       }
     } catch {
-      // Continue.
+      // Continue searching.
     }
   }
 
   return null;
 };
+
+/* =========================================================
+   AXIOS CONFIG
+========================================================= */
 
 const getAxiosConfig = () => {
   const token = getAuthToken();
@@ -155,48 +205,51 @@ const getAxiosConfig = () => {
   };
 };
 
-/*
- * ---------------------------------------------------------
- * NORMALIZE TEXT
- * ---------------------------------------------------------
- */
+/* =========================================================
+   NORMALIZE
+========================================================= */
 
-const normalize = (value: unknown): string => {
+const normalize = (
+  value: unknown
+): string => {
   return String(value ?? "")
     .trim()
     .toLowerCase();
 };
 
-/*
- * ---------------------------------------------------------
- * CHECK WHETHER TEST CASE BELONGS TO CURRENT USER
- * ---------------------------------------------------------
- */
+/* =========================================================
+   CHECK CURRENT USER OWNERSHIP
+========================================================= */
 
 const belongsToCurrentUser = (
   testCase: TestCase,
   user: StoredUser | null
 ): boolean => {
-  /*
-   * If backend doesn't provide assignedTo,
-   * we cannot determine ownership.
-   */
-
   if (!user) {
     return false;
   }
 
-  const assigned = normalize(
-    testCase.assignedTo
-  );
+  const assignedValues = [
+    testCase.assignedTo,
+    testCase.assignedToId,
+    testCase.assignedUserId,
+  ]
+    .filter(
+      (value) =>
+        value !== undefined &&
+        value !== null &&
+        String(value).trim() !== ""
+    )
+    .map(normalize);
 
-  if (!assigned) {
+  if (assignedValues.length === 0) {
     return false;
   }
 
-  const possibleUserValues = [
+  const userValues = [
     user.id,
     user.userId,
+    user.employeeId,
     user.name,
     user.fullName,
     user.username,
@@ -210,13 +263,23 @@ const belongsToCurrentUser = (
     )
     .map(normalize);
 
-  return possibleUserValues.includes(assigned);
+  return assignedValues.some(
+    (assignedValue) =>
+      userValues.includes(
+        assignedValue
+      )
+  );
 };
 
+/* =========================================================
+   COMPONENT
+========================================================= */
+
 const QATestCases = () => {
-  const [testCases, setTestCases] = useState<
-    TestCase[]
-  >([]);
+  const [
+    testCases,
+    setTestCases,
+  ] = useState<TestCase[]>([]);
 
   const [loading, setLoading] =
     useState(true);
@@ -230,45 +293,69 @@ const QATestCases = () => {
   const [currentUser, setCurrentUser] =
     useState<StoredUser | null>(null);
 
-  /*
-   * -------------------------------------------------------
-   * LOAD USER
-   * -------------------------------------------------------
-   */
+  /* =======================================================
+     LOAD USER
+  ======================================================= */
 
   useEffect(() => {
-    setCurrentUser(getCurrentUser());
+    const user =
+      getCurrentUser();
+
+    setCurrentUser(user);
   }, []);
 
-  /*
-   * -------------------------------------------------------
-   * LOAD TEST CASES
-   * -------------------------------------------------------
-   */
+  /* =======================================================
+     LOAD TEST CASES
+  ======================================================= */
 
-  const loadTestCases = useCallback(
-    async () => {
+  const loadTestCases =
+    useCallback(async () => {
       try {
         setLoading(true);
         setError("");
 
-        const response =
-          await axios.get<TestCase[]>(
-            API_URL,
-            getAxiosConfig()
-          );
-
-        const allTestCases =
-          response.data || [];
-
-        const user = getCurrentUser();
+        const user =
+          getCurrentUser();
 
         setCurrentUser(user);
 
         /*
-         * ONLY CURRENT QA USER'S TASKS
+         * Calling this endpoint causes the backend to:
+         *
+         * Scrum Master tasks
+         *        ↓
+         * QA synchronization
+         *        ↓
+         * qa_test_cases
+         *
+         * before returning the QA data.
          */
+        const response =
+          await axios.get(
+            API_URL,
+            getAxiosConfig()
+          );
 
+        const result =
+          response.data;
+
+        const allTestCases: TestCase[] =
+          Array.isArray(result)
+            ? result
+            : Array.isArray(
+                result?.data
+              )
+            ? result.data
+            : Array.isArray(
+                result?.testCases
+              )
+            ? result.testCases
+            : [];
+
+        /*
+         * Only show records assigned to
+         * the currently logged-in QA user.
+         */
         const myTestCases =
           allTestCases.filter(
             (testCase) =>
@@ -278,7 +365,9 @@ const QATestCases = () => {
               )
           );
 
-        setTestCases(myTestCases);
+        setTestCases(
+          myTestCases
+        );
       } catch (err: any) {
         console.error(
           "Failed to load test cases:",
@@ -286,13 +375,15 @@ const QATestCases = () => {
         );
 
         if (
-          err?.response?.status === 401
+          err?.response?.status ===
+          401
         ) {
           setError(
             "Authentication required. Please login again."
           );
         } else if (
-          err?.response?.status === 403
+          err?.response?.status ===
+          403
         ) {
           setError(
             "Access denied. Please login again."
@@ -302,46 +393,56 @@ const QATestCases = () => {
             "Failed to load test cases."
           );
         }
+
+        setTestCases([]);
       } finally {
         setLoading(false);
       }
-    },
-    []
-  );
+    }, []);
 
   useEffect(() => {
     loadTestCases();
   }, [loadTestCases]);
 
-  /*
-   * -------------------------------------------------------
-   * UPDATE STATUS
-   * -------------------------------------------------------
-   */
+  /* =======================================================
+     UPDATE STATUS
+  ======================================================= */
 
   const updateStatus = async (
     id: number,
-    status: "Passed" | "Failed"
+    status:
+      | "Passed"
+      | "Failed"
   ) => {
     try {
       setUpdatingId(id);
       setError("");
 
-      await axios.put(
-        `${API_URL}/${id}/status`,
-        { status },
-        getAxiosConfig()
-      );
+      const response =
+        await axios.put(
+          `${API_URL}/${id}/status`,
+          {
+            status,
+          },
+          getAxiosConfig()
+        );
 
-      setTestCases((current) =>
-        current.map((testCase) =>
-          testCase.id === id
-            ? {
-                ...testCase,
-                status,
-              }
-            : testCase
-        )
+      const updated =
+        response.data as TestCase;
+
+      setTestCases(
+        (current) =>
+          current.map(
+            (testCase) =>
+              testCase.id === id
+                ? {
+                    ...testCase,
+                    status:
+                      updated?.status ||
+                      status,
+                  }
+                : testCase
+          )
       );
     } catch (err: any) {
       console.error(
@@ -349,13 +450,31 @@ const QATestCases = () => {
         err
       );
 
-      setError(
-        "Failed to update test case status."
-      );
+      if (
+        err?.response?.status === 401
+      ) {
+        setError(
+          "Authentication required. Please login again."
+        );
+      } else if (
+        err?.response?.status === 403
+      ) {
+        setError(
+          "Access denied. You cannot update this test case."
+        );
+      } else {
+        setError(
+          "Failed to update test case status."
+        );
+      }
     } finally {
       setUpdatingId(null);
     }
   };
+
+  /* =======================================================
+     PRIORITY
+  ======================================================= */
 
   const getPriorityClass = (
     priority: string
@@ -375,6 +494,10 @@ const QATestCases = () => {
     }
   };
 
+  /* =======================================================
+     STATUS
+  ======================================================= */
+
   const getStatusClass = (
     status: string
   ) => {
@@ -388,19 +511,33 @@ const QATestCases = () => {
       case "Failed":
         return "bg-[#fff0f0] text-[#ff3b3b]";
 
+      case "Blocked":
+        return "bg-[#fff0f0] text-[#ff3b3b]";
+
       default:
         return "bg-[#f4f6f8] text-[#9aa8bb]";
     }
   };
 
+  /* =======================================================
+     DATE
+  ======================================================= */
+
   const formatDate = (
     createdAt?: string
   ) => {
-    if (!createdAt) return "-";
+    if (!createdAt) {
+      return "-";
+    }
 
-    const date = new Date(createdAt);
+    const date =
+      new Date(createdAt);
 
-    if (Number.isNaN(date.getTime())) {
+    if (
+      Number.isNaN(
+        date.getTime()
+      )
+    ) {
       return "-";
     }
 
@@ -413,10 +550,12 @@ const QATestCases = () => {
     );
   };
 
+  /* =======================================================
+     UI
+  ======================================================= */
+
   return (
     <div className="w-full">
-
-      {/* ERROR */}
 
       {error && (
         <div
@@ -436,8 +575,6 @@ const QATestCases = () => {
           {error}
         </div>
       )}
-
-      {/* CURRENT USER */}
 
       {currentUser && (
         <div
@@ -460,6 +597,7 @@ const QATestCases = () => {
       {/* DESKTOP */}
 
       <div className="hidden md:block w-full overflow-x-auto">
+
         <div
           className="
             min-w-[1050px]
@@ -471,6 +609,7 @@ const QATestCases = () => {
             shadow-[0_2px_8px_rgba(17,24,39,0.05)]
           "
         >
+
           <div
             className="
               grid
@@ -482,6 +621,7 @@ const QATestCases = () => {
               border-[#e5e7eb]
             "
           >
+
             {[
               "TEST ID",
               "TEST TITLE",
@@ -505,6 +645,7 @@ const QATestCases = () => {
                 {heading}
               </div>
             ))}
+
           </div>
 
           {loading && (
@@ -523,7 +664,10 @@ const QATestCases = () => {
 
           {!loading &&
             testCases.map(
-              (testCase, index) => (
+              (
+                testCase,
+                index
+              ) => (
                 <div
                   key={testCase.id}
                   className={`
@@ -541,6 +685,7 @@ const QATestCases = () => {
                     }
                   `}
                 >
+
                   <div className="text-[9px] text-[#8d98a8]">
                     {testCase.testId}
                   </div>
@@ -552,9 +697,11 @@ const QATestCases = () => {
                   </div>
 
                   <div>
+
                     <span className="rounded-[6px] bg-[#f4f6f8] px-2 py-1 text-[9px] text-[#657184]">
                       {testCase.type || "-"}
                     </span>
+
                   </div>
 
                   <div className="text-[9px] text-[#8d98a8]">
@@ -562,6 +709,7 @@ const QATestCases = () => {
                   </div>
 
                   <div>
+
                     <span
                       className={`
                         rounded-[6px]
@@ -576,9 +724,11 @@ const QATestCases = () => {
                     >
                       {testCase.priority || "-"}
                     </span>
+
                   </div>
 
                   <div>
+
                     <span
                       className={`
                         rounded-[6px]
@@ -591,8 +741,10 @@ const QATestCases = () => {
                         )}
                       `}
                     >
-                      {testCase.status || "Pending"}
+                      {testCase.status ||
+                        "Pending"}
                     </span>
+
                   </div>
 
                   <div className="text-[9px] text-[#8d98a8]">
@@ -602,6 +754,7 @@ const QATestCases = () => {
                   </div>
 
                   <div className="flex items-center gap-1.5">
+
                     {testCase.status !==
                       "Passed" && (
                       <button
@@ -667,16 +820,21 @@ const QATestCases = () => {
                           : "Fail"}
                       </button>
                     )}
+
                   </div>
+
                 </div>
               )
             )}
+
         </div>
+
       </div>
 
       {/* MOBILE */}
 
       <div className="md:hidden space-y-3">
+
         {loading && (
           <div className="py-8 text-center text-[10px] text-[#9aa8bb]">
             Loading test cases...
@@ -692,147 +850,177 @@ const QATestCases = () => {
           )}
 
         {!loading &&
-          testCases.map((testCase) => (
-            <div
-              key={testCase.id}
-              className="
-                rounded-[12px]
-                border
-                border-[#e5e7eb]
-                bg-white
-                p-4
-                shadow-sm
-              "
-            >
-              <div className="flex items-start justify-between gap-2 mb-3">
-                <div>
-                  <p className="text-[9px] text-[#8d98a8]">
-                    {testCase.testId}
-                  </p>
+          testCases.map(
+            (testCase) => (
+              <div
+                key={testCase.id}
+                className="
+                  rounded-[12px]
+                  border
+                  border-[#e5e7eb]
+                  bg-white
+                  p-4
+                  shadow-sm
+                "
+              >
 
-                  <p className="text-[11px] font-semibold text-[#111827]">
-                    {testCase.title}
-                  </p>
+                <div className="flex items-start justify-between gap-2 mb-3">
+
+                  <div>
+
+                    <p className="text-[9px] text-[#8d98a8]">
+                      {testCase.testId}
+                    </p>
+
+                    <p className="text-[11px] font-semibold text-[#111827]">
+                      {testCase.title}
+                    </p>
+
+                  </div>
+
+                  <span
+                    className={`
+                      rounded-[6px]
+                      px-2
+                      py-1
+                      text-[9px]
+                      font-semibold
+                      ${getStatusClass(
+                        testCase.status
+                      )}
+                    `}
+                  >
+                    {testCase.status ||
+                      "Pending"}
+                  </span>
+
                 </div>
 
-                <span
-                  className={`
-                    rounded-[6px]
-                    px-2
-                    py-1
-                    text-[9px]
-                    font-semibold
-                    ${getStatusClass(
-                      testCase.status
+                <div className="grid grid-cols-2 gap-2 text-[9px]">
+
+                  <div>
+
+                    <span className="text-[#9aa8bb]">
+                      Type:
+                    </span>{" "}
+
+                    {testCase.type ||
+                      "-"}
+
+                  </div>
+
+                  <div>
+
+                    <span className="text-[#9aa8bb]">
+                      Task:
+                    </span>{" "}
+
+                    {testCase.linkedTask ||
+                      "-"}
+
+                  </div>
+
+                  <div>
+
+                    <span className="text-[#9aa8bb]">
+                      Priority:
+                    </span>{" "}
+
+                    {testCase.priority ||
+                      "-"}
+
+                  </div>
+
+                  <div>
+
+                    <span className="text-[#9aa8bb]">
+                      Date:
+                    </span>{" "}
+
+                    {formatDate(
+                      testCase.createdAt
                     )}
-                  `}
-                >
-                  {testCase.status}
-                </span>
-              </div>
 
-              <div className="grid grid-cols-2 gap-2 text-[9px]">
-                <div>
-                  <span className="text-[#9aa8bb]">
-                    Type:
-                  </span>{" "}
-                  {testCase.type || "-"}
+                  </div>
+
                 </div>
 
-                <div>
-                  <span className="text-[#9aa8bb]">
-                    Task:
-                  </span>{" "}
-                  {testCase.linkedTask || "-"}
-                </div>
+                <div className="flex gap-2 mt-3 pt-3 border-t border-[#eeeeee]">
 
-                <div>
-                  <span className="text-[#9aa8bb]">
-                    Priority:
-                  </span>{" "}
-                  {testCase.priority || "-"}
-                </div>
-
-                <div>
-                  <span className="text-[#9aa8bb]">
-                    Date:
-                  </span>{" "}
-                  {formatDate(
-                    testCase.createdAt
+                  {testCase.status !==
+                    "Passed" && (
+                    <button
+                      type="button"
+                      disabled={
+                        updatingId ===
+                        testCase.id
+                      }
+                      onClick={() =>
+                        updateStatus(
+                          testCase.id,
+                          "Passed"
+                        )
+                      }
+                      className="
+                        h-[26px]
+                        rounded-[6px]
+                        border
+                        border-[#b9ead4]
+                        bg-[#f0fbf6]
+                        px-3
+                        text-[9px]
+                        font-semibold
+                        text-[#20b978]
+                      "
+                    >
+                      {updatingId ===
+                      testCase.id
+                        ? "..."
+                        : "Pass"}
+                    </button>
                   )}
+
+                  {testCase.status !==
+                    "Failed" && (
+                    <button
+                      type="button"
+                      disabled={
+                        updatingId ===
+                        testCase.id
+                      }
+                      onClick={() =>
+                        updateStatus(
+                          testCase.id,
+                          "Failed"
+                        )
+                      }
+                      className="
+                        h-[26px]
+                        rounded-[6px]
+                        border
+                        border-[#ffc9c9]
+                        bg-[#fff4f4]
+                        px-3
+                        text-[9px]
+                        font-semibold
+                        text-[#ff4b4b]
+                      "
+                    >
+                      {updatingId ===
+                      testCase.id
+                        ? "..."
+                        : "Fail"}
+                    </button>
+                  )}
+
                 </div>
-              </div>
 
-              <div className="flex gap-2 mt-3 pt-3 border-t border-[#eeeeee]">
-                {testCase.status !==
-                  "Passed" && (
-                  <button
-                    type="button"
-                    disabled={
-                      updatingId ===
-                      testCase.id
-                    }
-                    onClick={() =>
-                      updateStatus(
-                        testCase.id,
-                        "Passed"
-                      )
-                    }
-                    className="
-                      h-[26px]
-                      rounded-[6px]
-                      border
-                      border-[#b9ead4]
-                      bg-[#f0fbf6]
-                      px-3
-                      text-[9px]
-                      font-semibold
-                      text-[#20b978]
-                    "
-                  >
-                    {updatingId ===
-                    testCase.id
-                      ? "..."
-                      : "Pass"}
-                  </button>
-                )}
-
-                {testCase.status !==
-                  "Failed" && (
-                  <button
-                    type="button"
-                    disabled={
-                      updatingId ===
-                      testCase.id
-                    }
-                    onClick={() =>
-                      updateStatus(
-                        testCase.id,
-                        "Failed"
-                      )
-                    }
-                    className="
-                      h-[26px]
-                      rounded-[6px]
-                      border
-                      border-[#ffc9c9]
-                      bg-[#fff4f4]
-                      px-3
-                      text-[9px]
-                      font-semibold
-                      text-[#ff4b4b]
-                    "
-                  >
-                    {updatingId ===
-                    testCase.id
-                      ? "..."
-                      : "Fail"}
-                  </button>
-                )}
               </div>
-            </div>
-          ))}
+            )
+          )}
+
       </div>
+
     </div>
   );
 };

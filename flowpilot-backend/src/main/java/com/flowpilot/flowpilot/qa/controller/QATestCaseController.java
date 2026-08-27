@@ -24,7 +24,12 @@ public class QATestCaseController {
     }
 
     /*
+     * =========================================================
      * GET ALL TEST CASES
+     *
+     * Automatically synchronizes new Scrum Master tasks
+     * into QA before returning the QA test cases.
+     * =========================================================
      */
     @GetMapping
     public ResponseEntity<List<QATestCase>>
@@ -36,11 +41,47 @@ public class QATestCaseController {
     }
 
     /*
+     * =========================================================
+     * MANUAL SCRUM MASTER → QA SYNC
+     *
+     * GET:
+     * /api/qa/test-cases/sync
+     *
+     * This does NOT modify Scrum Master tasks.
+     * It only creates missing QA test cases.
+     * =========================================================
+     */
+    @GetMapping("/sync")
+    public ResponseEntity<Map<String, Object>>
+    syncScrumMasterTasks() {
+
+        int created =
+                testCaseService.syncScrumMasterTasks();
+
+        return ResponseEntity.ok(
+                Map.of(
+                        "success", true,
+                        "created", created,
+                        "message",
+                                created +
+                                " Scrum Master task(s) synchronized to QA."
+                )
+        );
+    }
+
+    /*
+     * =========================================================
      * GET ONE TEST CASE
+     *
+     * IMPORTANT:
+     * This mapping stays after /sync so that
+     * /sync is handled correctly.
+     * =========================================================
      */
     @GetMapping("/{id}")
     public ResponseEntity<QATestCase>
-    getTestCase(@PathVariable Long id) {
+    getTestCase(
+            @PathVariable Long id) {
 
         return ResponseEntity.ok(
                 testCaseService.getTestCase(id)
@@ -48,32 +89,39 @@ public class QATestCaseController {
     }
 
     /*
+     * =========================================================
      * CREATE TEST CASE
+     * =========================================================
      */
     @PostMapping
     public ResponseEntity<QATestCase>
     createTestCase(
             @RequestBody QATestCase testCase) {
 
+        QATestCase saved =
+                testCaseService.createTestCase(
+                        testCase
+                );
+
         return ResponseEntity
                 .status(HttpStatus.CREATED)
-                .body(
-                        testCaseService.createTestCase(
-                                testCase
-                        )
-                );
+                .body(saved);
     }
 
     /*
+     * =========================================================
      * UPDATE STATUS
      *
-     * Example:
-     * PUT /api/qa/test-cases/1/status
+     * PUT:
+     *
+     * /api/qa/test-cases/{id}/status
      *
      * Body:
+     *
      * {
-     *   "status": "Passed"
+     *     "status": "Passed"
      * }
+     * =========================================================
      */
     @PutMapping("/{id}/status")
     public ResponseEntity<QATestCase>
@@ -81,15 +129,17 @@ public class QATestCaseController {
             @PathVariable Long id,
             @RequestBody Map<String, String> body) {
 
-        String status = body.get("status");
-
-        if (status == null ||
-                status.trim().isEmpty()) {
+        if (body == null ||
+                body.get("status") == null ||
+                body.get("status").trim().isEmpty()) {
 
             return ResponseEntity
                     .badRequest()
                     .build();
         }
+
+        String status =
+                body.get("status").trim();
 
         return ResponseEntity.ok(
                 testCaseService.updateStatus(
