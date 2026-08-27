@@ -168,6 +168,9 @@ export interface BoardColumn {
 }
 
 export interface Board {
+  /** The project this board is scoped to; null when the sprint has no project. */
+  projectId: number | null;
+  projectName: string | null;
   sprintId: number;
   sprintName: string;
   sprintStatus: SprintStatus;
@@ -396,6 +399,11 @@ export const deleteTask = (taskId: number) =>
 // ============================================
 
 export interface BoardFilters {
+  /**
+   * Outer scope, not a filter: it decides which sprint is shown when no sprint
+   * is named, and narrows the assignee list to that project's team.
+   */
+  projectId?: number;
   sprintId?: number;
   assigneeId?: number;
   priority?: Priority;
@@ -415,8 +423,16 @@ export const moveTask = (taskId: number, status: TaskStatus, blockedReason?: str
 
 export const fetchWipLimits = () => request<Record<string, number>>('/board/wip-limits');
 
-export const setWipLimit = (status: TaskStatus, limit: number | null) =>
-  request<Board>('/board/wip-limits', {
+/**
+ * The scope is echoed back in the query so the board this returns is the one
+ * the user is looking at, rather than whichever sprint happens to be active.
+ */
+export const setWipLimit = (
+  status: TaskStatus,
+  limit: number | null,
+  scope: Pick<BoardFilters, 'projectId' | 'sprintId'> = {}
+) =>
+  request<Board>(`/board/wip-limits${query(scope)}`, {
     method: 'PUT',
     body: JSON.stringify({ status, limit })
   });
@@ -425,7 +441,9 @@ export const setWipLimit = (status: TaskStatus, limit: number | null) =>
 // SPRINTS
 // ============================================
 
-export const fetchSprints = () => request<Sprint[]>('/sprints');
+/** Sprints for one project, or every sprint when no project is given. */
+export const fetchSprints = (projectId?: number) =>
+  request<Sprint[]>(`/sprints${query({ projectId })}`);
 
 export const fetchActiveSprint = () => request<Sprint>('/sprints/active');
 
