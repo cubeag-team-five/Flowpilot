@@ -27,6 +27,7 @@ import {
   cloneTask,
   deleteTask,
   TASK_STATUSES,
+  BOARD_COLUMNS,
   PRIORITIES,
   STATUS_LABEL,
   PRIORITY_LABEL,
@@ -233,12 +234,19 @@ export const ScrumBoard: React.FC = () => {
     })();
   }, []);
 
-  /** Eight columns always, in TASK_STATUSES order — a missing column reads as lost work. */
+  /**
+   * Seven columns always, in BOARD_COLUMNS order.
+   *
+   * Review has no column of its own — see BOARD_COLUMNS — so its cards are
+   * carried into Testing rather than dropped: a missing column reads as lost
+   * work. Such a card still shows "Review" in its own move dropdown, so its
+   * real status stays visible even though it sits under Testing.
+   */
   const columns = useMemo<BoardColumn[]>(() => {
     const byStatus = new Map(board?.columns.map((column) => [column.status, column]) ?? []);
 
-    return TASK_STATUSES.map(
-      (status) =>
+    return BOARD_COLUMNS.map((status) => {
+      const column =
         byStatus.get(status) ?? {
           status,
           label: STATUS_LABEL[status],
@@ -247,8 +255,25 @@ export const ScrumBoard: React.FC = () => {
           wipLimit: null,
           wipExceeded: false,
           cards: []
-        }
-    );
+        };
+
+      if (status !== 'TESTING') return column;
+
+      const review = byStatus.get('CODE_REVIEW');
+
+      if (!review || review.cards.length === 0) return column;
+
+      const taskCount = column.taskCount + review.taskCount;
+
+      return {
+        ...column,
+        taskCount,
+        totalPoints: column.totalPoints + review.totalPoints,
+        // The limit belongs to Testing, so re-test it against the merged count
+        wipExceeded: column.wipLimit !== null && taskCount > column.wipLimit,
+        cards: [...review.cards, ...column.cards]
+      };
+    });
   }, [board]);
 
   /** Every card on the board, for the dependency picker in the detail panel. */
@@ -683,7 +708,7 @@ export const ScrumBoard: React.FC = () => {
       {/* Below lg the eight columns are a snap carousel; from lg they are a grid */}
       <div
         className="flex items-start gap-3 overflow-x-auto snap-x snap-mandatory pb-2 -mx-4 px-4
-          sm:-mx-5 sm:px-5 lg:grid lg:grid-cols-8 lg:items-stretch lg:mx-0 lg:px-0
+          sm:-mx-5 sm:px-5 lg:grid lg:grid-cols-7 lg:items-stretch lg:mx-0 lg:px-0
           lg:overflow-visible"
       >
         {columns.map((column) => {
@@ -750,7 +775,7 @@ export const ScrumBoard: React.FC = () => {
                   event.preventDefault();
                   handleDrop(column.status);
                 }}
-                className={`mt-2 space-y-2 rounded-xl min-h-24 max-h-[65vh] overflow-y-auto p-1
+                className={`mt-2 space-y-2 rounded-xl min-h-24 p-1
                   transition-colors ${dropping ? 'bg-emerald-500/10 ring-2 ring-emerald-500/40' : ''}`}
               >
                 {column.cards.length === 0 ? (
