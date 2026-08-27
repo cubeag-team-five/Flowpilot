@@ -5,7 +5,7 @@ import java.util.List;
 
 import org.springframework.stereotype.Service;
 
-import com.flowpilot.flowpilot.admin.model.AdminDepartmentMember;
+import com.flowpilot.flowpilot.superadmin.model.SuperAdminUser;
 import com.flowpilot.flowpilot.pm.model.PMProject;
 import com.flowpilot.flowpilot.pm.repository.PMProjectsRepository;
 import com.flowpilot.flowpilot.scrummaster.dto.ScrumProjectDto;
@@ -76,19 +76,23 @@ public class ScrumProjectService {
 
         List<ScrumProjectDto.TeamMember> members = new ArrayList<>();
 
-        // teamMembers is a join to the Admin module's people; a project with
-        // none is normal early on, so an empty list is not an error
-        List<AdminDepartmentMember> team = project.getTeamMembers();
+        // The PM module owns this join and recently moved it from the Admin
+        // module's people to SuperAdminUser, so the mapping follows their type.
+        // A project with no team is normal early on, not an error.
+        List<SuperAdminUser> team = project.getTeamMembers();
 
         if (team != null) {
-            for (AdminDepartmentMember member : team) {
+            for (SuperAdminUser member : team) {
                 members.add(new ScrumProjectDto.TeamMember(
-                        member.getId(),
-                        member.getFullName(),
-                        member.getEmail(),
                         member.getEmployeeId(),
+                        member.getName(),
+                        member.getEmail(),
+                        // Their id doubles as the employee identifier
+                        member.getEmployeeId() == null
+                                ? null
+                                : String.valueOf(member.getEmployeeId()),
                         member.getDesignation(),
-                        ScrumTask.initialsOf(member.getFullName())
+                        ScrumTask.initialsOf(member.getName())
                 ));
             }
         }

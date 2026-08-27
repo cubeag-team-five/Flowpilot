@@ -30,23 +30,44 @@ type Project = {
   id: number;
   projectCode: string;
   projectName: string;
-  teamMemberIds?: number[];
+
+  /*
+   * IMPORTANT:
+   * PM stores employeeId values here.
+   */
+  teamMemberIds?: Array<number | string>;
 };
 
 type Member = {
-  id: number;
-  fullName: string;
+  employeeId: number | string;
+  name: string;
   email: string;
-  employeeId: string;
+  role: string;
+  department: string;
   designation: string;
+  status: string;
+  lastLogin: string;
+  initials: string;
 };
 
-const BUG_API_URL = "http://localhost:8080/api/qa/bugs";
+const BUG_API_URL =
+  "http://localhost:8080/api/qa/bugs";
 
-const PROJECT_API_URL = "http://localhost:8080/api/pm/projects";
+const PROJECT_API_URL =
+  "http://localhost:8080/api/pm/projects";
 
-const ADMIN_DEPARTMENT_API_URL =
-  "http://localhost:8080/api/admin/departments";
+/*
+ * Same member API used by PMProjects.tsx.
+ *
+ * We intentionally DO NOT use:
+ *
+ * /api/admin/departments
+ *
+ * QA Assign To must use the members assigned
+ * to the selected PM project.
+ */
+const SUPERADMIN_USERS_URL =
+  "http://localhost:8080/api/superadmin/users";
 
 const emptyForm: BugForm = {
   bugId: "",
@@ -78,7 +99,8 @@ const QABugReports: React.FC = () => {
 
   const [members, setMembers] = useState<Member[]>([]);
 
-  const [memberSearch, setMemberSearch] = useState("");
+  const [memberSearch, setMemberSearch] =
+    useState("");
 
   const [showMemberDropdown, setShowMemberDropdown] =
     useState(false);
@@ -87,49 +109,146 @@ const QABugReports: React.FC = () => {
      FORM
   ========================================================= */
 
-  const [form, setForm] = useState<BugForm>(emptyForm);
+  const [form, setForm] =
+    useState<BugForm>(emptyForm);
 
-  const [showForm, setShowForm] = useState(false);
+  const [showForm, setShowForm] =
+    useState(false);
 
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] =
+    useState(false);
 
-  const [saving, setSaving] = useState(false);
+  const [saving, setSaving] =
+    useState(false);
 
-  const [loadingProjects, setLoadingProjects] = useState(false);
+  const [loadingProjects, setLoadingProjects] =
+    useState(false);
 
-  const [loadingMembers, setLoadingMembers] = useState(false);
+  const [loadingMembers, setLoadingMembers] =
+    useState(false);
 
-  const [error, setError] = useState("");
+  const [error, setError] =
+    useState("");
 
-  const [success, setSuccess] = useState("");
+  const [success, setSuccess] =
+    useState("");
 
-  const [globalSearch, setGlobalSearch] = useState("");
+  const [globalSearch, setGlobalSearch] =
+    useState("");
 
   /* =========================================================
      AUTH TOKEN
   ========================================================= */
 
-  const getToken = () => {
-    return (
-      localStorage.getItem("token") ||
-      localStorage.getItem("accessToken") ||
-      localStorage.getItem("jwt") ||
-      ""
-    );
+  const getToken = (): string => {
+    const keys = [
+      "token",
+      "accessToken",
+      "jwtToken",
+      "authToken",
+      "jwt",
+      "access_token",
+    ];
+
+    /*
+     * Check localStorage first.
+     */
+    for (const key of keys) {
+      const localToken =
+        localStorage.getItem(key);
+
+      if (localToken) {
+        return localToken.replace(
+          /^Bearer\s+/i,
+          ""
+        );
+      }
+    }
+
+    /*
+     * Then sessionStorage.
+     */
+    for (const key of keys) {
+      const sessionToken =
+        sessionStorage.getItem(key);
+
+      if (sessionToken) {
+        return sessionToken.replace(
+          /^Bearer\s+/i,
+          ""
+        );
+      }
+    }
+
+    /*
+     * Some applications store the token
+     * inside an object such as currentUser,
+     * user, auth, or userData.
+     */
+    const objectKeys = [
+      "currentUser",
+      "user",
+      "auth",
+      "userData",
+    ];
+
+    for (const key of objectKeys) {
+      const localValue =
+        localStorage.getItem(key);
+
+      const sessionValue =
+        sessionStorage.getItem(key);
+
+      const value =
+        localValue || sessionValue;
+
+      if (!value) {
+        continue;
+      }
+
+      try {
+        const parsed = JSON.parse(value);
+
+        const token =
+          parsed?.token ||
+          parsed?.jwt ||
+          parsed?.jwtToken ||
+          parsed?.accessToken ||
+          parsed?.access_token ||
+          parsed?.user?.token ||
+          parsed?.user?.accessToken;
+
+        if (token) {
+          return String(token).replace(
+            /^Bearer\s+/i,
+            ""
+          );
+        }
+      } catch {
+        /*
+         * Not JSON.
+         * Continue checking the other keys.
+         */
+      }
+    }
+
+    return "";
   };
 
   /* =========================================================
      COMMON HEADERS
   ========================================================= */
 
-  const getHeaders = () => {
+  const getHeaders = (): HeadersInit => {
     const token = getToken();
 
     return {
       "Content-Type": "application/json",
+
       ...(token
         ? {
-            Authorization: `Bearer ${token}`,
+            Authorization:
+              `Bearer ${token}`,
           }
         : {}),
     };
@@ -140,10 +259,15 @@ const QABugReports: React.FC = () => {
   ========================================================= */
 
   useEffect(() => {
-    const handleGlobalSearch = (event: Event) => {
-      const customEvent = event as CustomEvent<string>;
+    const handleGlobalSearch = (
+      event: Event
+    ) => {
+      const customEvent =
+        event as CustomEvent<string>;
 
-      setGlobalSearch(customEvent.detail || "");
+      setGlobalSearch(
+        customEvent.detail || ""
+      );
     };
 
     window.addEventListener(
@@ -161,7 +285,6 @@ const QABugReports: React.FC = () => {
 
   /* =========================================================
      SUCCESS MESSAGE
-     Automatically disappears after 4 seconds.
   ========================================================= */
 
   useEffect(() => {
@@ -169,9 +292,10 @@ const QABugReports: React.FC = () => {
       return;
     }
 
-    const timer = window.setTimeout(() => {
-      setSuccess("");
-    }, 4000);
+    const timer =
+      window.setTimeout(() => {
+        setSuccess("");
+      }, 4000);
 
     return () => {
       window.clearTimeout(timer);
@@ -187,13 +311,15 @@ const QABugReports: React.FC = () => {
       setLoading(true);
       setError("");
 
-      const response = await fetch(BUG_API_URL, {
-        method: "GET",
-        headers: getHeaders(),
-      });
+      const response =
+        await fetch(BUG_API_URL, {
+          method: "GET",
+          headers: getHeaders(),
+        });
 
       if (!response.ok) {
-        const errorText = await response.text();
+        const errorText =
+          await response.text();
 
         throw new Error(
           errorText ||
@@ -201,33 +327,44 @@ const QABugReports: React.FC = () => {
         );
       }
 
-      const result = await response.json();
+      const result =
+        await response.json();
 
-     const data = Array.isArray(result)
-  ? result
-  : Array.isArray(result?.data)
-  ? result.data
-  : [];
+      const data: BugReport[] =
+        Array.isArray(result)
+          ? result
+          : Array.isArray(result?.data)
+          ? result.data
+          : [];
 
-/*
- * Show the most recently created bug at the top.
- * createdAt is stored by the backend when the bug is created.
- */
-const sortedData = [...data].sort((a, b) => {
-  const dateA = new Date(
-    a.createdAt || a.filedDate || 0
-  ).getTime();
+      /*
+       * Most recently created bug at top.
+       */
+      const sortedData =
+        [...data].sort((a, b) => {
+          const dateA =
+            new Date(
+              a.createdAt ||
+                a.filedDate ||
+                0
+            ).getTime();
 
-  const dateB = new Date(
-    b.createdAt || b.filedDate || 0
-  ).getTime();
+          const dateB =
+            new Date(
+              b.createdAt ||
+                b.filedDate ||
+                0
+            ).getTime();
 
-  return dateB - dateA;
-});
+          return dateB - dateA;
+        });
 
-setBugs(sortedData);
+      setBugs(sortedData);
     } catch (err) {
-      console.error("Error loading bugs:", err);
+      console.error(
+        "Error loading bugs:",
+        err
+      );
 
       setError(
         err instanceof Error
@@ -240,20 +377,25 @@ setBugs(sortedData);
   };
 
   /* =========================================================
-     LOAD PROJECTS
+     LOAD PROJECTS FROM PM
   ========================================================= */
 
   const loadProjects = async () => {
     try {
       setLoadingProjects(true);
 
-      const response = await fetch(PROJECT_API_URL, {
-        method: "GET",
-        headers: getHeaders(),
-      });
+      const response =
+        await fetch(
+          PROJECT_API_URL,
+          {
+            method: "GET",
+            headers: getHeaders(),
+          }
+        );
 
       if (!response.ok) {
-        const errorText = await response.text();
+        const errorText =
+          await response.text();
 
         throw new Error(
           errorText ||
@@ -261,17 +403,22 @@ setBugs(sortedData);
         );
       }
 
-      const result = await response.json();
+      const result =
+        await response.json();
 
-      const data = Array.isArray(result)
-        ? result
-        : Array.isArray(result?.data)
-        ? result.data
-        : [];
+      const data: Project[] =
+        Array.isArray(result)
+          ? result
+          : Array.isArray(result?.data)
+          ? result.data
+          : [];
 
       setProjects(data);
     } catch (err) {
-      console.error("Error loading projects:", err);
+      console.error(
+        "Error loading projects:",
+        err
+      );
 
       setError(
         err instanceof Error
@@ -293,13 +440,21 @@ setBugs(sortedData);
   }, []);
 
   /* =========================================================
-     LOAD MEMBERS FOR SELECTED PROJECT
+     LOAD PM MEMBERS FOR SELECTED PROJECT
      
-     We use the existing Admin Department Member API.
-     
-     The PM project gives us teamMemberIds.
-     
-     We then find those members from the Admin departments.
+     FLOW:
+
+     PM PROJECT
+          ↓
+     teamMemberIds
+          ↓
+     /api/superadmin/users
+          ↓
+     employeeId MATCH
+          ↓
+     ACTIVE MEMBERS
+          ↓
+     ASSIGN TO DROPDOWN
   ========================================================= */
 
   const loadMembersForProject = async (
@@ -308,126 +463,200 @@ setBugs(sortedData);
     try {
       setLoadingMembers(true);
       setError("");
-
       setMembers([]);
 
+      /*
+       * IMPORTANT:
+       *
+       * PM stores employee IDs in
+       * teamMemberIds.
+       *
+       * Convert everything to strings
+       * so both:
+       *
+       * 1001
+       *
+       * and:
+       *
+       * "1001"
+       *
+       * match correctly.
+       */
+      const projectMemberIds =
+        (project.teamMemberIds ?? [])
+          .map((id) =>
+            String(id).trim()
+          )
+          .filter(Boolean);
+
+      console.log(
+        "Selected PM project teamMemberIds:",
+        projectMemberIds
+      );
+
+      /*
+       * No team members assigned to
+       * this PM project.
+       */
       if (
-        !project.teamMemberIds ||
-        project.teamMemberIds.length === 0
+        projectMemberIds.length === 0
       ) {
-        setLoadingMembers(false);
+        setMembers([]);
         return;
       }
 
       /*
-       * Get all departments.
-       *
-       * We do not change Admin.
-       * We only read the existing members.
+       * Get authentication token.
        */
-      const departmentResponse = await fetch(
-        ADMIN_DEPARTMENT_API_URL,
-        {
-          method: "GET",
-          headers: getHeaders(),
-        }
-      );
+      const token = getToken();
 
-      if (!departmentResponse.ok) {
-        const errorText =
-          await departmentResponse.text();
-
+      if (!token) {
         throw new Error(
-          errorText ||
-            `Failed to load departments (${departmentResponse.status})`
+          "Authentication token not found. Please log in again."
         );
       }
 
-      const departmentResult =
-        await departmentResponse.json();
+      /*
+       * Same users API used by PMProjects.tsx.
+       */
+      const response =
+        await fetch(
+          SUPERADMIN_USERS_URL,
+          {
+            method: "GET",
 
-      const departments = Array.isArray(
-        departmentResult
-      )
-        ? departmentResult
-        : Array.isArray(departmentResult?.data)
-        ? departmentResult.data
-        : [];
+            headers: {
+              "Content-Type":
+                "application/json",
+
+              Authorization:
+                `Bearer ${token}`,
+            },
+          }
+        );
+
+      if (
+        response.status === 401 ||
+        response.status === 403
+      ) {
+        throw new Error(
+          "Access denied while loading PM members. Please log in again."
+        );
+      }
+
+      if (!response.ok) {
+        const errorText =
+          await response.text();
+
+        throw new Error(
+          errorText ||
+            `Failed to load PM members (${response.status})`
+        );
+      }
+
+      const result =
+        await response.json();
 
       /*
-       * Get members from every department.
+       * Support possible response shapes:
+       *
+       * []
+       * { data: [] }
+       * { users: [] }
        */
-      const memberRequests = departments.map(
-        async (department: {
-          id: number;
-        }) => {
-          try {
-            const response = await fetch(
-              `${ADMIN_DEPARTMENT_API_URL}/${department.id}/members`,
-              {
-                method: "GET",
-                headers: getHeaders(),
-              }
-            );
+      const allMembers: Member[] =
+        Array.isArray(result)
+          ? result
+          : Array.isArray(result?.data)
+          ? result.data
+          : Array.isArray(result?.users)
+          ? result.users
+          : [];
 
-            if (!response.ok) {
-              return [];
-            }
-
-            const result = await response.json();
-
-            return Array.isArray(result)
-              ? result
-              : Array.isArray(result?.data)
-              ? result.data
-              : [];
-          } catch {
-            return [];
-          }
-        }
+      console.log(
+        "All members returned:",
+        allMembers
       );
 
-      const memberResults =
-        await Promise.all(memberRequests);
+      /*
+       * PMProjects only permits ACTIVE
+       * users to be selected.
+       */
+      const activeMembers =
+        allMembers.filter(
+          (member) =>
+            String(
+              member.status ?? ""
+            )
+              .trim()
+              .toUpperCase() ===
+            "ACTIVE"
+        );
 
-      const allMembers: Member[] =
-        memberResults.flat();
+      console.log(
+        "Active members:",
+        activeMembers
+      );
 
       /*
-       * Only keep members assigned to the selected project.
+       * IMPORTANT FIX:
+       *
+       * PM teamMemberIds contain employeeId.
+       *
+       * Therefore:
+       *
+       * project.teamMemberIds
+       *             ↓
+       * member.employeeId
+       *
+       * NOT member.id.
        */
-      const projectMemberIds =
-        project.teamMemberIds;
-
       const projectMembers =
-        allMembers.filter((member) =>
-          projectMemberIds.includes(member.id)
+        activeMembers.filter(
+          (member) =>
+            projectMemberIds.includes(
+              String(
+                member.employeeId
+              ).trim()
+            )
         );
 
       /*
-       * Remove duplicate members.
+       * Remove duplicate employee IDs.
        */
-      const uniqueMembers = Array.from(
-        new Map(
-          projectMembers.map((member) => [
-            member.id,
-            member,
-          ])
-        ).values()
+      const uniqueMembers =
+        Array.from(
+          new Map(
+            projectMembers.map(
+              (member) => [
+                String(
+                  member.employeeId
+                ).trim(),
+                member,
+              ]
+            )
+          ).values()
+        );
+
+      console.log(
+        "PM members available for Assign To:",
+        uniqueMembers
       );
 
       setMembers(uniqueMembers);
     } catch (err) {
       console.error(
-        "Error loading project members:",
+        "Error loading PM project members:",
         err
       );
 
       setError(
         err instanceof Error
           ? err.message
-          : "Failed to load project members"
+          : "Failed to load PM project members"
       );
+
+      setMembers([]);
     } finally {
       setLoadingMembers(false);
     }
@@ -444,7 +673,10 @@ setBugs(sortedData);
         HTMLSelectElement
     >
   ) => {
-    const { name, value } = event.target;
+    const {
+      name,
+      value,
+    } = event.target;
 
     setForm((previous) => ({
       ...previous,
@@ -457,15 +689,16 @@ setBugs(sortedData);
   ========================================================= */
 
   const handleProjectChange = async (
-    event: React.ChangeEvent<HTMLSelectElement>
+    event: React.ChangeEvent<
+      HTMLSelectElement
+    >
   ) => {
-    const projectId = event.target.value;
+    const projectId =
+      event.target.value;
 
     /*
-     * Reset assignment whenever project changes.
-     *
-     * This prevents a member from the previous
-     * project remaining selected.
+     * Clear previous assignee when
+     * project changes.
      */
     setForm((previous) => ({
       ...previous,
@@ -474,24 +707,41 @@ setBugs(sortedData);
     }));
 
     setMemberSearch("");
-
     setShowMemberDropdown(false);
+    setMembers([]);
 
     if (!projectId) {
-      setMembers([]);
       return;
     }
 
-    const selectedProject = projects.find(
-      (project) =>
-        String(project.id) === projectId
-    );
+    /*
+     * Find selected PM project.
+     */
+    const selectedProject =
+      projects.find(
+        (project) =>
+          String(project.id) ===
+          String(projectId)
+      );
 
     if (!selectedProject) {
-      setMembers([]);
+      console.warn(
+        "Selected PM project not found:",
+        projectId
+      );
+
       return;
     }
 
+    console.log(
+      "Selected PM project:",
+      selectedProject
+    );
+
+    /*
+     * Fetch ONLY the members assigned
+     * to this PM project.
+     */
     await loadMembersForProject(
       selectedProject
     );
@@ -501,43 +751,72 @@ setBugs(sortedData);
      MEMBER SEARCH
   ========================================================= */
 
-  const filteredMembers = useMemo(() => {
-    const search =
-      memberSearch.trim().toLowerCase();
+  const filteredMembers =
+    useMemo(() => {
+      const search =
+        memberSearch
+          .trim()
+          .toLowerCase();
 
-    if (!search) {
-      return members;
-    }
+      if (!search) {
+        return members;
+      }
 
-    return members.filter((member) => {
-      return (
-        member.fullName
-          ?.toLowerCase()
-          .includes(search) ||
-        member.employeeId
-          ?.toLowerCase()
-          .includes(search) ||
-        member.designation
-          ?.toLowerCase()
-          .includes(search) ||
-        member.email
-          ?.toLowerCase()
-          .includes(search)
+      return members.filter(
+        (member) => {
+          return (
+            String(
+              member.name ?? ""
+            )
+              .toLowerCase()
+              .includes(search) ||
+            String(
+              member.employeeId ?? ""
+            )
+              .toLowerCase()
+              .includes(search) ||
+            String(
+              member.designation ?? ""
+            )
+              .toLowerCase()
+              .includes(search) ||
+            String(
+              member.email ?? ""
+            )
+              .toLowerCase()
+              .includes(search)
+          );
+        }
       );
-    });
-  }, [members, memberSearch]);
+    }, [
+      members,
+      memberSearch,
+    ]);
 
   /* =========================================================
      SELECT MEMBER
   ========================================================= */
 
-  const selectMember = (member: Member) => {
+  const selectMember = (
+    member: Member
+  ) => {
+    /*
+     * Backend currently expects assignedTo
+     * as the member's name.
+     */
     setForm((previous) => ({
       ...previous,
-      assignedTo: member.fullName,
+      assignedTo: member.name,
     }));
 
-    setMemberSearch(member.fullName);
+    /*
+     * Keep the existing UI behavior:
+     * selected member name remains inside
+     * the search input.
+     */
+    setMemberSearch(
+      member.name
+    );
 
     setShowMemberDropdown(false);
   };
@@ -552,15 +831,15 @@ setBugs(sortedData);
 
     setForm({
       ...emptyForm,
-      bugId: `BUG-${String(
-        bugs.length + 1
-      ).padStart(3, "0")}`,
+
+      bugId:
+        `BUG-${String(
+          bugs.length + 1
+        ).padStart(3, "0")}`,
     });
 
     setMembers([]);
-
     setMemberSearch("");
-
     setShowMemberDropdown(false);
 
     setShowForm(true);
@@ -576,9 +855,7 @@ setBugs(sortedData);
     setForm(emptyForm);
 
     setMembers([]);
-
     setMemberSearch("");
-
     setShowMemberDropdown(false);
 
     setError("");
@@ -596,6 +873,9 @@ setBugs(sortedData);
     setError("");
     setSuccess("");
 
+    /*
+     * Validate required fields.
+     */
     if (
       !form.bugId.trim() ||
       !form.bugTitle.trim() ||
@@ -615,44 +895,50 @@ setBugs(sortedData);
       setSaving(true);
 
       /*
-       * IMPORTANT:
-       *
-       * Backend QABugReport uses:
-       *
-       * title
-       * projectId
-       *
-       * NOT bugTitle.
+       * Backend expects "title",
+       * not "bugTitle".
        */
-      const response = await fetch(
-        BUG_API_URL,
-        {
-          method: "POST",
-          headers: getHeaders(),
-          body: JSON.stringify({
-            bugId: form.bugId.trim(),
+      const response =
+        await fetch(
+          BUG_API_URL,
+          {
+            method: "POST",
 
-            title: form.bugTitle.trim(),
+            headers:
+              getHeaders(),
 
-            projectId: Number(form.projectId),
+            body:
+              JSON.stringify({
+                bugId:
+                  form.bugId.trim(),
 
-            linkedTaskId:
-              form.linkedTaskId.trim(),
+                title:
+                  form.bugTitle.trim(),
 
-            environment: form.environment,
+                projectId:
+                  Number(
+                    form.projectId
+                  ),
 
-            severity: form.severity,
+                linkedTaskId:
+                  form.linkedTaskId.trim(),
 
-            assignedTo:
-              form.assignedTo.trim(),
+                environment:
+                  form.environment,
 
-            stepsToReproduce:
-              form.stepsToReproduce.trim(),
+                severity:
+                  form.severity,
 
-            status: "Open",
-          }),
-        }
-      );
+                assignedTo:
+                  form.assignedTo.trim(),
+
+                stepsToReproduce:
+                  form.stepsToReproduce.trim(),
+
+                status: "Open",
+              }),
+          }
+        );
 
       if (!response.ok) {
         const errorText =
@@ -664,11 +950,6 @@ setBugs(sortedData);
         );
       }
 
-      /*
-       * SUCCESS MESSAGE
-       *
-       * Automatically disappears after 4 seconds.
-       */
       setSuccess(
         "Bug successfully added."
       );
@@ -678,11 +959,12 @@ setBugs(sortedData);
       setForm(emptyForm);
 
       setMembers([]);
-
       setMemberSearch("");
-
       setShowMemberDropdown(false);
 
+      /*
+       * Refresh table.
+       */
       await loadBugs();
     } catch (err) {
       console.error(
@@ -704,55 +986,79 @@ setBugs(sortedData);
      SEARCH BUGS
   ========================================================= */
 
-  const filteredBugs = useMemo(() => {
-    const search =
-      globalSearch.trim().toLowerCase();
+  const filteredBugs =
+    useMemo(() => {
+      const search =
+        globalSearch
+          .trim()
+          .toLowerCase();
 
-    if (!search) {
-      return bugs;
-    }
+      if (!search) {
+        return bugs;
+      }
 
-    return bugs.filter((bug) => {
-      const values = [
-        bug.bugId,
-        bug.title,
-        bug.linkedTaskId,
-        bug.environment,
-        bug.severity,
-        bug.assignedTo,
-        bug.status,
-        bug.stepsToReproduce,
-      ];
+      return bugs.filter(
+        (bug) => {
+          const values = [
+            bug.bugId,
+            bug.title,
+            bug.linkedTaskId,
+            bug.environment,
+            bug.severity,
+            bug.assignedTo,
+            bug.status,
+            bug.stepsToReproduce,
+          ];
 
-      return values.some((value) =>
-        String(value ?? "")
-          .toLowerCase()
-          .includes(search)
+          return values.some(
+            (value) =>
+              String(value ?? "")
+                .toLowerCase()
+                .includes(search)
+          );
+        }
       );
-    });
-  }, [bugs, globalSearch]);
+    }, [
+      bugs,
+      globalSearch,
+    ]);
 
   /* =========================================================
      COUNTS
   ========================================================= */
 
-  const openCount = bugs.filter(
-    (bug) =>
-      (bug.status || "Open")
-        .toLowerCase() === "open"
-  ).length;
+  const openCount =
+    bugs.filter(
+      (bug) =>
+        (
+          bug.status ||
+          "Open"
+        )
+          .toLowerCase() ===
+        "open"
+    ).length;
 
-  const fixedCount = bugs.filter(
-    (bug) =>
-      (bug.status || "")
-        .toLowerCase() === "fixed"
-  ).length;
+  const fixedCount =
+    bugs.filter(
+      (bug) =>
+        (
+          bug.status ||
+          ""
+        )
+          .toLowerCase() ===
+        "fixed"
+    ).length;
 
-  const closedCount = bugs.filter(
-    (bug) =>
-      (bug.status || "")
-        .toLowerCase() === "closed"
-  ).length;
+  const closedCount =
+    bugs.filter(
+      (bug) =>
+        (
+          bug.status ||
+          ""
+        )
+          .toLowerCase() ===
+        "closed"
+    ).length;
 
   /* =========================================================
      FORMAT DATE
@@ -762,15 +1068,21 @@ setBugs(sortedData);
     bug: BugReport
   ) => {
     const value =
-      bug.createdAt || bug.filedDate;
+      bug.createdAt ||
+      bug.filedDate;
 
     if (!value) {
       return "—";
     }
 
-    const date = new Date(value);
+    const date =
+      new Date(value);
 
-    if (Number.isNaN(date.getTime())) {
+    if (
+      Number.isNaN(
+        date.getTime()
+      )
+    ) {
       return value;
     }
 
@@ -797,9 +1109,12 @@ setBugs(sortedData);
       return "—";
     }
 
-    const project = projects.find(
-      (item) => item.id === projectId
-    );
+    const project =
+      projects.find(
+        (item) =>
+          item.id ===
+          projectId
+      );
 
     if (!project) {
       return `Project ${projectId}`;
@@ -810,14 +1125,15 @@ setBugs(sortedData);
 
   /* =========================================================
      UI
+     
+     IMPORTANT:
+     UI below is unchanged.
   ========================================================= */
 
   return (
     <div className="w-full">
 
-      {/* =====================================================
-          FILE BUG BUTTON
-      ===================================================== */}
+      {/* FILE BUG BUTTON */}
 
       <div className="flex justify-center mb-6">
 
@@ -831,9 +1147,7 @@ setBugs(sortedData);
 
       </div>
 
-      {/* =====================================================
-          SUCCESS MESSAGE
-      ===================================================== */}
+      {/* SUCCESS MESSAGE */}
 
       {success && (
         <div className="mb-4 flex items-center justify-between rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700 shadow-sm">
@@ -844,7 +1158,9 @@ setBugs(sortedData);
               ✓
             </span>
 
-            <span>{success}</span>
+            <span>
+              {success}
+            </span>
 
           </div>
 
@@ -861,9 +1177,7 @@ setBugs(sortedData);
         </div>
       )}
 
-      {/* =====================================================
-          ERROR
-      ===================================================== */}
+      {/* ERROR */}
 
       {error && (
         <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
@@ -871,9 +1185,7 @@ setBugs(sortedData);
         </div>
       )}
 
-      {/* =====================================================
-          NEW BUG FORM
-      ===================================================== */}
+      {/* NEW BUG FORM */}
 
       {showForm && (
         <div className="mb-6 rounded-xl border border-red-200 bg-white p-5 shadow-sm">
@@ -906,9 +1218,7 @@ setBugs(sortedData);
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
 
-              {/* =================================================
-                  BUG ID
-              ================================================= */}
+              {/* BUG ID */}
 
               <div>
 
@@ -926,9 +1236,7 @@ setBugs(sortedData);
 
               </div>
 
-              {/* =================================================
-                  BUG TITLE
-              ================================================= */}
+              {/* BUG TITLE */}
 
               <div>
 
@@ -946,9 +1254,7 @@ setBugs(sortedData);
 
               </div>
 
-              {/* =================================================
-                  PROJECT
-              ================================================= */}
+              {/* PROJECT */}
 
               <div>
 
@@ -976,7 +1282,8 @@ setBugs(sortedData);
                         key={project.id}
                         value={project.id}
                       >
-                        {project.projectCode} -{" "}
+                        {project.projectCode}{" "}
+                        -{" "}
                         {project.projectName}
                       </option>
                     )
@@ -986,9 +1293,7 @@ setBugs(sortedData);
 
               </div>
 
-              {/* =================================================
-                  LINKED TASK
-              ================================================= */}
+              {/* LINKED TASK */}
 
               <div>
 
@@ -1006,9 +1311,7 @@ setBugs(sortedData);
 
               </div>
 
-              {/* =================================================
-                  ENVIRONMENT
-              ================================================= */}
+              {/* ENVIRONMENT */}
 
               <div>
 
@@ -1039,9 +1342,7 @@ setBugs(sortedData);
 
               </div>
 
-              {/* =================================================
-                  SEVERITY
-              ================================================= */}
+              {/* SEVERITY */}
 
               <div>
 
@@ -1076,9 +1377,7 @@ setBugs(sortedData);
 
               </div>
 
-              {/* =================================================
-                  ASSIGN TO
-              ================================================= */}
+              {/* ASSIGN TO */}
 
               <div className="relative">
 
@@ -1091,10 +1390,18 @@ setBugs(sortedData);
                   value={memberSearch}
                   disabled={!form.projectId}
                   onChange={(event) => {
-                    setMemberSearch(
-                      event.target.value
-                    );
 
+                    const value =
+                      event.target.value;
+
+                    setMemberSearch(value);
+
+                    /*
+                     * When the user starts
+                     * searching again, clear
+                     * the previous selected
+                     * assignee.
+                     */
                     setForm(
                       (previous) => ({
                         ...previous,
@@ -1105,15 +1412,16 @@ setBugs(sortedData);
                     setShowMemberDropdown(
                       true
                     );
+
                   }}
                   onFocus={() => {
-                    if (
-                      form.projectId
-                    ) {
+
+                    if (form.projectId) {
                       setShowMemberDropdown(
                         true
                       );
                     }
+
                   }}
                   placeholder={
                     !form.projectId
@@ -1139,16 +1447,24 @@ setBugs(sortedData);
                         0 ? (
 
                         <div className="px-3 py-3 text-sm text-slate-400">
-                          No members found
+
+                          {members.length ===
+                          0
+                            ? "No PM members assigned to this project"
+                            : "No matching members found"}
+
                         </div>
 
                       ) : (
 
                         filteredMembers.map(
                           (member) => (
+
                             <button
                               type="button"
-                              key={member.id}
+                              key={String(
+                                member.employeeId
+                              )}
                               onClick={() =>
                                 selectMember(
                                   member
@@ -1158,15 +1474,21 @@ setBugs(sortedData);
                             >
 
                               <div className="text-sm font-medium text-slate-700">
-                                {member.fullName}
+                                {member.name}
                               </div>
 
                               <div className="text-xs text-slate-400">
-                                {member.employeeId} ·{" "}
-                                {member.designation}
+                                {
+                                  member.employeeId
+                                }{" "}
+                                ·{" "}
+                                {
+                                  member.designation
+                                }
                               </div>
 
                             </button>
+
                           )
                         )
 
@@ -1179,9 +1501,7 @@ setBugs(sortedData);
 
             </div>
 
-            {/* =================================================
-                STEPS TO REPRODUCE
-            ================================================= */}
+            {/* STEPS TO REPRODUCE */}
 
             <div className="mt-4">
 
@@ -1202,9 +1522,7 @@ setBugs(sortedData);
 
             </div>
 
-            {/* =================================================
-                BUTTONS
-            ================================================= */}
+            {/* BUTTONS */}
 
             <div className="flex gap-2 mt-5">
 
@@ -1233,9 +1551,7 @@ setBugs(sortedData);
         </div>
       )}
 
-      {/* =====================================================
-          COUNT ROW
-      ===================================================== */}
+      {/* COUNT ROW */}
 
       <div className="flex items-center justify-between mb-3 text-xs text-slate-400">
 
@@ -1255,9 +1571,7 @@ setBugs(sortedData);
 
       </div>
 
-      {/* =====================================================
-          TABLE
-      ===================================================== */}
+      {/* TABLE */}
 
       <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm">
 
@@ -1267,7 +1581,8 @@ setBugs(sortedData);
             Loading bug reports...
           </div>
 
-        ) : filteredBugs.length === 0 ? (
+        ) : filteredBugs.length ===
+          0 ? (
 
           <div className="py-16 text-center">
 
@@ -1340,12 +1655,17 @@ setBugs(sortedData);
             <tbody>
 
               {filteredBugs.map(
-                (bug, index) => {
+                (
+                  bug,
+                  index
+                ) => {
 
                   const status =
-                    bug.status || "Open";
+                    bug.status ||
+                    "Open";
 
                   return (
+
                     <tr
                       key={
                         bug.id ??
@@ -1354,13 +1674,9 @@ setBugs(sortedData);
                       className="border-b border-slate-100 last:border-b-0 hover:bg-slate-50"
                     >
 
-                      {/* BUG ID */}
-
                       <td className="px-3 py-4 text-sm text-slate-600">
                         {bug.bugId}
                       </td>
-
-                      {/* TITLE */}
 
                       <td className="px-3 py-4">
 
@@ -1378,27 +1694,26 @@ setBugs(sortedData);
 
                       </td>
 
-                      {/* PROJECT */}
-
                       <td className="px-3 py-4 text-sm text-slate-600">
                         {getProjectName(
                           bug.projectId
                         )}
                       </td>
 
-                      {/* SEVERITY */}
-
                       <td className="px-3 py-4">
 
                         <span
                           className={`inline-flex rounded-md px-2 py-1 text-xs ${
-                            bug.severity?.toLowerCase() ===
-                              "critical"
+                            bug.severity
+                              ?.toLowerCase() ===
+                            "critical"
                               ? "bg-red-50 text-red-500"
-                              : bug.severity?.toLowerCase() ===
+                              : bug.severity
+                                  ?.toLowerCase() ===
                                 "high"
                               ? "bg-red-50 text-red-500"
-                              : bug.severity?.toLowerCase() ===
+                              : bug.severity
+                                  ?.toLowerCase() ===
                                 "medium"
                               ? "bg-orange-50 text-orange-500"
                               : "bg-green-50 text-green-600"
@@ -1409,8 +1724,6 @@ setBugs(sortedData);
 
                       </td>
 
-                      {/* STATUS */}
-
                       <td className="px-3 py-4">
 
                         <span className="inline-flex rounded-md bg-red-50 px-2 py-1 text-xs text-red-500">
@@ -1419,25 +1732,17 @@ setBugs(sortedData);
 
                       </td>
 
-                      {/* LINKED TASK */}
-
                       <td className="px-3 py-4 text-sm text-slate-600">
                         {bug.linkedTaskId}
                       </td>
-
-                      {/* ASSIGNEE */}
 
                       <td className="px-3 py-4 text-sm text-slate-600">
                         {bug.assignedTo}
                       </td>
 
-                      {/* ENVIRONMENT */}
-
                       <td className="px-3 py-4 text-sm text-slate-600">
                         {bug.environment}
                       </td>
-
-                      {/* CREATED */}
 
                       <td className="px-3 py-4 text-sm text-slate-500 whitespace-nowrap">
                         {formatDateTime(
@@ -1446,6 +1751,7 @@ setBugs(sortedData);
                       </td>
 
                     </tr>
+
                   );
                 }
               )}
@@ -1462,4 +1768,4 @@ setBugs(sortedData);
   );
 };
 
-export default QABugReports;
+export default QABugReports;;

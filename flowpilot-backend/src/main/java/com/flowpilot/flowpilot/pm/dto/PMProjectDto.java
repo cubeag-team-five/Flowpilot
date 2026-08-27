@@ -23,6 +23,12 @@ public class PMProjectDto {
 
     private Integer progress;
 
+    /*
+     * IDs of SuperAdmin users assigned to this project.
+     *
+     * IMPORTANT:
+     * These are SuperAdminUser.id values, NOT employeeId.
+     */
     private List<Long> teamMemberIds;
 
     public PMProjectDto() {
@@ -104,8 +110,7 @@ public class PMProjectDto {
         return teamMemberIds;
     }
 
-    public void setTeamMemberIds(
-            List<Long> teamMemberIds) {
+    public void setTeamMemberIds(List<Long> teamMemberIds) {
         this.teamMemberIds = teamMemberIds;
     }
 }
