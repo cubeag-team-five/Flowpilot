@@ -1,7 +1,9 @@
 package com.flowpilot.flowpilot.admin.controller;
 
+import com.flowpilot.flowpilot.admin.dto.AdminDepartmentMemberDto;
 import com.flowpilot.flowpilot.admin.model.AdminDepartmentMember;
 import com.flowpilot.flowpilot.admin.service.AdminDepartmentMemberService;
+
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -22,6 +24,11 @@ public class AdminDepartmentMemberController {
         this.service = service;
     }
 
+
+    // =========================================================
+    // GET MEMBERS OF DEPARTMENT
+    // =========================================================
+
     @GetMapping("/{departmentId}/members")
     public ResponseEntity<List<AdminDepartmentMember>> getMembers(
             @PathVariable Long departmentId) {
@@ -31,30 +38,30 @@ public class AdminDepartmentMemberController {
         );
     }
 
+
+    // =========================================================
+    // ADD EXISTING SUPERADMIN USER AS MEMBER
+    // =========================================================
+
     @PostMapping("/{departmentId}/members")
     public ResponseEntity<AdminDepartmentMember> addMember(
             @PathVariable Long departmentId,
-            @RequestBody AdminDepartmentMember member) {
+            @RequestBody AdminDepartmentMemberDto dto) {
 
         return ResponseEntity
                 .status(HttpStatus.CREATED)
-                .body(service.addMember(departmentId, member));
+                .body(
+                        service.addMember(
+                                departmentId,
+                                dto
+                        )
+                );
     }
 
-    @PutMapping("/{departmentId}/members/{memberId}")
-    public ResponseEntity<AdminDepartmentMember> updateMember(
-            @PathVariable Long departmentId,
-            @PathVariable Long memberId,
-            @RequestBody AdminDepartmentMember member) {
 
-        return ResponseEntity.ok(
-                service.updateMember(
-                        departmentId,
-                        memberId,
-                        member
-                )
-        );
-    }
+    // =========================================================
+    // ERROR HANDLER
+    // =========================================================
 
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<Map<String, String>>
@@ -63,6 +70,11 @@ public class AdminDepartmentMemberController {
 
         return ResponseEntity
                 .status(HttpStatus.BAD_REQUEST)
-                .body(Map.of("message", ex.getMessage()));
+                .body(
+                        Map.of(
+                                "message",
+                                ex.getMessage()
+                        )
+                );
     }
 }

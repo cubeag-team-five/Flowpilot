@@ -44,7 +44,10 @@ public class AuthService {
          * matches the role assigned to the user.
          */
         if (request.getRole() == null ||
-                !request.getRole().trim().equalsIgnoreCase(user.getRole())) {
+                user.getRole() == null ||
+                !request.getRole().trim().equalsIgnoreCase(
+                        user.getRole().trim()
+                )) {
 
             throw new BadCredentialsException(
                     "You are not authorized to login with this role"
@@ -71,9 +74,14 @@ public class AuthService {
                 user.getRole()
         );
 
+        /*
+         * Return the role selected on the login page.
+         * This keeps the frontend role names consistent
+         * even if the database stores roles in uppercase.
+         */
         return new LoginResponseDto(
                 token,
-                user.getRole(),
+                request.getRole().trim(),
                 user.getEmail(),
                 user.getName(),
                 user.getId()

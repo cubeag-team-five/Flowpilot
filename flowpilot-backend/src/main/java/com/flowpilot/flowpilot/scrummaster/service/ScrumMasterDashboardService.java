@@ -1,142 +1,170 @@
 package com.flowpilot.flowpilot.scrummaster.service;
 
-import com.flowpilot.flowpilot.scrummaster.dto.ScrumDashboardDto;
-import com.flowpilot.flowpilot.scrummaster.model.ScrumBlocker;
-import com.flowpilot.flowpilot.scrummaster.model.ScrumCeremony;
-import com.flowpilot.flowpilot.scrummaster.model.ScrumSprint;
-import com.flowpilot.flowpilot.scrummaster.repository.ScrumBlockerRepository;
-import com.flowpilot.flowpilot.scrummaster.repository.ScrumBoardTaskRepository;
-import com.flowpilot.flowpilot.scrummaster.repository.ScrumCeremonyRepository;
-import com.flowpilot.flowpilot.scrummaster.repository.ScrumSprintRepository;
-
-import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
-import java.time.LocalDateTime;
+import java.time.DayOfWeek;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
+import org.springframework.stereotype.Service;
+
+import com.flowpilot.flowpilot.scrummaster.dto.ScrumTaskDto;
+import com.flowpilot.flowpilot.scrummaster.exception.ScrumNotFoundException;
+import com.flowpilot.flowpilot.scrummaster.model.ScrumSprint;
+import com.flowpilot.flowpilot.scrummaster.model.ScrumTask;
+import com.flowpilot.flowpilot.scrummaster.repository.ScrumSprintRepository;
+import com.flowpilot.flowpilot.scrummaster.repository.ScrumTaskRepository;
+
+/**
+ * Sprint Overview: the one screen a scrum master opens first.
+ *
+ * It answers three questions — where is the sprint, what needs unblocking
+ * today, and what is happening next — by composing the sprint and analytics
+ * services rather than recalculating anything itself.
+ */
 @Service
-@RequiredArgsConstructor
 public class ScrumMasterDashboardService {
 
+    private static final DateTimeFormatter DAY_MONTH = DateTimeFormatter.ofPattern("MMM d");
+
+    /** A card idle this long is worth a scrum master's attention. */
+    private static final int STUCK_AFTER_DAYS = 3;
+
     private final ScrumSprintRepository sprintRepository;
-    private final ScrumBlockerRepository blockerRepository;
-    private final ScrumCeremonyRepository ceremonyRepository;
-    private final ScrumBoardTaskRepository boardTaskRepository;
+    private final ScrumTaskRepository taskRepository;
+    private final ScrumSprintService sprintService;
+    private final ScrumTaskService taskService;
+    private final ScrumAnalyticsService analyticsService;
 
-    @Transactional(readOnly = true)
-    public ScrumDashboardDto getDashboardData() {
-        ScrumSprint activeSprint = sprintRepository.findByStatus("ACTIVE")
-                .orElseGet(() -> ScrumSprint.builder()
-                        .name("Sprint 12")
-                        .projectName("IPMT Platform v2")
-                        .goal("Deliver the core design system, task board enhancements, and mobile responsiveness for the IPMT Platform.")
-                        .totalDays(21)
-                        .status("ACTIVE")
-                        .build());
-
-        List<ScrumBlocker> activeBlockers = blockerRepository.findByStatus("ACTIVE");
-        if (activeBlockers.isEmpty()) {
-            activeBlockers = List.of(
-                    ScrumBlocker.builder()
-                            .id(1L)
-                            .raisedBy("Divya Mehta")
-                            .title("waiting for brand colour tokens")
-                            .details("Blocks T-044 mobile responsive layout and T-047 dark mode theming · raised 2 days ago")
-                            .status("ACTIVE")
-                            .createdAt(LocalDateTime.now().minusDays(2))
-                            .build()
-            );
-        }
-
-        List<ScrumCeremony> ceremonies = ceremonyRepository.findAll();
-        if (ceremonies.isEmpty()) {
-            ceremonies = List.of(
-                    ScrumCeremony.builder().id(1L).name("Daily standup").whenTime("9:30 AM — daily").tone("done").status("SCHEDULED").build(),
-                    ScrumCeremony.builder().id(2L).name("Sprint review / demo").whenTime("Aug 8 · 3:00 PM").tone("plan").status("SCHEDULED").build(),
-                    ScrumCeremony.builder().id(3L).name("Sprint retrospective").whenTime("Aug 9 · 10:00 AM").tone("done").status("SCHEDULED").build(),
-                    ScrumCeremony.builder().id(4L).name("Sprint 13 planning").whenTime("Aug 18 · 9:00 AM").tone("active").status("SCHEDULED").build()
-            );
-        }
-
-        long totalTasks = boardTaskRepository.count();
-        if (totalTasks == 0) {
-            totalTasks = 18;
-        }
-
-        long doneTasks = boardTaskRepository.findByColumnStatus("Done").size();
-        if (doneTasks == 0 && totalTasks == 18) {
-            doneTasks = 7;
-        }
-
-        int percentage = totalTasks > 0 ? (int) ((doneTasks * 100) / totalTasks) : 0;
-
-        List<ScrumDashboardDto.BlockerDto> blockerDtos = activeBlockers.stream()
-                .map(b -> ScrumDashboardDto.BlockerDto.builder()
-                        .id(b.getId())
-                        .raisedBy(b.getRaisedBy())
-                        .title(b.getTitle())
-                        .details(b.getDetails())
-                        .status(b.getStatus())
-                        .createdAt(b.getCreatedAt() != null ? b.getCreatedAt().toString() : null)
-                        .build())
-                .toList();
-
-        List<ScrumDashboardDto.CeremonyDto> ceremonyDtos = ceremonies.stream()
-                .map(c -> ScrumDashboardDto.CeremonyDto.builder()
-                        .id(c.getId())
-                        .name(c.getName())
-                        .when(c.getWhenTime())
-                        .tone(c.getTone())
-                        .status(c.getStatus())
-                        .build())
-                .toList();
-
-        return ScrumDashboardDto.builder()
-                .sprintName(activeSprint.getName())
-                .projectName(activeSprint.getProjectName())
-                .daysRemaining(14)
-                .totalDays(activeSprint.getTotalDays() != null ? activeSprint.getTotalDays() : 21)
-                .tasksCompleted((int) doneTasks)
-                .totalTasks((int) totalTasks)
-                .completionPercentage(percentage)
-                .activeBlockersCount(activeBlockers.size())
-                .sprintGoal(activeSprint.getGoal())
-                .activeBlockers(blockerDtos)
-                .ceremonies(ceremonyDtos)
-                .build();
+    public ScrumMasterDashboardService(
+            ScrumSprintRepository sprintRepository,
+            ScrumTaskRepository taskRepository,
+            ScrumSprintService sprintService,
+            ScrumTaskService taskService,
+            ScrumAnalyticsService analyticsService
+    ) {
+        this.sprintRepository = sprintRepository;
+        this.taskRepository = taskRepository;
+        this.sprintService = sprintService;
+        this.taskService = taskService;
+        this.analyticsService = analyticsService;
     }
 
-    @Transactional
-    public ScrumDashboardDto.BlockerDto escalateBlocker(Long blockerId) {
-        ScrumBlocker blocker = blockerRepository.findById(blockerId)
-                .orElseThrow(() -> new RuntimeException("Blocker not found with id: " + blockerId));
-        blocker.setStatus("ESCALATED");
-        ScrumBlocker updated = blockerRepository.save(blocker);
-        return ScrumDashboardDto.BlockerDto.builder()
-                .id(updated.getId())
-                .raisedBy(updated.getRaisedBy())
-                .title(updated.getTitle())
-                .details(updated.getDetails())
-                .status(updated.getStatus())
-                .createdAt(updated.getCreatedAt() != null ? updated.getCreatedAt().toString() : null)
-                .build();
+
+    public Map<String, Object> getDashboard() {
+
+        ScrumSprint sprint = sprintRepository
+                .findFirstByStatus(ScrumSprint.Status.ACTIVE)
+                .orElseThrow(() -> new ScrumNotFoundException(
+                        "No active sprint. Create one and start it."));
+
+        Map<String, Object> payload = new LinkedHashMap<>();
+        payload.put("sprint", sprintService.toResponse(sprint));
+        payload.put("kpis", analyticsService.buildKpis(sprint));
+        payload.put("ceremonies", ceremonies(sprint));
+        payload.put("stuckTasks", stuckTasks(sprint));
+
+        return payload;
     }
 
-    @Transactional
-    public ScrumDashboardDto.BlockerDto resolveBlocker(Long blockerId) {
-        ScrumBlocker blocker = blockerRepository.findById(blockerId)
-                .orElseThrow(() -> new RuntimeException("Blocker not found with id: " + blockerId));
-        blocker.setStatus("RESOLVED");
-        ScrumBlocker updated = blockerRepository.save(blocker);
-        return ScrumDashboardDto.BlockerDto.builder()
-                .id(updated.getId())
-                .raisedBy(updated.getRaisedBy())
-                .title(updated.getTitle())
-                .details(updated.getDetails())
-                .status(updated.getStatus())
-                .createdAt(updated.getCreatedAt() != null ? updated.getCreatedAt().toString() : null)
-                .build();
+
+    /**
+     * Cards that have not moved in days. Done work is excluded because a
+     * finished task is not stuck, and backlog items are excluded because they
+     * are not meant to be moving yet.
+     */
+    private List<ScrumTaskDto.Card> stuckTasks(ScrumSprint sprint) {
+
+        List<ScrumTaskDto.Card> stuck = new ArrayList<>();
+
+        for (ScrumTask task : taskRepository
+                .findBySprintIdOrderByStatusAscTaskKeyAsc(sprint.getId())) {
+
+            boolean idle = task.getDaysInColumn() >= STUCK_AFTER_DAYS;
+            boolean shouldBeMoving = task.getStatus() != ScrumTask.Status.DONE
+                    && task.getStatus() != ScrumTask.Status.BACKLOG;
+
+            if (idle && shouldBeMoving) {
+                stuck.add(taskService.toCard(task));
+            }
+        }
+
+        return stuck;
+    }
+
+
+    /**
+     * Ceremonies follow a fixed cadence, so they are derived from the sprint
+     * window rather than stored: standup daily, review on the working day
+     * before the close, retro at the close, next planning the working day
+     * after.
+     *
+     * Both steps are working-day arithmetic, like every other date in this
+     * module. Raw calendar arithmetic scheduled a Friday-ending sprint's next
+     * planning on the Saturday, and a Monday-ending sprint's review on the
+     * Sunday — days nobody is in the office for.
+     */
+    private List<Map<String, String>> ceremonies(ScrumSprint sprint) {
+
+        List<Map<String, String>> list = new ArrayList<>();
+
+        list.add(ceremony("Daily standup", "9:30 AM — every working day", "done"));
+
+        if (sprint.getEndDate() != null) {
+
+            list.add(ceremony(
+                    "Sprint review",
+                    previousWorkingDay(sprint.getEndDate()).format(DAY_MONTH)
+                            + " · 3:00 PM",
+                    "plan"
+            ));
+
+            list.add(ceremony(
+                    "Retrospective",
+                    sprint.getEndDate().format(DAY_MONTH) + " · 10:00 AM",
+                    "test"
+            ));
+
+            // plusWorkingDays counts its own start as day 1, so day 2 is the
+            // first working day after the sprint closes
+            list.add(ceremony(
+                    "Next sprint planning",
+                    ScrumWorkingDays.plusWorkingDays(sprint.getEndDate(), 2)
+                            .format(DAY_MONTH) + " · 9:00 AM",
+                    "active"
+            ));
+        }
+
+        return list;
+    }
+
+    /**
+     * The working day before `date`. Stepping back one calendar day is not
+     * enough on its own: from a Monday that lands on the Sunday, and from a
+     * Sunday on the Saturday. At most two extra steps are ever needed.
+     */
+    private LocalDate previousWorkingDay(LocalDate date) {
+
+        LocalDate previous = date.minusDays(1);
+
+        while (previous.getDayOfWeek() == DayOfWeek.SATURDAY
+                || previous.getDayOfWeek() == DayOfWeek.SUNDAY) {
+
+            previous = previous.minusDays(1);
+        }
+
+        return previous;
+    }
+
+    private Map<String, String> ceremony(String name, String when, String tone) {
+
+        Map<String, String> entry = new LinkedHashMap<>();
+        entry.put("name", name);
+        entry.put("when", when);
+        entry.put("tone", tone);
+
+        return entry;
     }
 }

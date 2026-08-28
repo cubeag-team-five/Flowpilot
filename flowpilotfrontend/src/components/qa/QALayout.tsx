@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import {
   LayoutGrid,
   CheckSquare,
@@ -20,15 +20,144 @@ interface QALayoutProps {
   onLogout?: () => void;
 }
 
-const QALayout: React.FC<QALayoutProps> = ({ onLogout }) => {
-  const [activeTab, setActiveTab] = useState("QA Dashboard");
+export interface QAUser {
+  id?: string | number;
+  name: string;
+  username?: string;
+  email?: string;
+  department: string;
+  role: string;
+  avatar: string;
+}
+
+/*
+ * ---------------------------------------------------------
+ * GET LOGGED-IN USER
+ * ---------------------------------------------------------
+ *
+ * We only read information already stored by the login.
+ * Nothing outside QA needs to be changed.
+ */
+
+const getLoggedInUser = (): QAUser => {
+  const possibleKeys = [
+    "currentUser",
+    "user",
+    "auth",
+    "userData",
+    "loggedInUser",
+  ];
+
+  for (const key of possibleKeys) {
+    const value = localStorage.getItem(key);
+
+    if (!value) {
+      continue;
+    }
+
+    try {
+      const parsed = JSON.parse(value);
+
+      /*
+       * Some applications store:
+       *
+       * { user: {...} }
+       *
+       * while others store:
+       *
+       * {...}
+       */
+
+      const user = parsed?.user ?? parsed;
+
+      if (
+        user?.name ||
+        user?.fullName ||
+        user?.username ||
+        user?.email
+      ) {
+        const name =
+          user.name ||
+          user.fullName ||
+          user.username ||
+          user.email ||
+          "QA User";
+
+        const avatar = name
+          .split(" ")
+          .filter(Boolean)
+          .map((part: string) => part.charAt(0))
+          .join("")
+          .substring(0, 2)
+          .toUpperCase();
+
+        return {
+          id: user.id ?? user.userId ?? user.employeeId,
+          name,
+          username: user.username,
+          email: user.email,
+          department:
+            user.department ||
+            user.designation ||
+            "Quality",
+          role:
+            user.role ||
+            user.jobTitle ||
+            "QA ENGINEER",
+          avatar: avatar || "QA",
+        };
+      }
+    } catch {
+      /*
+       * Not JSON. Ignore and continue.
+       */
+    }
+  }
 
   /*
-   * GLOBAL QA SEARCH
-   *
-   * Sends search text to QA pages such as
-   * QABugReports.tsx.
+   * If the application stores the user information
+   * directly instead of JSON.
    */
+
+  const name =
+    localStorage.getItem("name") ||
+    localStorage.getItem("username") ||
+    localStorage.getItem("email");
+
+  if (name) {
+    const avatar = name
+      .split(" ")
+      .filter(Boolean)
+      .map((part) => part.charAt(0))
+      .join("")
+      .substring(0, 2)
+      .toUpperCase();
+
+    return {
+      name,
+      department: "Quality",
+      role: "QA ENGINEER",
+      avatar: avatar || "QA",
+    };
+  }
+
+  /*
+   * Fallback only if login storage cannot be found.
+   *
+   * This prevents the page from crashing.
+   */
+
+  return {
+    name: "QA User",
+    department: "Quality",
+    role: "QA ENGINEER",
+    avatar: "QA",
+  };
+};
+
+const QALayout = ({ onLogout }: QALayoutProps) => {
+  const [activeTab, setActiveTab] = useState("QA Dashboard");
+
   const [globalSearch, setGlobalSearch] = useState("");
 
   const [showNotifications, setShowNotifications] =
@@ -58,21 +187,23 @@ const QALayout: React.FC<QALayoutProps> = ({ onLogout }) => {
     },
   ]);
 
-  const currentDate = "Friday, 21 August 2026";
-
   /*
-   * QA USER INFORMATION
+   * IMPORTANT:
+   * Read this every time QALayout is created.
    */
-  const qaUser = {
-    name: "Priya Rajan",
-    department: "Quality",
-    role: "QA ENGINEER",
-    avatar: "PR",
-  };
 
-  /*
-   * QA NAVIGATION ITEMS
-   */
+  const qaUser = getLoggedInUser();
+
+  const currentDate = new Date().toLocaleDateString(
+    "en-US",
+    {
+      weekday: "long",
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+    }
+  );
+
   const navItems = [
     {
       name: "QA Dashboard",
@@ -96,9 +227,6 @@ const QALayout: React.FC<QALayoutProps> = ({ onLogout }) => {
     },
   ];
 
-  /*
-   * PAGE TITLE
-   */
   const getPageTitle = () => {
     switch (activeTab) {
       case "My Test Tasks":
@@ -118,15 +246,8 @@ const QALayout: React.FC<QALayoutProps> = ({ onLogout }) => {
     }
   };
 
-  /*
-   * CHANGE QA PAGE
-   */
   const handleNavigation = (tabName: string) => {
     setActiveTab(tabName);
-
-    /*
-     * Clear top search when changing QA pages.
-     */
     setGlobalSearch("");
 
     window.dispatchEvent(
@@ -136,9 +257,6 @@ const QALayout: React.FC<QALayoutProps> = ({ onLogout }) => {
     );
   };
 
-  /*
-   * RENDER QA CONTENT
-   */
   const renderQAContent = () => {
     switch (activeTab) {
       case "QA Dashboard":
@@ -162,11 +280,20 @@ const QALayout: React.FC<QALayoutProps> = ({ onLogout }) => {
   };
 
   return (
-    <div className="h-screen w-full overflow-hidden bg-[#f8fafc] text-slate-800 font-sans flex">
-
-      {/* =========================================================
-          QA SIDEBAR
-      ========================================================= */}
+    <div
+      className="
+        h-screen
+        w-full
+        overflow-hidden
+        bg-[#f8fafc]
+        text-slate-800
+        font-sans
+        flex
+      "
+    >
+      {/* =====================================================
+          SIDEBAR
+      ===================================================== */}
 
       <aside
         className="
@@ -184,13 +311,11 @@ const QALayout: React.FC<QALayoutProps> = ({ onLogout }) => {
           overflow-hidden
         "
       >
-
         <div className="min-h-0 flex flex-col">
 
           {/* LOGO */}
 
-          <div className="flex items-center gap-2.5 mb-6 px-2 shrink-0">
-
+          <div className="flex items-center gap-2.5 mb-6 px-2">
             <div
               className="
                 w-8
@@ -202,24 +327,13 @@ const QALayout: React.FC<QALayoutProps> = ({ onLogout }) => {
                 justify-center
                 text-white
                 font-bold
-                shadow-md
-                shadow-emerald-500/20
               "
             >
               <LayoutGrid size={18} />
             </div>
 
             <div>
-
-              <div
-                className="
-                  font-extrabold
-                  text-base
-                  tracking-tight
-                  leading-none
-                  text-white
-                "
-              >
+              <div className="font-extrabold text-base leading-none">
                 Flowpilot
               </div>
 
@@ -235,15 +349,12 @@ const QALayout: React.FC<QALayoutProps> = ({ onLogout }) => {
               >
                 PLATFORM V2.0
               </div>
-
             </div>
-
           </div>
 
-          {/* QA ROLE BADGE */}
+          {/* ROLE */}
 
-          <div className="mb-6 px-2 shrink-0">
-
+          <div className="mb-6 px-2">
             <span
               className="
                 inline-block
@@ -263,17 +374,13 @@ const QALayout: React.FC<QALayoutProps> = ({ onLogout }) => {
             >
               ● QA ENGINEER
             </span>
-
           </div>
 
-          {/* QA NAVIGATION */}
+          {/* NAVIGATION */}
 
-          <nav className="flex flex-col gap-1 overflow-y-auto pr-1">
-
+          <nav className="flex flex-col gap-1 overflow-y-auto">
             {navItems.map((item) => {
-
-              const isActive =
-                activeTab === item.name;
+              const isActive = activeTab === item.name;
 
               return (
                 <button
@@ -291,19 +398,16 @@ const QALayout: React.FC<QALayoutProps> = ({ onLogout }) => {
                     rounded-xl
                     text-xs
                     font-bold
-                    transition-all
-                    cursor-pointer
                     text-left
-                    shrink-0
+                    transition-all
 
                     ${
                       isActive
-                        ? "bg-white/10 text-white shadow-xs border border-white/10"
+                        ? "bg-white/10 text-white border border-white/10"
                         : "text-slate-400 hover:text-slate-200 hover:bg-white/5"
                     }
                   `}
                 >
-
                   <span
                     className={
                       isActive
@@ -314,21 +418,15 @@ const QALayout: React.FC<QALayoutProps> = ({ onLogout }) => {
                     {item.icon}
                   </span>
 
-                  <span>
-                    {item.name}
-                  </span>
-
+                  <span>{item.name}</span>
                 </button>
               );
-
             })}
-
           </nav>
-
         </div>
 
         {/* =====================================================
-            QA USER AREA
+            LOGGED-IN QA USER
         ===================================================== */}
 
         <div
@@ -341,12 +439,9 @@ const QALayout: React.FC<QALayoutProps> = ({ onLogout }) => {
             items-center
             justify-between
             px-2
-            shrink-0
           "
         >
-
           <div className="flex items-center gap-2.5 min-w-0">
-
             <div
               className="
                 w-8
@@ -360,14 +455,12 @@ const QALayout: React.FC<QALayoutProps> = ({ onLogout }) => {
                 font-extrabold
                 text-xs
                 shrink-0
-                shadow-sm
               "
             >
               {qaUser.avatar}
             </div>
 
             <div className="min-w-0">
-
               <div
                 className="
                   text-xs
@@ -388,9 +481,7 @@ const QALayout: React.FC<QALayoutProps> = ({ onLogout }) => {
               >
                 {qaUser.department}
               </div>
-
             </div>
-
           </div>
 
           <button
@@ -406,25 +497,19 @@ const QALayout: React.FC<QALayoutProps> = ({ onLogout }) => {
               border-slate-800
               text-slate-400
               hover:text-rose-400
-              hover:bg-rose-500/10
               flex
               items-center
               justify-center
-              transition-colors
-              cursor-pointer
-              shrink-0
             "
           >
             <LogOut size={14} />
           </button>
-
         </div>
-
       </aside>
 
-      {/* =========================================================
-          QA MAIN CONTENT
-      ========================================================= */}
+      {/* =====================================================
+          MAIN
+      ===================================================== */}
 
       <main
         className="
@@ -437,10 +522,7 @@ const QALayout: React.FC<QALayoutProps> = ({ onLogout }) => {
           bg-[#f8fafc]
         "
       >
-
-        {/* =====================================================
-            QA HEADER
-        ===================================================== */}
+        {/* HEADER */}
 
         <header
           className="
@@ -455,14 +537,9 @@ const QALayout: React.FC<QALayoutProps> = ({ onLogout }) => {
             sticky
             top-0
             z-30
-            shadow-2xs
           "
         >
-
-          {/* PAGE TITLE */}
-
           <div>
-
             <h1
               className="
                 text-xl
@@ -483,19 +560,13 @@ const QALayout: React.FC<QALayoutProps> = ({ onLogout }) => {
             >
               {currentDate}
             </div>
-
           </div>
-
-          {/* HEADER RIGHT */}
 
           <div className="flex items-center gap-4">
 
-            {/* =================================================
-                QA GLOBAL SEARCH
-            ================================================= */}
+            {/* SEARCH */}
 
             <div className="relative w-64 hidden sm:block">
-
               <Search
                 size={14}
                 className="
@@ -512,18 +583,9 @@ const QALayout: React.FC<QALayoutProps> = ({ onLogout }) => {
                 placeholder="Search..."
                 value={globalSearch}
                 onChange={(e) => {
-
-                  const value =
-                    e.target.value;
+                  const value = e.target.value;
 
                   setGlobalSearch(value);
-
-                  /*
-                   * Send search value to QA components.
-                   *
-                   * QABugReports listens to:
-                   * qa-global-search
-                   */
 
                   window.dispatchEvent(
                     new CustomEvent(
@@ -533,7 +595,6 @@ const QALayout: React.FC<QALayoutProps> = ({ onLogout }) => {
                       }
                     )
                   );
-
                 }}
                 className="
                   w-full
@@ -548,18 +609,13 @@ const QALayout: React.FC<QALayoutProps> = ({ onLogout }) => {
                   text-slate-800
                   focus:outline-none
                   focus:border-emerald-500
-                  transition-colors
                 "
               />
-
             </div>
 
-            {/* =================================================
-                NOTIFICATIONS
-            ================================================= */}
+            {/* NOTIFICATIONS */}
 
             <div className="relative">
-
               <button
                 type="button"
                 onClick={() =>
@@ -567,8 +623,6 @@ const QALayout: React.FC<QALayoutProps> = ({ onLogout }) => {
                     (previous) => !previous
                   )
                 }
-                aria-label="Notifications"
-                aria-expanded={showNotifications}
                 className="
                   relative
                   w-9
@@ -581,13 +635,8 @@ const QALayout: React.FC<QALayoutProps> = ({ onLogout }) => {
                   items-center
                   justify-center
                   text-slate-600
-                  hover:text-slate-900
-                  hover:bg-slate-100
-                  transition-colors
-                  cursor-pointer
                 "
               >
-
                 <Bell size={16} />
 
                 {notifications.some(
@@ -608,13 +657,9 @@ const QALayout: React.FC<QALayoutProps> = ({ onLogout }) => {
                     "
                   />
                 )}
-
               </button>
 
-              {/* NOTIFICATION DROPDOWN */}
-
               {showNotifications && (
-
                 <div
                   className="
                     absolute
@@ -630,7 +675,6 @@ const QALayout: React.FC<QALayoutProps> = ({ onLogout }) => {
                     overflow-hidden
                   "
                 >
-
                   <div
                     className="
                       px-4
@@ -642,29 +686,14 @@ const QALayout: React.FC<QALayoutProps> = ({ onLogout }) => {
                       justify-between
                     "
                   >
-
                     <div>
-
-                      <h3
-                        className="
-                          text-sm
-                          font-bold
-                          text-slate-900
-                        "
-                      >
+                      <h3 className="text-sm font-bold text-slate-900">
                         Notifications
                       </h3>
 
-                      <p
-                        className="
-                          text-[10px]
-                          text-slate-400
-                          mt-0.5
-                        "
-                      >
+                      <p className="text-[10px] text-slate-400">
                         Recent QA activity
                       </p>
-
                     </div>
 
                     <button
@@ -684,20 +713,15 @@ const QALayout: React.FC<QALayoutProps> = ({ onLogout }) => {
                         text-[10px]
                         font-semibold
                         text-emerald-600
-                        hover:text-emerald-700
-                        cursor-pointer
                       "
                     >
                       Mark all as read
                     </button>
-
                   </div>
 
                   <div className="max-h-80 overflow-y-auto">
-
                     {notifications.map(
                       (notification) => (
-
                         <button
                           key={notification.id}
                           type="button"
@@ -724,9 +748,6 @@ const QALayout: React.FC<QALayoutProps> = ({ onLogout }) => {
                             py-3
                             border-b
                             border-slate-100
-                            hover:bg-slate-50
-                            transition-colors
-                            cursor-pointer
 
                             ${
                               notification.unread
@@ -735,9 +756,7 @@ const QALayout: React.FC<QALayoutProps> = ({ onLogout }) => {
                             }
                           `}
                         >
-
                           <div className="flex items-start gap-3">
-
                             <div
                               className={`
                                 mt-1
@@ -745,7 +764,6 @@ const QALayout: React.FC<QALayoutProps> = ({ onLogout }) => {
                                 h-2
                                 rounded-full
                                 shrink-0
-
                                 ${
                                   notification.unread
                                     ? "bg-emerald-500"
@@ -754,58 +772,29 @@ const QALayout: React.FC<QALayoutProps> = ({ onLogout }) => {
                               `}
                             />
 
-                            <div className="min-w-0">
-
-                              <div
-                                className="
-                                  text-xs
-                                  font-bold
-                                  text-slate-900
-                                "
-                              >
+                            <div>
+                              <div className="text-xs font-bold text-slate-900">
                                 {notification.title}
                               </div>
 
-                              <div
-                                className="
-                                  text-[11px]
-                                  text-slate-500
-                                  mt-0.5
-                                "
-                              >
+                              <div className="text-[11px] text-slate-500 mt-0.5">
                                 {notification.message}
                               </div>
 
-                              <div
-                                className="
-                                  text-[10px]
-                                  text-slate-400
-                                  mt-1
-                                "
-                              >
+                              <div className="text-[10px] text-slate-400 mt-1">
                                 {notification.time}
                               </div>
-
                             </div>
-
                           </div>
-
                         </button>
-
                       )
                     )}
-
                   </div>
-
                 </div>
-
               )}
-
             </div>
 
-            {/* =================================================
-                QA AVATAR
-            ================================================= */}
+            {/* USER AVATAR */}
 
             <div
               className="
@@ -819,21 +808,15 @@ const QALayout: React.FC<QALayoutProps> = ({ onLogout }) => {
                 justify-center
                 font-extrabold
                 text-xs
-                shadow-sm
-                cursor-pointer
               "
-              title="QA Engineer"
+              title={qaUser.name}
             >
               {qaUser.avatar}
             </div>
-
           </div>
-
         </header>
 
-        {/* =====================================================
-            QA PAGE CONTENT
-        ===================================================== */}
+        {/* CONTENT */}
 
         <div
           className="
@@ -841,28 +824,14 @@ const QALayout: React.FC<QALayoutProps> = ({ onLogout }) => {
             max-w-[1400px]
             w-full
             mx-auto
-            space-y-8
           "
         >
           {renderQAContent()}
         </div>
-
       </main>
-
     </div>
   );
 };
 
-/*
- * Export both ways so App.tsx can use either:
- *
- * import QALayout from "./components/qa/QALayout";
- *
- * OR
- *
- * import { QALayout } from "./components/qa/QALayout";
- */
-
 export { QALayout };
-
 export default QALayout;

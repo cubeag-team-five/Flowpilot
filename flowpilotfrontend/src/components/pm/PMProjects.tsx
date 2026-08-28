@@ -29,7 +29,7 @@ interface SuperAdminUser {
   initials: string;
 }
 
-interface Project {
+export interface Project {
   backendId: number;
   id: string;
   name: string;
