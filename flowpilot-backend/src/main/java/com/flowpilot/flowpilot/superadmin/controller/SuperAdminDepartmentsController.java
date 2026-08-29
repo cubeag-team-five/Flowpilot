@@ -1,8 +1,8 @@
 package com.flowpilot.flowpilot.superadmin.controller;
 
 import com.flowpilot.flowpilot.admin.model.AdminDepartment;
-import com.flowpilot.flowpilot.admin.repository.AdminDepartmentsRepository;
 import com.flowpilot.flowpilot.admin.repository.AdminDepartmentMemberRepository;
+import com.flowpilot.flowpilot.admin.repository.AdminDepartmentsRepository;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 

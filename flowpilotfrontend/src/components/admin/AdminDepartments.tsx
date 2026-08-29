@@ -5,6 +5,8 @@ import {
   Check,
   X,
   Users,
+  Pencil,
+  Trash2,
 } from 'lucide-react';
 
 /* ============================================================
@@ -119,9 +121,6 @@ export const AdminDepartments: React.FC = () => {
 
   /* ==========================================================
      ALL EXISTING DEPARTMENT MEMBERS
-
-     Key = department id
-     Value = members of that department
   ========================================================== */
 
   const [departmentMembers, setDepartmentMembers] = useState<
@@ -129,7 +128,7 @@ export const AdminDepartments: React.FC = () => {
   >({});
 
   /* ==========================================================
-     ADD DEPARTMENT
+     ADD / EDIT DEPARTMENT
   ========================================================== */
 
   const [showForm, setShowForm] = useState(false);
@@ -145,12 +144,6 @@ export const AdminDepartments: React.FC = () => {
   const [showUserDropdown, setShowUserDropdown] =
     useState(false);
 
-  /*
-   * Stores the selection that existed when the member
-   * dropdown was opened.
-   *
-   * This allows Cancel to restore the previous selection.
-   */
   const [memberDropdownInitialSelection, setMemberDropdownInitialSelection] =
     useState<number[]>([]);
 
@@ -161,6 +154,35 @@ export const AdminDepartments: React.FC = () => {
 
   const [departmentErrors, setDepartmentErrors] =
     useState<DepartmentFormErrors>({});
+
+  /* ==========================================================
+     EDIT MODE
+  ========================================================== */
+
+  const [editingDepartmentId, setEditingDepartmentId] =
+    useState<number | null>(null);
+
+  const [editingDepartment, setEditingDepartment] =
+    useState<Department | null>(null);
+
+  const [savingDepartment, setSavingDepartment] =
+    useState(false);
+
+  /* ==========================================================
+     DELETE
+  ========================================================== */
+
+  const [deletingDepartmentId, setDeletingDepartmentId] =
+    useState<number | null>(null);
+
+  const [showDeleteConfirmation, setShowDeleteConfirmation] =
+    useState(false);
+
+  const [departmentToDelete, setDepartmentToDelete] =
+    useState<Department | null>(null);
+
+  const [deletingDepartment, setDeletingDepartment] =
+    useState(false);
 
   /* ==========================================================
      VIEW MEMBERS
@@ -184,12 +206,6 @@ export const AdminDepartments: React.FC = () => {
   const [selectedNewMemberIds, setSelectedNewMemberIds] =
     useState<number[]>([]);
 
-  /*
-   * Stores the selection that existed when Add Member
-   * dropdown was opened.
-   *
-   * Cancel restores this selection.
-   */
   const [addMemberDropdownInitialSelection, setAddMemberDropdownInitialSelection] =
     useState<number[]>([]);
 
@@ -223,7 +239,7 @@ export const AdminDepartments: React.FC = () => {
   };
 
   /* ==========================================================
-     VALIDATION HELPERS
+     VALIDATION
   ========================================================== */
 
   const isValidName = (value: string) => {
@@ -527,7 +543,7 @@ export const AdminDepartments: React.FC = () => {
           ?.trim()
           .toLowerCase()
       )
-      .filter(Boolean);
+      .filter(Boolean) as string[];
   };
 
   /* ==========================================================
@@ -574,7 +590,8 @@ export const AdminDepartments: React.FC = () => {
     users.filter((user) => {
       if (
         isUserAlreadyAssigned(
-          user.employeeId
+          user.employeeId,
+          editingDepartmentId ?? undefined
         )
       ) {
         return false;
@@ -582,7 +599,8 @@ export const AdminDepartments: React.FC = () => {
 
       if (
         isUserAlreadyHead(
-          user
+          user,
+          editingDepartmentId ?? undefined
         )
       ) {
         return false;
@@ -828,7 +846,12 @@ export const AdminDepartments: React.FC = () => {
         'Please select a department head.';
     }
 
+    /*
+     * Members are required only while creating.
+     * During edit, existing members are preserved.
+     */
     if (
+      editingDepartmentId === null &&
       selectedUsers.length === 0
     ) {
       errors.members =
@@ -879,6 +902,10 @@ export const AdminDepartments: React.FC = () => {
     setShowHeadDropdown(false);
 
     setMemberDropdownInitialSelection([]);
+
+    setEditingDepartmentId(null);
+    setEditingDepartment(null);
+    setSavingDepartment(false);
   };
 
   /* ==========================================================
@@ -916,7 +943,138 @@ export const AdminDepartments: React.FC = () => {
         }
 
         /* ====================================================
-           STEP 1: CREATE DEPARTMENT
+           EDIT DEPARTMENT
+        ==================================================== */
+
+        if (editingDepartmentId !== null) {
+          setSavingDepartment(true);
+
+          const departmentPayload = {
+            name:
+              departmentName.trim(),
+
+            head:
+              selectedHeadUser.name,
+
+            progress:
+              Number(progress),
+          };
+
+          const response =
+            await fetch(
+              `${API_BASE_URL}/departments/${editingDepartmentId}`,
+              {
+                method: 'PUT',
+
+                headers: {
+                  Authorization:
+                    `Bearer ${token}`,
+
+                  'Content-Type':
+                    'application/json',
+                },
+
+                body:
+                  JSON.stringify(
+                    departmentPayload
+                  ),
+              }
+            );
+
+          if (!response.ok) {
+            let message =
+              'Failed to update department.';
+
+            try {
+              const errorData =
+                await response.json();
+
+              if (
+                errorData?.message
+              ) {
+                message =
+                  errorData.message;
+              }
+            } catch {
+              // Ignore parsing error
+            }
+
+            throw new Error(
+              message
+            );
+          }
+
+          let updatedDepartmentData: any =
+            null;
+
+          try {
+            updatedDepartmentData =
+              await response.json();
+          } catch {
+            updatedDepartmentData = null;
+          }
+
+          const existingDepartment =
+            departments.find(
+              (department) =>
+                department.id ===
+                editingDepartmentId
+            );
+
+          if (!existingDepartment) {
+            throw new Error(
+              'Department not found in the current list.'
+            );
+          }
+
+          const updatedDepartment: Department = {
+            ...existingDepartment,
+
+            name:
+              updatedDepartmentData?.name ??
+              departmentName.trim(),
+
+            head:
+              updatedDepartmentData?.head ??
+              selectedHeadUser.name,
+
+            progress:
+              updatedDepartmentData?.progress ??
+              Number(progress),
+          };
+
+          setDepartments(
+            (previous) =>
+              previous.map(
+                (department) =>
+                  department.id ===
+                  editingDepartmentId
+                    ? updatedDepartment
+                    : department
+              )
+          );
+
+          if (
+            selectedDepartment?.id ===
+            editingDepartmentId
+          ) {
+            setSelectedDepartment(
+              updatedDepartment
+            );
+          }
+
+          resetDepartmentForm();
+          setShowForm(false);
+
+          showToast(
+            'Department updated successfully.'
+          );
+
+          return;
+        }
+
+        /* ====================================================
+           CREATE DEPARTMENT
         ==================================================== */
 
         const departmentPayload = {
@@ -981,7 +1139,7 @@ export const AdminDepartments: React.FC = () => {
           await response.json();
 
         /* ====================================================
-           STEP 2: ADD SELECTED MEMBERS
+           ADD SELECTED MEMBERS
         ==================================================== */
 
         const savedMembers: Member[] =
@@ -1056,7 +1214,7 @@ export const AdminDepartments: React.FC = () => {
         }
 
         /* ====================================================
-           STEP 3: ADD DEPARTMENT TO UI
+           ADD DEPARTMENT TO UI
         ==================================================== */
 
         const index =
@@ -1118,10 +1276,6 @@ export const AdminDepartments: React.FC = () => {
           })
         );
 
-        /* ====================================================
-           RESET
-        ==================================================== */
-
         resetDepartmentForm();
         setShowForm(false);
 
@@ -1138,20 +1292,246 @@ export const AdminDepartments: React.FC = () => {
         }
       } catch (error) {
         console.error(
-          'Error creating department:',
+          'Error creating/updating department:',
           error
         );
 
         showToast(
           error instanceof Error
             ? error.message
-            : 'Failed to create department.'
+            : 'Failed to save department.'
+        );
+      } finally {
+        setSavingDepartment(false);
+      }
+    };
+
+  /* ==========================================================
+     EDIT DEPARTMENT
+  ========================================================== */
+
+  const handleEditDepartment = (
+    department: Department
+  ) => {
+    const headUser =
+      users.find(
+        (user) =>
+          user.name.trim().toLowerCase() ===
+          department.head.trim().toLowerCase()
+      );
+
+    setEditingDepartmentId(
+      department.id
+    );
+
+    setEditingDepartment(
+      department
+    );
+
+    setDepartmentName(
+      department.name
+    );
+
+    setDepartmentHeadId(
+      headUser?.employeeId ?? null
+    );
+
+    /*
+     * Existing members are preserved.
+     * We don't change the existing member functionality.
+     */
+    setSelectedUsers([]);
+
+    setProgress(
+      String(department.progress)
+    );
+
+    setDepartmentErrors({});
+
+    setShowUserDropdown(false);
+    setShowHeadDropdown(false);
+
+    setShowForm(true);
+  };
+
+  /* ==========================================================
+     DELETE DEPARTMENT - OPEN CONFIRMATION
+  ========================================================== */
+
+  const handleDeleteDepartment = (
+    department: Department
+  ) => {
+    setDepartmentToDelete(
+      department
+    );
+
+    setDeletingDepartmentId(
+      department.id
+    );
+
+    setShowDeleteConfirmation(
+      true
+    );
+  };
+
+  /* ==========================================================
+     CANCEL DELETE
+  ========================================================== */
+
+  const handleCancelDelete = () => {
+    if (deletingDepartment) {
+      return;
+    }
+
+    setShowDeleteConfirmation(
+      false
+    );
+
+    setDepartmentToDelete(null);
+    setDeletingDepartmentId(null);
+  };
+
+  /* ==========================================================
+     CONFIRM DELETE
+  ========================================================== */
+
+  const handleConfirmDelete =
+    async () => {
+      if (
+        !departmentToDelete
+      ) {
+        return;
+      }
+
+      try {
+        const token =
+          getToken();
+
+        if (!token) {
+          throw new Error(
+            'Authentication token not found. Please login again.'
+          );
+        }
+
+        setDeletingDepartment(
+          true
+        );
+
+        const response =
+          await fetch(
+            `${API_BASE_URL}/departments/${departmentToDelete.id}`,
+            {
+              method: 'DELETE',
+
+              headers: {
+                Authorization:
+                  `Bearer ${token}`,
+
+                'Content-Type':
+                  'application/json',
+              },
+            }
+          );
+
+        if (!response.ok) {
+          let message =
+            'Failed to delete department.';
+
+          try {
+            const errorData =
+              await response.json();
+
+            if (
+              errorData?.message
+            ) {
+              message =
+                errorData.message;
+            }
+          } catch {
+            // Ignore parsing error
+          }
+
+          throw new Error(
+            message
+          );
+        }
+
+        /*
+         * Remove department from UI
+         */
+        setDepartments(
+          (previous) =>
+            previous.filter(
+              (department) =>
+                department.id !==
+                departmentToDelete.id
+            )
+        );
+
+        /*
+         * Remove its members from local state
+         */
+        setDepartmentMembers(
+          (previous) => {
+            const updated = {
+              ...previous,
+            };
+
+            delete updated[
+              departmentToDelete.id
+            ];
+
+            return updated;
+          }
+        );
+
+        /*
+         * Close members modal if the deleted
+         * department was open.
+         */
+        if (
+          selectedDepartment?.id ===
+          departmentToDelete.id
+        ) {
+          setShowMembers(false);
+          setSelectedDepartment(null);
+        }
+
+        setShowDeleteConfirmation(
+          false
+        );
+
+        setDepartmentToDelete(
+          null
+        );
+
+        setDeletingDepartmentId(
+          null
+        );
+
+        showToast(
+          'Department deleted successfully.'
+        );
+      } catch (error) {
+        console.error(
+          'Error deleting department:',
+          error
+        );
+
+        showToast(
+          error instanceof Error
+            ? error.message
+            : 'Failed to delete department.'
+        );
+      } finally {
+        setDeletingDepartment(
+          false
         );
       }
     };
 
   /* ==========================================================
-     CANCEL DEPARTMENT
+     CANCEL DEPARTMENT FORM
   ========================================================== */
 
   const handleCancel = () => {
@@ -1868,6 +2248,83 @@ export const AdminDepartments: React.FC = () => {
 
               </div>
 
+              {/* ==================================================
+                  EDIT + DELETE BUTTONS
+              ================================================== */}
+
+              <div className="mt-3 flex gap-2">
+
+                {/* EDIT */}
+
+                <button
+                  type="button"
+                  onClick={() =>
+                    handleEditDepartment(
+                      department
+                    )
+                  }
+                  className="
+                    flex
+                    h-8
+                    flex-1
+                    items-center
+                    justify-center
+                    gap-1.5
+                    rounded-md
+                    border
+                    border-slate-200
+                    bg-white
+                    text-[12px]
+                    font-bold
+                    text-slate-600
+                    transition
+                    hover:bg-slate-50
+                  "
+                >
+                  <Pencil size={13} />
+                  Edit
+                </button>
+
+                {/* DELETE */}
+
+                <button
+                  type="button"
+                  disabled={
+                    deletingDepartmentId ===
+                    department.id &&
+                    deletingDepartment
+                  }
+                  onClick={() =>
+                    handleDeleteDepartment(
+                      department
+                    )
+                  }
+                  className="
+                    flex
+                    h-8
+                    flex-1
+                    items-center
+                    justify-center
+                    gap-1.5
+                    rounded-md
+                    border
+                    border-red-100
+                    bg-white
+                    text-[12px]
+                    font-bold
+                    text-red-500
+                    transition
+                    hover:bg-red-50
+                    disabled:cursor-not-allowed
+                    disabled:opacity-50
+                  "
+                >
+                  <Trash2 size={13} />
+                  Delete
+                </button>
+
+              </div>
+
               {/* VIEW MEMBERS */}
 
               <button
@@ -1904,7 +2361,7 @@ export const AdminDepartments: React.FC = () => {
       </div>
 
       {/* ======================================================
-          ADD DEPARTMENT MODAL
+          ADD / EDIT DEPARTMENT MODAL
       ====================================================== */}
 
       {showForm && (
@@ -1949,7 +2406,9 @@ export const AdminDepartments: React.FC = () => {
                   text-slate-900
                 "
               >
-                Add Department
+                {editingDepartmentId !== null
+                  ? 'Edit Department'
+                  : 'Add Department'}
               </h2>
 
               <p
@@ -1960,7 +2419,9 @@ export const AdminDepartments: React.FC = () => {
                   text-slate-500
                 "
               >
-                Enter the department details below.
+                {editingDepartmentId !== null
+                  ? 'Update the department details below.'
+                  : 'Enter the department details below.'}
               </p>
 
             </div>
@@ -2095,6 +2556,8 @@ export const AdminDepartments: React.FC = () => {
                       ? 'Loading users...'
                       : selectedHeadUser
                       ? selectedHeadUser.name
+                      : editingDepartment?.head
+                      ? editingDepartment.head
                       : 'Select department head'}
                   </span>
 
@@ -2258,462 +2721,440 @@ export const AdminDepartments: React.FC = () => {
                   MEMBERS MULTI SELECT
               ================================================== */}
 
-              <div className="relative">
+              {editingDepartmentId === null && (
+                <div className="relative">
 
-                <label
-                  className="
-                    mb-1.5
-                    block
-                    text-[12px]
-                    font-bold
-                    text-slate-700
-                  "
-                >
-                  Members
-                </label>
-
-                {/* SELECTED USER CHIPS */}
-
-                {selectedUsers.length >
-                  0 && (
-                  <div
+                  <label
                     className="
-                      mb-2
-                      flex
-                      max-h-[70px]
-                      flex-wrap
-                      gap-1.5
-                      overflow-y-auto
+                      mb-1.5
+                      block
+                      text-[12px]
+                      font-bold
+                      text-slate-700
                     "
                   >
+                    Members
+                  </label>
 
-                    {selectedUsers.map(
-                      (user) => (
-                        <div
-                          key={
-                            user.employeeId
-                          }
-                          className="
-                            inline-flex
-                            items-center
-                            gap-1.5
-                            rounded-md
-                            bg-slate-100
-                            px-2
-                            py-1.5
-                            text-[11px]
-                            font-semibold
-                            text-slate-700
-                          "
-                        >
+                  {/* SELECTED USER CHIPS */}
 
-                          <span>
-                            {user.name}
-                          </span>
-
-                          <button
-                            type="button"
-                            onClick={() =>
-                              removeSelectedUser(
-                                user.employeeId
-                              )
-                            }
-                            className="
-                              text-slate-400
-                              hover:text-red-500
-                            "
-                          >
-                            <X size={12} />
-                          </button>
-
-                        </div>
-                      )
-                    )}
-
-                  </div>
-                )}
-
-                {/* DROPDOWN BUTTON */}
-
-                <button
-                  type="button"
-                  onClick={
-                    handleOpenUserDropdown
-                  }
-                  className={`
-                    flex
-                    h-10
-                    w-full
-                    items-center
-                    justify-between
-                    rounded-md
-                    border
-                    ${
-                      departmentErrors.members
-                        ? 'border-red-300'
-                        : 'border-slate-200'
-                    }
-                    bg-white
-                    px-3
-                    text-left
-                    text-[13px]
-                    font-medium
-                    text-slate-700
-                    outline-none
-                    focus:border-slate-400
-                    focus:ring-2
-                    focus:ring-slate-100
-                  `}
-                >
-
-                  <span>
-                    {usersLoading
-                      ? 'Loading users...'
-                      : selectedUsers.length >
-                        0
-                      ? `${selectedUsers.length} user${
-                          selectedUsers.length !==
-                          1
-                            ? 's'
-                            : ''
-                        } selected`
-                      : 'Select members'}
-                  </span>
-
-                  <ChevronDown
-                    size={15}
-                    className={`
-                      text-slate-400
-                      transition-transform
-                      ${
-                        showUserDropdown
-                          ? 'rotate-180'
-                          : ''
-                      }
-                    `}
-                  />
-
-                </button>
-
-                {/* ==================================================
-                    CREATE DEPARTMENT MEMBERS DROPDOWN
-                ================================================== */}
-
-                {showUserDropdown && (
-                  <div
-                    className="
-                      absolute
-                      left-0
-                      right-0
-                      top-[70px]
-                      z-[999]
-                      overflow-hidden
-                      rounded-md
-                      border
-                      border-slate-200
-                      bg-white
-                      shadow-[0_10px_30px_rgba(15,23,42,0.18)]
-                    "
-                  >
-
-                    {/* USER LIST */}
-
+                  {selectedUsers.length >
+                    0 && (
                     <div
                       className="
-                        max-h-[230px]
+                        mb-2
+                        flex
+                        max-h-[70px]
+                        flex-wrap
+                        gap-1.5
                         overflow-y-auto
-                        p-1
                       "
                     >
 
-                      {usersLoading ? (
-                        <div
-                          className="
-                            px-3
-                            py-5
-                            text-center
-                            text-[12px]
-                            text-slate-500
-                          "
-                        >
-                          Loading users...
-                        </div>
-                      ) : availableUsersForNewDepartment.length ===
-                        0 ? (
-                        <div
-                          className="
-                            px-3
-                            py-5
-                            text-center
-                            text-[12px]
-                            text-slate-500
-                          "
-                        >
-                          No available users.
-                        </div>
-                      ) : (
-                        availableUsersForNewDepartment.map(
-                          (user) => {
-                            const selected =
-                              isUserSelected(
-                                user.employeeId
-                              );
+                      {selectedUsers.map(
+                        (user) => (
+                          <div
+                            key={
+                              user.employeeId
+                            }
+                            className="
+                              inline-flex
+                              items-center
+                              gap-1.5
+                              rounded-md
+                              bg-slate-100
+                              px-2
+                              py-1.5
+                              text-[11px]
+                              font-semibold
+                              text-slate-700
+                            "
+                          >
 
-                            return (
-                              <button
-                                key={
+                            <span>
+                              {user.name}
+                            </span>
+
+                            <button
+                              type="button"
+                              onClick={() =>
+                                removeSelectedUser(
                                   user.employeeId
-                                }
-                                type="button"
-                                onClick={() =>
-                                  toggleUserSelection(
-                                    user
-                                  )
-                                }
-                                className={`
-                                  flex
-                                  w-full
-                                  items-center
-                                  gap-2.5
-                                  rounded-md
-                                  px-2.5
-                                  py-2.5
-                                  text-left
-                                  transition
-                                  hover:bg-slate-50
-                                  ${
-                                    selected
-                                      ? 'bg-slate-50'
-                                      : ''
-                                  }
-                                `}
-                              >
+                                )
+                              }
+                              className="
+                                text-slate-400
+                                hover:text-red-500
+                              "
+                            >
+                              <X size={12} />
+                            </button>
 
-                                {/* CHECKBOX */}
-
-                                <div
-                                  className={`
-                                    flex
-                                    h-4
-                                    w-4
-                                    shrink-0
-                                    items-center
-                                    justify-center
-                                    rounded
-                                    border
-                                    ${
-                                      selected
-                                        ? 'border-slate-900 bg-slate-900'
-                                        : 'border-slate-300 bg-white'
-                                    }
-                                  `}
-                                >
-                                  {selected && (
-                                    <Check
-                                      size={11}
-                                      className="text-white"
-                                    />
-                                  )}
-                                </div>
-
-                                {/* USER INFO */}
-
-                                <div className="min-w-0 flex-1">
-
-                                  <div
-                                    className="
-                                      truncate
-                                      text-[12px]
-                                      font-bold
-                                      text-slate-800
-                                    "
-                                  >
-                                    {user.name}
-                                  </div>
-
-                                  <div
-                                    className="
-                                      truncate
-                                      text-[10px]
-                                      font-medium
-                                      text-slate-500
-                                    "
-                                  >
-                                    EMP-
-                                    {String(
-                                      user.employeeId
-                                    ).padStart(
-                                      3,
-                                      '0'
-                                    )}
-                                    {' • '}
-                                    {user.email}
-                                  </div>
-
-                                </div>
-
-                                {/* ROLE */}
-
-                                <span
-                                  className="
-                                    shrink-0
-                                    text-[10px]
-                                    font-semibold
-                                    text-slate-400
-                                  "
-                                >
-                                  {user.role}
-                                </span>
-
-                              </button>
-                            );
-                          }
+                          </div>
                         )
                       )}
 
                     </div>
+                  )}
 
-                    {/* ==================================================
-                        SELECTED COUNT
-                    ================================================== */}
+                  {/* DROPDOWN BUTTON */}
 
+                  <button
+                    type="button"
+                    onClick={
+                      handleOpenUserDropdown
+                    }
+                    className={`
+                      flex
+                      h-10
+                      w-full
+                      items-center
+                      justify-between
+                      rounded-md
+                      border
+                      ${
+                        departmentErrors.members
+                          ? 'border-red-300'
+                          : 'border-slate-200'
+                      }
+                      bg-white
+                      px-3
+                      text-left
+                      text-[13px]
+                      font-medium
+                      text-slate-700
+                      outline-none
+                      focus:border-slate-400
+                      focus:ring-2
+                      focus:ring-slate-100
+                    `}
+                  >
+
+                    <span>
+                      {usersLoading
+                        ? 'Loading users...'
+                        : selectedUsers.length >
+                          0
+                        ? `${selectedUsers.length} user${
+                            selectedUsers.length !==
+                            1
+                              ? 's'
+                              : ''
+                          } selected`
+                        : 'Select members'}
+                    </span>
+
+                    <ChevronDown
+                      size={15}
+                      className={`
+                        text-slate-400
+                        transition-transform
+                        ${
+                          showUserDropdown
+                            ? 'rotate-180'
+                            : ''
+                        }
+                      `}
+                    />
+
+                  </button>
+
+                  {/* CREATE DEPARTMENT MEMBERS DROPDOWN */}
+
+                  {showUserDropdown && (
                     <div
                       className="
-                        border-t
-                        border-slate-100
-                        bg-slate-50
-                        px-3
-                        py-2
-                      "
-                    >
-                      <span
-                        className="
-                          text-[11px]
-                          font-semibold
-                          text-slate-500
-                        "
-                      >
-                        Selected members:{' '}
-                      </span>
-
-                      <span
-                        className="
-                          text-[11px]
-                          font-extrabold
-                          text-slate-800
-                        "
-                      >
-                        {selectedUsers.length}
-                      </span>
-                    </div>
-
-                    {/* ==================================================
-                        ADD + CANCEL BUTTONS
-                    ================================================== */}
-
-                    <div
-                      className="
-                        flex
-                        gap-2
-                        border-t
-                        border-slate-100
+                        absolute
+                        left-0
+                        right-0
+                        top-[70px]
+                        z-[999]
+                        overflow-hidden
+                        rounded-md
+                        border
+                        border-slate-200
                         bg-white
-                        p-2
+                        shadow-[0_10px_30px_rgba(15,23,42,0.18)]
                       "
                     >
 
-                      {/* CANCEL */}
+                      <div
+                        className="
+                          max-h-[230px]
+                          overflow-y-auto
+                          p-1
+                        "
+                      >
 
-                      <button
-                        type="button"
-                        onClick={
-                          handleCancelDepartmentMemberSelection
-                        }
+                        {usersLoading ? (
+                          <div
+                            className="
+                              px-3
+                              py-5
+                              text-center
+                              text-[12px]
+                              text-slate-500
+                            "
+                          >
+                            Loading users...
+                          </div>
+                        ) : availableUsersForNewDepartment.length ===
+                          0 ? (
+                          <div
+                            className="
+                              px-3
+                              py-5
+                              text-center
+                              text-[12px]
+                              text-slate-500
+                            "
+                          >
+                            No available users.
+                          </div>
+                        ) : (
+                          availableUsersForNewDepartment.map(
+                            (user) => {
+                              const selected =
+                                isUserSelected(
+                                  user.employeeId
+                                );
+
+                              return (
+                                <button
+                                  key={
+                                    user.employeeId
+                                  }
+                                  type="button"
+                                  onClick={() =>
+                                    toggleUserSelection(
+                                      user
+                                    )
+                                  }
+                                  className={`
+                                    flex
+                                    w-full
+                                    items-center
+                                    gap-2.5
+                                    rounded-md
+                                    px-2.5
+                                    py-2.5
+                                    text-left
+                                    transition
+                                    hover:bg-slate-50
+                                    ${
+                                      selected
+                                        ? 'bg-slate-50'
+                                        : ''
+                                    }
+                                  `}
+                                >
+
+                                  <div
+                                    className={`
+                                      flex
+                                      h-4
+                                      w-4
+                                      shrink-0
+                                      items-center
+                                      justify-center
+                                      rounded
+                                      border
+                                      ${
+                                        selected
+                                          ? 'border-slate-900 bg-slate-900'
+                                          : 'border-slate-300 bg-white'
+                                      }
+                                    `}
+                                  >
+                                    {selected && (
+                                      <Check
+                                        size={11}
+                                        className="text-white"
+                                      />
+                                    )}
+                                  </div>
+
+                                  <div className="min-w-0 flex-1">
+
+                                    <div
+                                      className="
+                                        truncate
+                                        text-[12px]
+                                        font-bold
+                                        text-slate-800
+                                      "
+                                    >
+                                      {user.name}
+                                    </div>
+
+                                    <div
+                                      className="
+                                        truncate
+                                        text-[10px]
+                                        font-medium
+                                        text-slate-500
+                                      "
+                                    >
+                                      EMP-
+                                      {String(
+                                        user.employeeId
+                                      ).padStart(
+                                        3,
+                                        '0'
+                                      )}
+                                      {' • '}
+                                      {user.email}
+                                    </div>
+
+                                  </div>
+
+                                  <span
+                                    className="
+                                      shrink-0
+                                      text-[10px]
+                                      font-semibold
+                                      text-slate-400
+                                    "
+                                  >
+                                    {user.role}
+                                  </span>
+
+                                </button>
+                              );
+                            }
+                          )
+                        )}
+
+                      </div>
+
+                      <div
+                        className="
+                          border-t
+                          border-slate-100
+                          bg-slate-50
+                          px-3
+                          py-2
+                        "
+                      >
+                        <span
+                          className="
+                            text-[11px]
+                            font-semibold
+                            text-slate-500
+                          "
+                        >
+                          Selected members:{' '}
+                        </span>
+
+                        <span
+                          className="
+                            text-[11px]
+                            font-extrabold
+                            text-slate-800
+                          "
+                        >
+                          {selectedUsers.length}
+                        </span>
+                      </div>
+
+                      <div
                         className="
                           flex
-                          h-9
-                          flex-1
-                          items-center
-                          justify-center
-                          rounded-md
-                          border
-                          border-slate-300
+                          gap-2
+                          border-t
+                          border-slate-100
                           bg-white
-                          text-[12px]
-                          font-bold
-                          text-slate-700
-                          transition
-                          hover:bg-slate-50
+                          p-2
                         "
                       >
-                        Cancel
-                      </button>
 
-                      {/* ADD */}
+                        <button
+                          type="button"
+                          onClick={
+                            handleCancelDepartmentMemberSelection
+                          }
+                          className="
+                            flex
+                            h-9
+                            flex-1
+                            items-center
+                            justify-center
+                            rounded-md
+                            border
+                            border-slate-300
+                            bg-white
+                            text-[12px]
+                            font-bold
+                            text-slate-700
+                            transition
+                            hover:bg-slate-50
+                          "
+                        >
+                          Cancel
+                        </button>
 
-                      <button
-                        type="button"
-                        onClick={
-                          handleAddSelectedDepartmentMembers
-                        }
-                        className="
-                          flex
-                          h-9
-                          flex-1
-                          items-center
-                          justify-center
-                          gap-1.5
-                          rounded-md
-                          bg-slate-900
-                          text-[12px]
-                          font-bold
-                          text-white
-                          transition
-                          hover:bg-slate-800
-                        "
-                      >
-                        <Plus size={13} />
-                        Add
-                      </button>
+                        <button
+                          type="button"
+                          onClick={
+                            handleAddSelectedDepartmentMembers
+                          }
+                          className="
+                            flex
+                            h-9
+                            flex-1
+                            items-center
+                            justify-center
+                            gap-1.5
+                            rounded-md
+                            bg-slate-900
+                            text-[12px]
+                            font-bold
+                            text-white
+                            transition
+                            hover:bg-slate-800
+                          "
+                        >
+                          <Plus size={13} />
+                          Add
+                        </button>
+
+                      </div>
 
                     </div>
+                  )}
 
+                  {departmentErrors.members && (
+                    <p className="mt-1.5 text-[11px] text-red-500">
+                      {
+                        departmentErrors.members
+                      }
+                    </p>
+                  )}
+
+                  <div
+                    className="
+                      mt-2
+                      rounded-md
+                      border
+                      border-slate-100
+                      bg-slate-50
+                      px-3
+                      py-2
+                      text-[11px]
+                      font-semibold
+                      text-slate-500
+                    "
+                  >
+                    Selected members:{' '}
+                    <span className="font-extrabold text-slate-800">
+                      {
+                        selectedUsers.length
+                      }
+                    </span>
                   </div>
-                )}
 
-                {departmentErrors.members && (
-                  <p className="mt-1.5 text-[11px] text-red-500">
-                    {
-                      departmentErrors.members
-                    }
-                  </p>
-                )}
-
-                {/* SELECTED COUNT */}
-
-                <div
-                  className="
-                    mt-2
-                    rounded-md
-                    border
-                    border-slate-100
-                    bg-slate-50
-                    px-3
-                    py-2
-                    text-[11px]
-                    font-semibold
-                    text-slate-500
-                  "
-                >
-                  Selected members:{' '}
-                  <span className="font-extrabold text-slate-800">
-                    {
-                      selectedUsers.length
-                    }
-                  </span>
                 </div>
-
-              </div>
+              )}
 
               {/* ==================================================
                   PROGRESS
@@ -2803,6 +3244,7 @@ export const AdminDepartments: React.FC = () => {
                   onClick={
                     handleCancel
                   }
+                  disabled={savingDepartment}
                   className="
                     h-9
                     rounded-md
@@ -2814,6 +3256,8 @@ export const AdminDepartments: React.FC = () => {
                     font-bold
                     text-slate-600
                     hover:bg-slate-50
+                    disabled:cursor-not-allowed
+                    disabled:opacity-50
                   "
                 >
                   Cancel
@@ -2821,6 +3265,7 @@ export const AdminDepartments: React.FC = () => {
 
                 <button
                   type="submit"
+                  disabled={savingDepartment}
                   className="
                     h-9
                     rounded-md
@@ -2830,9 +3275,15 @@ export const AdminDepartments: React.FC = () => {
                     font-bold
                     text-white
                     hover:bg-slate-800
+                    disabled:cursor-not-allowed
+                    disabled:opacity-50
                   "
                 >
-                  Add Department
+                  {savingDepartment
+                    ? 'Saving...'
+                    : editingDepartmentId !== null
+                    ? 'Save Changes'
+                    : 'Add Department'}
                 </button>
 
               </div>
@@ -2842,6 +3293,156 @@ export const AdminDepartments: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* ======================================================
+          DELETE CONFIRMATION MODAL
+      ====================================================== */}
+
+      {showDeleteConfirmation &&
+        departmentToDelete && (
+          <div
+            className="
+              fixed
+              inset-0
+              z-[200]
+              flex
+              items-center
+              justify-center
+              bg-slate-900/30
+              px-4
+              backdrop-blur-[2px]
+            "
+          >
+
+            <div
+              className="
+                w-full
+                max-w-[400px]
+                rounded-xl
+                border
+                border-slate-200
+                bg-white
+                p-6
+                shadow-[0_12px_40px_rgba(15,23,42,0.18)]
+              "
+            >
+
+              <div className="flex items-start gap-3">
+
+                <div
+                  className="
+                    flex
+                    h-10
+                    w-10
+                    shrink-0
+                    items-center
+                    justify-center
+                    rounded-full
+                    bg-red-50
+                    text-red-500
+                  "
+                >
+                  <Trash2 size={18} />
+                </div>
+
+                <div className="min-w-0">
+
+                  <h2
+                    className="
+                      text-[17px]
+                      font-extrabold
+                      text-slate-900
+                    "
+                  >
+                    Delete Department
+                  </h2>
+
+                  <p
+                    className="
+                      mt-1
+                      text-[12.5px]
+                      leading-5
+                      text-slate-500
+                    "
+                  >
+                    Are you sure you want to delete{' '}
+                    <span className="font-bold text-slate-700">
+                      {departmentToDelete.name}
+                    </span>
+                    ? This action cannot be undone.
+                  </p>
+
+                </div>
+
+              </div>
+
+              <div
+                className="
+                  mt-6
+                  flex
+                  justify-end
+                  gap-2
+                "
+              >
+
+                <button
+                  type="button"
+                  disabled={
+                    deletingDepartment
+                  }
+                  onClick={
+                    handleCancelDelete
+                  }
+                  className="
+                    h-9
+                    rounded-md
+                    border
+                    border-slate-200
+                    bg-white
+                    px-4
+                    text-[12px]
+                    font-bold
+                    text-slate-600
+                    hover:bg-slate-50
+                    disabled:cursor-not-allowed
+                    disabled:opacity-50
+                  "
+                >
+                  Cancel
+                </button>
+
+                <button
+                  type="button"
+                  disabled={
+                    deletingDepartment
+                  }
+                  onClick={
+                    handleConfirmDelete
+                  }
+                  className="
+                    h-9
+                    rounded-md
+                    bg-red-500
+                    px-4
+                    text-[12px]
+                    font-bold
+                    text-white
+                    hover:bg-red-600
+                    disabled:cursor-not-allowed
+                    disabled:opacity-50
+                  "
+                >
+                  {deletingDepartment
+                    ? 'Deleting...'
+                    : 'Delete'}
+                </button>
+
+              </div>
+
+            </div>
+
+          </div>
+        )}
 
       {/* ======================================================
           VIEW MEMBERS MODAL
@@ -2876,9 +3477,7 @@ export const AdminDepartments: React.FC = () => {
               "
             >
 
-              {/* ==================================================
-                  HEADER
-              ================================================== */}
+              {/* HEADER */}
 
               <div
                 className="
@@ -2953,9 +3552,7 @@ export const AdminDepartments: React.FC = () => {
 
               </div>
 
-              {/* ==================================================
-                  ADD MEMBER SECTION
-              ================================================== */}
+              {/* ADD MEMBER SECTION */}
 
               <div
                 className="
@@ -3009,9 +3606,7 @@ export const AdminDepartments: React.FC = () => {
 
                 </div>
 
-                {/* ==================================================
-                    ADD MEMBER DROPDOWN
-                ================================================== */}
+                {/* ADD MEMBER DROPDOWN */}
 
                 {showAddMemberDropdown && (
                   <div
@@ -3029,8 +3624,6 @@ export const AdminDepartments: React.FC = () => {
                       shadow-[0_12px_30px_rgba(15,23,42,0.18)]
                     "
                   >
-
-                    {/* HEADER */}
 
                     <div
                       className="
@@ -3062,8 +3655,6 @@ export const AdminDepartments: React.FC = () => {
                       </p>
 
                     </div>
-
-                    {/* USER LIST */}
 
                     <div
                       className="
@@ -3146,8 +3737,6 @@ export const AdminDepartments: React.FC = () => {
                                   `}
                                 >
 
-                                  {/* CHECKBOX */}
-
                                   <div
                                     className={`
                                       flex
@@ -3172,8 +3761,6 @@ export const AdminDepartments: React.FC = () => {
                                       />
                                     )}
                                   </div>
-
-                                  {/* USER INFO */}
 
                                   <div className="min-w-0 flex-1">
 
@@ -3208,8 +3795,6 @@ export const AdminDepartments: React.FC = () => {
 
                                   </div>
 
-                                  {/* STATUS */}
-
                                   {existing ? (
                                     <span
                                       className="
@@ -3242,10 +3827,6 @@ export const AdminDepartments: React.FC = () => {
                       )}
 
                     </div>
-
-                    {/* ==================================================
-                        SELECTED NEW MEMBERS COUNT
-                    ================================================== */}
 
                     <div
                       className="
@@ -3281,10 +3862,6 @@ export const AdminDepartments: React.FC = () => {
 
                     </div>
 
-                    {/* ==================================================
-                        CANCEL + ADD
-                    ================================================== */}
-
                     <div
                       className="
                         flex
@@ -3295,8 +3872,6 @@ export const AdminDepartments: React.FC = () => {
                         p-2
                       "
                     >
-
-                      {/* CANCEL */}
 
                       <button
                         type="button"
@@ -3327,8 +3902,6 @@ export const AdminDepartments: React.FC = () => {
                       >
                         Cancel
                       </button>
-
-                      {/* ADD */}
 
                       <button
                         type="button"
@@ -3374,9 +3947,7 @@ export const AdminDepartments: React.FC = () => {
 
               </div>
 
-              {/* ==================================================
-                  MEMBERS TABLE
-              ================================================== */}
+              {/* MEMBERS TABLE */}
 
               <div
                 className="
