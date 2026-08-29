@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   FiAlertTriangle,
   FiArrowRight,
@@ -20,6 +20,7 @@ import { ScrumTaskDetail } from './ScrumTaskDetail';
 import {
   fetchBoard,
   fetchSprints,
+  fetchProjects,
   moveTask,
   setWipLimit,
   createTask,
@@ -37,10 +38,17 @@ import {
   type Card,
   type Member,
   type Priority,
+  type Project,
   type Sprint,
   type TaskInput,
   type TaskStatus
 } from './scrumApi';
+
+/**
+ * Where the chosen project is remembered. Per-viewer convenience only: the
+ * board is always correct without it, it just opens on "All projects".
+ */
+const PROJECT_KEY = 'scrum.board.projectId';
 
 /**
  * HTML5 drag and drop has no touch implementation, and a card that cannot be
@@ -167,6 +175,25 @@ export const ScrumBoard: React.FC = () => {
   const [busyId, setBusyId] = useState<number | null>(null);
   const [wipBusy, setWipBusy] = useState<TaskStatus | null>(null);
 
+  /**
+   * Project scope.
+   *
+   * A scrum master works one project at a time, so the choice is remembered
+   * across reloads: coming back and landing on someone else's project is a
+   * quiet way to plan the wrong sprint. Read lazily rather than in an effect,
+   * so the very first render is already scoped correctly.
+   */
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [projectId, setProjectId] = useState<number | ''>(() => {
+    try {
+      const stored = window.localStorage.getItem(PROJECT_KEY);
+      return stored === null || stored === '' ? '' : Number(stored) || '';
+    } catch {
+      // Private windows and blocked site data both throw on access
+      return '';
+    }
+  });
+
   // Filters
   const [sprintId, setSprintId] = useState<number | ''>('');
   const [searchInput, setSearchInput] = useState('');
@@ -194,6 +221,7 @@ export const ScrumBoard: React.FC = () => {
 
   const filters = useMemo<BoardFilters>(
     () => ({
+      projectId: projectId === '' ? undefined : projectId,
       sprintId: sprintId === '' ? undefined : sprintId,
       assigneeId: assigneeId === '' ? undefined : assigneeId,
       priority: priority === '' ? undefined : priority,
@@ -201,7 +229,7 @@ export const ScrumBoard: React.FC = () => {
       search: search || undefined,
       unassigned: unassigned || undefined
     }),
-    [sprintId, assigneeId, priority, label, search, unassigned]
+    [projectId, sprintId, assigneeId, priority, label, search, unassigned]
   );
 
   const load = useCallback(async () => {
@@ -222,17 +250,53 @@ export const ScrumBoard: React.FC = () => {
     void load();
   }, [load]);
 
-  // The sprint list does not depend on the filters, so it is fetched once rather
-  // than on every keystroke. A failure here still leaves a usable board.
+  // The sprint list follows the project but not the other filters, so it is
+  // refetched when the project changes rather than on every keystroke. A
+  // failure here still leaves a usable board.
   useEffect(() => {
     void (async () => {
       try {
-        setSprints(await fetchSprints());
+        setSprints(await fetchSprints(projectId === '' ? undefined : projectId));
       } catch {
         setSprints([]);
       }
     })();
+  }, [projectId]);
+
+  // The project list belongs to the PM module and is read-only here, so a
+  // project renamed there is renamed here. Losing it must not take the board
+  // down with it — the board is still usable unscoped.
+  useEffect(() => {
+    void (async () => {
+      try {
+        setProjects(await fetchProjects());
+      } catch {
+        setProjects([]);
+      }
+    })();
   }, []);
+
+  /**
+   * Switching project clears the chosen sprint.
+   *
+   * Keeping it would send project A's sprint alongside project B's id, which
+   * the backend rejects outright. Falling back to "this project's current
+   * sprint" is better than an error the user did not cause.
+   */
+  const handleProjectChange = (next: number | '') => {
+    setProjectId(next);
+    setSprintId('');
+
+    try {
+      if (next === '') {
+        window.localStorage.removeItem(PROJECT_KEY);
+      } else {
+        window.localStorage.setItem(PROJECT_KEY, String(next));
+      }
+    } catch {
+      // Remembering the choice is a convenience, never a requirement
+    }
+  };
 
   /**
    * Seven columns always, in BOARD_COLUMNS order.
@@ -385,7 +449,10 @@ export const ScrumBoard: React.FC = () => {
     setNotice('');
 
     try {
-      await setWipLimit(column.status, limit);
+      await setWipLimit(column.status, limit, {
+        projectId: projectId === '' ? undefined : projectId,
+        sprintId: activeSprintId ?? undefined
+      });
       setNotice(
         limit === null
           ? `WIP limit removed from ${column.label}`
@@ -400,6 +467,10 @@ export const ScrumBoard: React.FC = () => {
   };
 
   const activeSprintId = sprintId === '' ? board?.sprintId : sprintId;
+
+  // Resolved from the board's own cards, so the dialog closes by itself if a
+  // refresh removes the card underneath it rather than editing a stale copy
+  const editingCard = editingId === null ? null : cardById.get(editingId) ?? null;
 
   const handleCreate = async (draft: TaskDraft) => {
     setSaving(true);
@@ -433,6 +504,9 @@ export const ScrumBoard: React.FC = () => {
     try {
       await updateTask(card.id, {
         ...draftToEdit(draft),
+        // draftToInput leaves status out, so the dialog's status field has to
+        // be sent here or changing it would report success and change nothing
+        status: draft.status,
         assigneeId: draft.assigneeId === '' ? null : Number(draft.assigneeId),
         // PATCH treats a null assignee as "unchanged", so clearing needs the flag.
         unassign: draft.assigneeId === ''
@@ -526,6 +600,11 @@ export const ScrumBoard: React.FC = () => {
         <div className="min-w-0">
           <h2 className={`${TYPE.title} text-slate-900`}>{board.sprintName} board</h2>
           <p className={`${TYPE.meta} text-slate-500`}>
+            {/* Naming the project makes the scope visible, so nobody plans
+                the right sprint under the wrong project by accident */}
+            {board.projectName !== null && (
+              <span className="text-slate-600 font-medium">{board.projectName} · </span>
+            )}
             {board.totalTasks} cards · {board.totalPoints} points ·{' '}
             <span className="capitalize">{board.sprintStatus.toLowerCase()}</span>
             {refreshing && <span className="text-slate-400"> · updating…</span>}
@@ -533,6 +612,25 @@ export const ScrumBoard: React.FC = () => {
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
+          {/* Project comes first: it is the scope everything else sits inside */}
+          <label className="sr-only" htmlFor="board-project">Project</label>
+          <select
+            id="board-project"
+            value={projectId}
+            onChange={(event) =>
+              handleProjectChange(
+                event.target.value === '' ? '' : Number(event.target.value)
+              )}
+            className={`${TYPE.meta} ${FIELD.select} max-w-[14rem] truncate`}
+          >
+            <option value="">All projects</option>
+            {projects.map((project) => (
+              <option key={project.id} value={project.id}>
+                {project.name ?? project.code ?? `Project ${project.id}`}
+              </option>
+            ))}
+          </select>
+
           <label className="sr-only" htmlFor="board-sprint">Sprint</label>
           <select
             id="board-sprint"
@@ -792,7 +890,6 @@ export const ScrumBoard: React.FC = () => {
                         siblings={allCards}
                         busy={busyId === card.id}
                         editing={editingId === card.id}
-                        saving={saving}
                         dragEnabled={dragEnabled}
                         dragging={dragCardId === card.id}
                         onDragStart={(event) => {
@@ -812,8 +909,6 @@ export const ScrumBoard: React.FC = () => {
                           setEditingId(card.id);
                           setCreating(false);
                         }}
-                        onEditCancel={() => setEditingId(null)}
-                        onEditSubmit={(draft) => handleEdit(card, draft)}
                       />
                     ))}
                   </ul>
@@ -823,7 +918,106 @@ export const ScrumBoard: React.FC = () => {
           );
         })}
       </div>
+
+      {/* Editing lives in a modal, so it is rendered once for the board rather
+          than inside whichever card is being edited */}
+      {editingCard !== null && (
+        <TaskEditDialog
+          card={editingCard}
+          members={board.members}
+          saving={saving}
+          onCancel={() => setEditingId(null)}
+          onSubmit={(draft) => handleEdit(editingCard, draft)}
+        />
+      )}
     </div>
+  );
+};
+
+/**
+ * Editing a card happens in a modal rather than inside the card.
+ *
+ * A board column is around 200px wide, and the inline form this replaced had
+ * to fit eight fields into that, pushing the rest of the column out of view
+ * while it was open. The native <dialog> is deliberate: showModal() brings
+ * Escape-to-close, a focus trap and an inert background, none of which a
+ * hand-rolled overlay gets for free.
+ */
+const TaskEditDialog: React.FC<{
+  card: Card;
+  members: Member[];
+  saving: boolean;
+  onCancel: () => void;
+  onSubmit: (draft: TaskDraft) => Promise<void>;
+}> = ({ card, members, saving, onCancel, onSubmit }) => {
+  const ref = useRef<HTMLDialogElement>(null);
+  const titleId = `edit-dialog-${card.id}-title`;
+
+  useEffect(() => {
+    const dialog = ref.current;
+
+    if (dialog !== null && !dialog.open) {
+      dialog.showModal();
+    }
+  }, []);
+
+  return (
+    <dialog
+      ref={ref}
+      aria-labelledby={titleId}
+      // Escape fires 'cancel'; routing it through the board's own close keeps
+      // editingId and the dialog's open state from drifting apart
+      onCancel={(event) => {
+        event.preventDefault();
+        onCancel();
+      }}
+      // Only a click on the backdrop itself closes: the panel is a child, so
+      // clicks inside the form never reach this handler as the target
+      onClick={(event) => {
+        if (event.target === ref.current) {
+          onCancel();
+        }
+      }}
+      className="m-auto w-[calc(100%-2rem)] max-w-lg rounded-2xl border border-slate-200
+        bg-white p-0 shadow-lg backdrop:bg-slate-900/40"
+    >
+      <div className={SURFACE.pad}>
+        <div className="flex items-start justify-between gap-3 mb-3">
+          <div className="min-w-0">
+            <h3 id={titleId} className={`${TYPE.title} text-slate-900`}>
+              Edit task
+            </h3>
+            <p className={`${TYPE.meta} text-slate-500 truncate`}>
+              <span className={`${TYPE.code} text-slate-400`}>{card.taskKey}</span>
+              {' · '}
+              {card.title}
+            </p>
+          </div>
+
+          <button
+            type="button"
+            onClick={onCancel}
+            aria-label="Close without saving"
+            className="shrink-0 p-1 rounded cursor-pointer text-slate-400 hover:text-slate-600
+              focus-visible:outline-2 focus-visible:outline-offset-2
+              focus-visible:outline-emerald-500"
+          >
+            <FiX size={16} aria-hidden="true" />
+          </button>
+        </div>
+
+        <TaskForm
+          idPrefix={`edit-${card.id}`}
+          initial={draftFromCard(card)}
+          members={members}
+          showStatus
+          saving={saving}
+          submitLabel="Save"
+          onCancel={onCancel}
+          onSubmit={onSubmit}
+        />
+      </div>
+    </dialog>
   );
 };
 
@@ -833,8 +1027,8 @@ const BoardCard: React.FC<{
   /** The rest of the board, offered as dependency targets in the detail panel. */
   siblings: Card[];
   busy: boolean;
+  /** Dimmed and undraggable while the edit dialog holds this card. */
   editing: boolean;
-  saving: boolean;
   dragEnabled: boolean;
   dragging: boolean;
   onDragStart: (event: React.DragEvent<HTMLLIElement>) => void;
@@ -843,15 +1037,12 @@ const BoardCard: React.FC<{
   onClone: (card: Card) => Promise<void>;
   onDelete: (card: Card) => Promise<void>;
   onEditOpen: () => void;
-  onEditCancel: () => void;
-  onEditSubmit: (draft: TaskDraft) => Promise<void>;
 }> = ({
   card,
   members,
   siblings,
   busy,
   editing,
-  saving,
   dragEnabled,
   dragging,
   onDragStart,
@@ -860,8 +1051,6 @@ const BoardCard: React.FC<{
   onClone,
   onDelete,
   onEditOpen,
-  onEditCancel,
-  onEditSubmit
 }) => {
   // Detail is collapsed by default: mounting it fetches dependencies,
   // attachments and comments, which is three requests nobody asked for yet.
@@ -886,18 +1075,7 @@ const BoardCard: React.FC<{
         <span className={`absolute inset-y-0 left-0 w-[3px] ${STATUS.blocked.rail}`} aria-hidden="true" />
       )}
 
-      {editing ? (
-        <TaskForm
-          idPrefix={`edit-${card.id}`}
-          initial={draftFromCard(card)}
-          members={members}
-          saving={saving}
-          submitLabel="Save"
-          onCancel={onEditCancel}
-          onSubmit={onEditSubmit}
-        />
-      ) : (
-        <>
+
           {/* Header: what it is and how big. Actions stay out of the resting state. */}
           <div className="flex items-baseline gap-1.5">
             <span
@@ -1057,9 +1235,8 @@ const BoardCard: React.FC<{
               icon={<FiTrash2 size={13} aria-hidden="true" />}
             />
           </span>
-        </>
-      )}
-          {showDetail && (
+
+      {showDetail && (
             <ScrumTaskDetail card={card} members={members} siblings={siblings} />
           )}
 

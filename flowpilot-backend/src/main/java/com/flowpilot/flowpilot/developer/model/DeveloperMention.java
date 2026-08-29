@@ -1,43 +1,38 @@
 package com.flowpilot.flowpilot.developer.model;
 
 import jakarta.persistence.*;
-
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
 @Entity
-@Table(name = "developer_tasks")
+@Table(name = "developer_mentions")
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class DeveloperTask {
+public class DeveloperMention {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(
-            name = "task_id",
-            nullable = false,
-            unique = true
-    )
-    private String taskId;
+    @Column(nullable = false)
+    private String initials;
 
     @Column(nullable = false)
-    private String priority;
+    private String name;
 
     @Column(nullable = false)
-    private String title;
+    private String task;
 
-    @Column(columnDefinition = "TEXT")
-    private String details;
+    @Column(nullable = false, length = 2000)
+    private String message;
 
     @Column(nullable = false)
-    private String status;
+    private String time;
 
-    @Column(name = "story_points")
-    private Integer storyPoints;
+    @Column(nullable = false)
+    private Boolean unread = true;
 }

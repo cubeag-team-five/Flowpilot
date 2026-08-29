@@ -18,16 +18,20 @@ public class QABugReportsController {
     public QABugReportsController(
             QABugReportsService bugReportsService) {
 
-        this.bugReportsService = bugReportsService;
+        this.bugReportsService =
+                bugReportsService;
     }
 
     /*
      * =========================================================
-     * GET ALL BUG REPORTS
+     * GET ALL BUGS
+     *
+     * Kept for existing QA functionality.
      * =========================================================
      */
     @GetMapping
-    public ResponseEntity<List<QABugReport>> getAllBugs() {
+    public ResponseEntity<List<QABugReport>>
+    getAllBugs() {
 
         return ResponseEntity.ok(
                 bugReportsService.getAllBugs()
@@ -36,16 +40,44 @@ public class QABugReportsController {
 
     /*
      * =========================================================
-     * CREATE BUG REPORT
+     * GET BUGS CREATED BY USER
+     *
+     * Example:
+     *
+     * /api/qa/bugs/by-creator?createdBy=Nishad%20Fulzele
+     *
+     * =========================================================
+     */
+    @GetMapping("/by-creator")
+    public ResponseEntity<List<QABugReport>>
+    getBugsCreatedBy(
+            @RequestParam String createdBy) {
+
+        return ResponseEntity.ok(
+                bugReportsService
+                        .getBugsCreatedBy(
+                                createdBy
+                        )
+        );
+    }
+
+    /*
+     * =========================================================
+     * CREATE BUG
      * =========================================================
      */
     @PostMapping
-    public ResponseEntity<QABugReport> createBug(
+    public ResponseEntity<QABugReport>
+    createBug(
             @RequestBody QABugReport bug) {
 
         QABugReport savedBug =
-                bugReportsService.createBug(bug);
+                bugReportsService.createBug(
+                        bug
+                );
 
-        return ResponseEntity.ok(savedBug);
+        return ResponseEntity.ok(
+                savedBug
+        );
     }
 }

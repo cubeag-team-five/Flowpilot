@@ -1,4 +1,8 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, {
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 
 type BugReport = {
   id?: number;
@@ -9,6 +13,7 @@ type BugReport = {
   environment: string;
   severity: string;
   assignedTo: string;
+  createdBy?: string;
   stepsToReproduce: string;
   status?: string;
   createdAt?: string;
@@ -30,11 +35,6 @@ type Project = {
   id: number;
   projectCode: string;
   projectName: string;
-
-  /*
-   * IMPORTANT:
-   * PM stores employeeId values here.
-   */
   teamMemberIds?: Array<number | string>;
 };
 
@@ -50,22 +50,22 @@ type Member = {
   initials: string;
 };
 
+type StoredUser = {
+  id?: string | number;
+  userId?: string | number;
+  employeeId?: string | number;
+  name?: string;
+  fullName?: string;
+  username?: string;
+  email?: string;
+};
+
 const BUG_API_URL =
   "http://localhost:8080/api/qa/bugs";
 
 const PROJECT_API_URL =
   "http://localhost:8080/api/pm/projects";
 
-/*
- * Same member API used by PMProjects.tsx.
- *
- * We intentionally DO NOT use:
- *
- * /api/admin/departments
- *
- * QA Assign To must use the members assigned
- * to the selected PM project.
- */
 const SUPERADMIN_USERS_URL =
   "http://localhost:8080/api/superadmin/users";
 
@@ -80,34 +80,236 @@ const emptyForm: BugForm = {
   stepsToReproduce: "",
 };
 
+/* =========================================================
+   GET CURRENT USER
+========================================================= */
+
+const getCurrentUser = (): StoredUser | null => {
+  const keys = [
+    "currentUser",
+    "user",
+    "auth",
+    "userData",
+    "loggedInUser",
+  ];
+
+  for (const key of keys) {
+    const value =
+      localStorage.getItem(key) ||
+      sessionStorage.getItem(key);
+
+    if (!value) {
+      continue;
+    }
+
+    try {
+      const parsed = JSON.parse(value);
+
+      const user =
+        parsed?.user ??
+        parsed?.data?.user ??
+        parsed?.data ??
+        parsed;
+
+      if (
+        user?.id ||
+        user?.userId ||
+        user?.employeeId ||
+        user?.name ||
+        user?.fullName ||
+        user?.username ||
+        user?.email
+      ) {
+        return user;
+      }
+    } catch {
+      // Continue searching.
+    }
+  }
+
+  const fallback: StoredUser = {
+    id:
+      localStorage.getItem("userId") ||
+      localStorage.getItem("id") ||
+      sessionStorage.getItem("userId") ||
+      sessionStorage.getItem("id") ||
+      undefined,
+
+    userId:
+      localStorage.getItem("userId") ||
+      sessionStorage.getItem("userId") ||
+      undefined,
+
+    employeeId:
+      localStorage.getItem("employeeId") ||
+      sessionStorage.getItem("employeeId") ||
+      undefined,
+
+    name:
+      localStorage.getItem("name") ||
+      localStorage.getItem("fullName") ||
+      localStorage.getItem("username") ||
+      sessionStorage.getItem("name") ||
+      sessionStorage.getItem("fullName") ||
+      sessionStorage.getItem("username") ||
+      undefined,
+
+    fullName:
+      localStorage.getItem("fullName") ||
+      sessionStorage.getItem("fullName") ||
+      undefined,
+
+    username:
+      localStorage.getItem("username") ||
+      sessionStorage.getItem("username") ||
+      undefined,
+
+    email:
+      localStorage.getItem("email") ||
+      sessionStorage.getItem("email") ||
+      undefined,
+  };
+
+  const hasUser = Object.values(fallback).some(
+    (value) =>
+      value !== undefined &&
+      value !== null &&
+      String(value).trim() !== ""
+  );
+
+  return hasUser ? fallback : null;
+};
+
+/* =========================================================
+   USER NAME
+========================================================= */
+
+const getUserName = (
+  user: StoredUser | null
+): string => {
+  return (
+    user?.name ||
+    user?.fullName ||
+    user?.username ||
+    user?.email ||
+    ""
+  ).trim();
+};
+
+/* =========================================================
+   TOKEN
+========================================================= */
+
+const getToken = (): string => {
+  const keys = [
+    "token",
+    "accessToken",
+    "jwtToken",
+    "authToken",
+    "jwt",
+    "access_token",
+  ];
+
+  for (const key of keys) {
+    const localToken =
+      localStorage.getItem(key);
+
+    if (localToken) {
+      return localToken.replace(
+        /^Bearer\s+/i,
+        ""
+      );
+    }
+
+    const sessionToken =
+      sessionStorage.getItem(key);
+
+    if (sessionToken) {
+      return sessionToken.replace(
+        /^Bearer\s+/i,
+        ""
+      );
+    }
+  }
+
+  const objectKeys = [
+    "currentUser",
+    "user",
+    "auth",
+    "userData",
+    "loggedInUser",
+  ];
+
+  for (const key of objectKeys) {
+    const value =
+      localStorage.getItem(key) ||
+      sessionStorage.getItem(key);
+
+    if (!value) {
+      continue;
+    }
+
+    try {
+      const parsed = JSON.parse(value);
+
+      const token =
+        parsed?.token ||
+        parsed?.jwt ||
+        parsed?.accessToken ||
+        parsed?.access_token ||
+        parsed?.jwtToken ||
+        parsed?.user?.token;
+
+      if (token) {
+        return String(token).replace(
+          /^Bearer\s+/i,
+          ""
+        );
+      }
+    } catch {
+      // Continue searching.
+    }
+  }
+
+  return "";
+};
+
+/* =========================================================
+   COMMON HEADERS
+========================================================= */
+
+const getHeaders = () => {
+  const token = getToken();
+
+  return {
+    "Content-Type": "application/json",
+    ...(token
+      ? {
+          Authorization: `Bearer ${token}`,
+        }
+      : {}),
+  };
+};
+
+/* =========================================================
+   GLOBAL QA SEARCH
+========================================================= */
+
 const QABugReports: React.FC = () => {
-  /* =========================================================
-     BUGS
-  ========================================================= */
+  const [bugs, setBugs] =
+    useState<BugReport[]>([]);
 
-  const [bugs, setBugs] = useState<BugReport[]>([]);
+  const [projects, setProjects] =
+    useState<Project[]>([]);
 
-  /* =========================================================
-     PROJECTS
-  ========================================================= */
-
-  const [projects, setProjects] = useState<Project[]>([]);
-
-  /* =========================================================
-     MEMBERS
-  ========================================================= */
-
-  const [members, setMembers] = useState<Member[]>([]);
+  const [members, setMembers] =
+    useState<Member[]>([]);
 
   const [memberSearch, setMemberSearch] =
     useState("");
 
   const [showMemberDropdown, setShowMemberDropdown] =
     useState(false);
-
-  /* =========================================================
-     FORM
-  ========================================================= */
 
   const [form, setForm] =
     useState<BugForm>(emptyForm);
@@ -137,125 +339,7 @@ const QABugReports: React.FC = () => {
     useState("");
 
   /* =========================================================
-     AUTH TOKEN
-  ========================================================= */
-
-  const getToken = (): string => {
-    const keys = [
-      "token",
-      "accessToken",
-      "jwtToken",
-      "authToken",
-      "jwt",
-      "access_token",
-    ];
-
-    /*
-     * Check localStorage first.
-     */
-    for (const key of keys) {
-      const localToken =
-        localStorage.getItem(key);
-
-      if (localToken) {
-        return localToken.replace(
-          /^Bearer\s+/i,
-          ""
-        );
-      }
-    }
-
-    /*
-     * Then sessionStorage.
-     */
-    for (const key of keys) {
-      const sessionToken =
-        sessionStorage.getItem(key);
-
-      if (sessionToken) {
-        return sessionToken.replace(
-          /^Bearer\s+/i,
-          ""
-        );
-      }
-    }
-
-    /*
-     * Some applications store the token
-     * inside an object such as currentUser,
-     * user, auth, or userData.
-     */
-    const objectKeys = [
-      "currentUser",
-      "user",
-      "auth",
-      "userData",
-    ];
-
-    for (const key of objectKeys) {
-      const localValue =
-        localStorage.getItem(key);
-
-      const sessionValue =
-        sessionStorage.getItem(key);
-
-      const value =
-        localValue || sessionValue;
-
-      if (!value) {
-        continue;
-      }
-
-      try {
-        const parsed = JSON.parse(value);
-
-        const token =
-          parsed?.token ||
-          parsed?.jwt ||
-          parsed?.jwtToken ||
-          parsed?.accessToken ||
-          parsed?.access_token ||
-          parsed?.user?.token ||
-          parsed?.user?.accessToken;
-
-        if (token) {
-          return String(token).replace(
-            /^Bearer\s+/i,
-            ""
-          );
-        }
-      } catch {
-        /*
-         * Not JSON.
-         * Continue checking the other keys.
-         */
-      }
-    }
-
-    return "";
-  };
-
-  /* =========================================================
-     COMMON HEADERS
-  ========================================================= */
-
-  const getHeaders = (): HeadersInit => {
-    const token = getToken();
-
-    return {
-      "Content-Type": "application/json",
-
-      ...(token
-        ? {
-            Authorization:
-              `Bearer ${token}`,
-          }
-        : {}),
-    };
-  };
-
-  /* =========================================================
-     GLOBAL QA SEARCH
+     GLOBAL SEARCH LISTENER
   ========================================================= */
 
   useEffect(() => {
@@ -303,19 +387,47 @@ const QABugReports: React.FC = () => {
   }, [success]);
 
   /* =========================================================
-     LOAD BUGS
-  ========================================================= */
+     LOAD ONLY CURRENT USER'S BUGS
+========================================================= */
 
   const loadBugs = async () => {
     try {
       setLoading(true);
       setError("");
 
+      const user =
+        getCurrentUser();
+
+      const createdBy =
+        getUserName(user);
+
+      /*
+       * No logged-in user = no personal bugs.
+       */
+      if (!createdBy) {
+        setBugs([]);
+        return;
+      }
+
+      /*
+       * IMPORTANT:
+       *
+       * We use CREATED BY, not ASSIGNED TO.
+       *
+       * Therefore a bug filed by Nishad appears
+       * in Nishad's Bug Reports even when it is
+       * assigned to another person.
+       */
       const response =
-        await fetch(BUG_API_URL, {
-          method: "GET",
-          headers: getHeaders(),
-        });
+        await fetch(
+          `${BUG_API_URL}/by-creator?createdBy=${encodeURIComponent(
+            createdBy
+          )}`,
+          {
+            method: "GET",
+            headers: getHeaders(),
+          }
+        );
 
       if (!response.ok) {
         const errorText =
@@ -337,27 +449,26 @@ const QABugReports: React.FC = () => {
           ? result.data
           : [];
 
-      /*
-       * Most recently created bug at top.
-       */
       const sortedData =
-        [...data].sort((a, b) => {
-          const dateA =
-            new Date(
-              a.createdAt ||
-                a.filedDate ||
-                0
-            ).getTime();
+        [...data].sort(
+          (a, b) => {
+            const dateA =
+              new Date(
+                a.createdAt ||
+                  a.filedDate ||
+                  0
+              ).getTime();
 
-          const dateB =
-            new Date(
-              b.createdAt ||
-                b.filedDate ||
-                0
-            ).getTime();
+            const dateB =
+              new Date(
+                b.createdAt ||
+                  b.filedDate ||
+                  0
+              ).getTime();
 
-          return dateB - dateA;
-        });
+            return dateB - dateA;
+          }
+        );
 
       setBugs(sortedData);
     } catch (err) {
@@ -371,13 +482,15 @@ const QABugReports: React.FC = () => {
           ? err.message
           : "Failed to load bug reports"
       );
+
+      setBugs([]);
     } finally {
       setLoading(false);
     }
   };
 
   /* =========================================================
-     LOAD PROJECTS FROM PM
+     LOAD PROJECTS
   ========================================================= */
 
   const loadProjects = async () => {
@@ -440,227 +553,143 @@ const QABugReports: React.FC = () => {
   }, []);
 
   /* =========================================================
-     LOAD PM MEMBERS FOR SELECTED PROJECT
-     
-     FLOW:
-
-     PM PROJECT
-          ↓
-     teamMemberIds
-          ↓
-     /api/superadmin/users
-          ↓
-     employeeId MATCH
-          ↓
-     ACTIVE MEMBERS
-          ↓
-     ASSIGN TO DROPDOWN
+     LOAD MEMBERS FOR PROJECT
   ========================================================= */
 
-  const loadMembersForProject = async (
-    project: Project
-  ) => {
-    try {
-      setLoadingMembers(true);
-      setError("");
-      setMembers([]);
-
-      /*
-       * IMPORTANT:
-       *
-       * PM stores employee IDs in
-       * teamMemberIds.
-       *
-       * Convert everything to strings
-       * so both:
-       *
-       * 1001
-       *
-       * and:
-       *
-       * "1001"
-       *
-       * match correctly.
-       */
-      const projectMemberIds =
-        (project.teamMemberIds ?? [])
-          .map((id) =>
-            String(id).trim()
-          )
-          .filter(Boolean);
-
-      console.log(
-        "Selected PM project teamMemberIds:",
-        projectMemberIds
-      );
-
-      /*
-       * No team members assigned to
-       * this PM project.
-       */
-      if (
-        projectMemberIds.length === 0
-      ) {
+  const loadMembersForProject =
+    async (
+      project: Project
+    ) => {
+      try {
+        setLoadingMembers(true);
+        setError("");
         setMembers([]);
-        return;
-      }
 
-      /*
-       * Get authentication token.
-       */
-      const token = getToken();
-
-      if (!token) {
-        throw new Error(
-          "Authentication token not found. Please log in again."
-        );
-      }
-
-      /*
-       * Same users API used by PMProjects.tsx.
-       */
-      const response =
-        await fetch(
-          SUPERADMIN_USERS_URL,
-          {
-            method: "GET",
-
-            headers: {
-              "Content-Type":
-                "application/json",
-
-              Authorization:
-                `Bearer ${token}`,
-            },
-          }
-        );
-
-      if (
-        response.status === 401 ||
-        response.status === 403
-      ) {
-        throw new Error(
-          "Access denied while loading PM members. Please log in again."
-        );
-      }
-
-      if (!response.ok) {
-        const errorText =
-          await response.text();
-
-        throw new Error(
-          errorText ||
-            `Failed to load PM members (${response.status})`
-        );
-      }
-
-      const result =
-        await response.json();
-
-      /*
-       * Support possible response shapes:
-       *
-       * []
-       * { data: [] }
-       * { users: [] }
-       */
-      const allMembers: Member[] =
-        Array.isArray(result)
-          ? result
-          : Array.isArray(result?.data)
-          ? result.data
-          : Array.isArray(result?.users)
-          ? result.users
-          : [];
-
-      console.log(
-        "All members returned:",
-        allMembers
-      );
-
-      /*
-       * PMProjects only permits ACTIVE
-       * users to be selected.
-       */
-      const activeMembers =
-        allMembers.filter(
-          (member) =>
-            String(
-              member.status ?? ""
+        const projectMemberIds =
+          (
+            project.teamMemberIds ||
+            []
+          )
+            .map(
+              (id) =>
+                String(id).trim()
             )
-              .trim()
-              .toUpperCase() ===
-            "ACTIVE"
-        );
+            .filter(Boolean);
 
-      console.log(
-        "Active members:",
-        activeMembers
-      );
+        if (
+          projectMemberIds.length ===
+          0
+        ) {
+          setMembers([]);
+          return;
+        }
 
-      /*
-       * IMPORTANT FIX:
-       *
-       * PM teamMemberIds contain employeeId.
-       *
-       * Therefore:
-       *
-       * project.teamMemberIds
-       *             ↓
-       * member.employeeId
-       *
-       * NOT member.id.
-       */
-      const projectMembers =
-        activeMembers.filter(
-          (member) =>
-            projectMemberIds.includes(
-              String(
-                member.employeeId
-              ).trim()
-            )
-        );
+        const token =
+          getToken();
 
-      /*
-       * Remove duplicate employee IDs.
-       */
-      const uniqueMembers =
-        Array.from(
-          new Map(
-            projectMembers.map(
-              (member) => [
+        if (!token) {
+          throw new Error(
+            "Authentication token not found. Please log in again."
+          );
+        }
+
+        const response =
+          await fetch(
+            SUPERADMIN_USERS_URL,
+            {
+              method: "GET",
+              headers: {
+                "Content-Type":
+                  "application/json",
+                Authorization:
+                  `Bearer ${token}`,
+              },
+            }
+          );
+
+        if (
+          response.status === 401 ||
+          response.status === 403
+        ) {
+          throw new Error(
+            "Access denied while loading PM members. Please log in again."
+          );
+        }
+
+        if (!response.ok) {
+          const errorText =
+            await response.text();
+
+          throw new Error(
+            errorText ||
+              `Failed to load PM members (${response.status})`
+          );
+        }
+
+        const result =
+          await response.json();
+
+        const allMembers: Member[] =
+          Array.isArray(result)
+            ? result
+            : Array.isArray(result?.data)
+            ? result.data
+            : Array.isArray(result?.users)
+            ? result.users
+            : [];
+
+        const activeMembers =
+          allMembers.filter(
+            (member) =>
+              member.status
+                ?.toUpperCase() ===
+              "ACTIVE"
+          );
+
+        const projectMembers =
+          activeMembers.filter(
+            (member) =>
+              projectMemberIds.includes(
                 String(
                   member.employeeId
-                ).trim(),
-                member,
-              ]
-            )
-          ).values()
+                ).trim()
+              )
+          );
+
+        const uniqueMembers =
+          Array.from(
+            new Map(
+              projectMembers.map(
+                (member) => [
+                  String(
+                    member.employeeId
+                  ),
+                  member,
+                ]
+              )
+            ).values()
+          );
+
+        setMembers(
+          uniqueMembers
+        );
+      } catch (err) {
+        console.error(
+          "Error loading PM project members:",
+          err
         );
 
-      console.log(
-        "PM members available for Assign To:",
-        uniqueMembers
-      );
+        setError(
+          err instanceof Error
+            ? err.message
+            : "Failed to load PM project members"
+        );
 
-      setMembers(uniqueMembers);
-    } catch (err) {
-      console.error(
-        "Error loading PM project members:",
-        err
-      );
-
-      setError(
-        err instanceof Error
-          ? err.message
-          : "Failed to load PM project members"
-      );
-
-      setMembers([]);
-    } finally {
-      setLoadingMembers(false);
-    }
-  };
+        setMembers([]);
+      } finally {
+        setLoadingMembers(false);
+      }
+    };
 
   /* =========================================================
      FORM CHANGE
@@ -678,77 +707,61 @@ const QABugReports: React.FC = () => {
       value,
     } = event.target;
 
-    setForm((previous) => ({
-      ...previous,
-      [name]: value,
-    }));
+    setForm(
+      (previous) => ({
+        ...previous,
+        [name]: value,
+      })
+    );
   };
 
   /* =========================================================
      PROJECT CHANGE
   ========================================================= */
 
-  const handleProjectChange = async (
-    event: React.ChangeEvent<
-      HTMLSelectElement
-    >
-  ) => {
-    const projectId =
-      event.target.value;
+  const handleProjectChange =
+    async (
+      event: React.ChangeEvent<
+        HTMLSelectElement
+      >
+    ) => {
+      const projectId =
+        event.target.value;
 
-    /*
-     * Clear previous assignee when
-     * project changes.
-     */
-    setForm((previous) => ({
-      ...previous,
-      projectId,
-      assignedTo: "",
-    }));
-
-    setMemberSearch("");
-    setShowMemberDropdown(false);
-    setMembers([]);
-
-    if (!projectId) {
-      return;
-    }
-
-    /*
-     * Find selected PM project.
-     */
-    const selectedProject =
-      projects.find(
-        (project) =>
-          String(project.id) ===
-          String(projectId)
+      setForm(
+        (previous) => ({
+          ...previous,
+          projectId,
+          assignedTo: "",
+        })
       );
 
-    if (!selectedProject) {
-      console.warn(
-        "Selected PM project not found:",
-        projectId
+      setMemberSearch("");
+      setShowMemberDropdown(false);
+      setMembers([]);
+
+      if (!projectId) {
+        return;
+      }
+
+      const selectedProject =
+        projects.find(
+          (project) =>
+            String(project.id) ===
+            String(projectId)
+        );
+
+      if (!selectedProject) {
+        return;
+      }
+
+      await loadMembersForProject(
+        selectedProject
       );
-
-      return;
-    }
-
-    console.log(
-      "Selected PM project:",
-      selectedProject
-    );
-
-    /*
-     * Fetch ONLY the members assigned
-     * to this PM project.
-     */
-    await loadMembersForProject(
-      selectedProject
-    );
-  };
+    };
 
   /* =========================================================
-     MEMBER SEARCH
+     FILTER MEMBERS
   ========================================================= */
 
   const filteredMembers =
@@ -763,30 +776,21 @@ const QABugReports: React.FC = () => {
       }
 
       return members.filter(
-        (member) => {
-          return (
-            String(
-              member.name ?? ""
-            )
-              .toLowerCase()
-              .includes(search) ||
-            String(
-              member.employeeId ?? ""
-            )
-              .toLowerCase()
-              .includes(search) ||
-            String(
-              member.designation ?? ""
-            )
-              .toLowerCase()
-              .includes(search) ||
-            String(
-              member.email ?? ""
-            )
-              .toLowerCase()
-              .includes(search)
-          );
-        }
+        (member) =>
+          member.name
+            ?.toLowerCase()
+            .includes(search) ||
+          String(
+            member.employeeId
+          )
+            .toLowerCase()
+            .includes(search) ||
+          member.designation
+            ?.toLowerCase()
+            .includes(search) ||
+          member.email
+            ?.toLowerCase()
+            .includes(search)
       );
     }, [
       members,
@@ -800,25 +804,21 @@ const QABugReports: React.FC = () => {
   const selectMember = (
     member: Member
   ) => {
-    /*
-     * Backend currently expects assignedTo
-     * as the member's name.
-     */
-    setForm((previous) => ({
-      ...previous,
-      assignedTo: member.name,
-    }));
+    setForm(
+      (previous) => ({
+        ...previous,
+        assignedTo:
+          member.name,
+      })
+    );
 
-    /*
-     * Keep the existing UI behavior:
-     * selected member name remains inside
-     * the search input.
-     */
     setMemberSearch(
       member.name
     );
 
-    setShowMemberDropdown(false);
+    setShowMemberDropdown(
+      false
+    );
   };
 
   /* =========================================================
@@ -831,17 +831,18 @@ const QABugReports: React.FC = () => {
 
     setForm({
       ...emptyForm,
-
       bugId:
         `BUG-${String(
           bugs.length + 1
-        ).padStart(3, "0")}`,
+        ).padStart(
+          3,
+          "0"
+        )}`,
     });
 
     setMembers([]);
     setMemberSearch("");
     setShowMemberDropdown(false);
-
     setShowForm(true);
   };
 
@@ -851,13 +852,10 @@ const QABugReports: React.FC = () => {
 
   const closeForm = () => {
     setShowForm(false);
-
     setForm(emptyForm);
-
     setMembers([]);
     setMemberSearch("");
     setShowMemberDropdown(false);
-
     setError("");
   };
 
@@ -873,9 +871,6 @@ const QABugReports: React.FC = () => {
     setError("");
     setSuccess("");
 
-    /*
-     * Validate required fields.
-     */
     if (
       !form.bugId.trim() ||
       !form.bugTitle.trim() ||
@@ -891,13 +886,26 @@ const QABugReports: React.FC = () => {
       return;
     }
 
+    const user =
+      getCurrentUser();
+
+    /*
+     * This is the person who FILED the bug.
+     */
+    const createdBy =
+      getUserName(user);
+
+    if (!createdBy) {
+      setError(
+        "Unable to identify the logged-in user. Please login again."
+      );
+
+      return;
+    }
+
     try {
       setSaving(true);
 
-      /*
-       * Backend expects "title",
-       * not "bugTitle".
-       */
       const response =
         await fetch(
           BUG_API_URL,
@@ -932,10 +940,19 @@ const QABugReports: React.FC = () => {
                 assignedTo:
                   form.assignedTo.trim(),
 
+                /*
+                 * CRITICAL:
+                 * Store the current logged-in
+                 * QA user as the bug creator.
+                 */
+                createdBy:
+                  createdBy,
+
                 stepsToReproduce:
                   form.stepsToReproduce.trim(),
 
-                status: "Open",
+                status:
+                  "Open",
               }),
           }
         );
@@ -955,15 +972,13 @@ const QABugReports: React.FC = () => {
       );
 
       setShowForm(false);
-
       setForm(emptyForm);
-
       setMembers([]);
       setMemberSearch("");
       setShowMemberDropdown(false);
 
       /*
-       * Refresh table.
+       * Reload only the current user's bugs.
        */
       await loadBugs();
     } catch (err) {
@@ -983,7 +998,7 @@ const QABugReports: React.FC = () => {
   };
 
   /* =========================================================
-     SEARCH BUGS
+     SEARCH CURRENT USER'S BUGS
   ========================================================= */
 
   const filteredBugs =
@@ -1006,13 +1021,16 @@ const QABugReports: React.FC = () => {
             bug.environment,
             bug.severity,
             bug.assignedTo,
+            bug.createdBy,
             bug.status,
             bug.stepsToReproduce,
           ];
 
           return values.some(
             (value) =>
-              String(value ?? "")
+              String(
+                value ?? ""
+              )
                 .toLowerCase()
                 .includes(search)
           );
@@ -1061,7 +1079,7 @@ const QABugReports: React.FC = () => {
     ).length;
 
   /* =========================================================
-     FORMAT DATE
+     DATE
   ========================================================= */
 
   const formatDateTime = (
@@ -1099,7 +1117,7 @@ const QABugReports: React.FC = () => {
   };
 
   /* =========================================================
-     GET PROJECT NAME
+     PROJECT NAME
   ========================================================= */
 
   const getProjectName = (
@@ -1125,9 +1143,6 @@ const QABugReports: React.FC = () => {
 
   /* =========================================================
      UI
-     
-     IMPORTANT:
-     UI below is unchanged.
   ========================================================= */
 
   return (
@@ -1139,7 +1154,9 @@ const QABugReports: React.FC = () => {
 
         <button
           type="button"
-          onClick={openForm}
+          onClick={
+            openForm
+          }
           className="bg-red-500 hover:bg-red-600 text-white px-5 py-3 rounded-lg font-medium transition-colors"
         >
           + File Bug
@@ -1147,7 +1164,7 @@ const QABugReports: React.FC = () => {
 
       </div>
 
-      {/* SUCCESS MESSAGE */}
+      {/* SUCCESS */}
 
       {success && (
         <div className="mb-4 flex items-center justify-between rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700 shadow-sm">
@@ -1206,7 +1223,9 @@ const QABugReports: React.FC = () => {
 
             <button
               type="button"
-              onClick={closeForm}
+              onClick={
+                closeForm
+              }
               className="text-slate-400 hover:text-slate-600 text-2xl leading-none"
             >
               ×
@@ -1214,7 +1233,11 @@ const QABugReports: React.FC = () => {
 
           </div>
 
-          <form onSubmit={handleSubmit}>
+          <form
+            onSubmit={
+              handleSubmit
+            }
+          >
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
 
@@ -1228,8 +1251,12 @@ const QABugReports: React.FC = () => {
 
                 <input
                   name="bugId"
-                  value={form.bugId}
-                  onChange={handleChange}
+                  value={
+                    form.bugId
+                  }
+                  onChange={
+                    handleChange
+                  }
                   className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-red-400"
                   placeholder="BUG-090"
                 />
@@ -1246,8 +1273,12 @@ const QABugReports: React.FC = () => {
 
                 <input
                   name="bugTitle"
-                  value={form.bugTitle}
-                  onChange={handleChange}
+                  value={
+                    form.bugTitle
+                  }
+                  onChange={
+                    handleChange
+                  }
                   className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-red-400"
                   placeholder="Bug title"
                 />
@@ -1264,9 +1295,15 @@ const QABugReports: React.FC = () => {
 
                 <select
                   name="projectId"
-                  value={form.projectId}
-                  onChange={handleProjectChange}
-                  disabled={loadingProjects}
+                  value={
+                    form.projectId
+                  }
+                  onChange={
+                    handleProjectChange
+                  }
+                  disabled={
+                    loadingProjects
+                  }
                   className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-red-400 bg-white disabled:bg-slate-50"
                 >
 
@@ -1279,12 +1316,20 @@ const QABugReports: React.FC = () => {
                   {projects.map(
                     (project) => (
                       <option
-                        key={project.id}
-                        value={project.id}
+                        key={
+                          project.id
+                        }
+                        value={
+                          project.id
+                        }
                       >
-                        {project.projectCode}{" "}
+                        {
+                          project.projectCode
+                        }{" "}
                         -{" "}
-                        {project.projectName}
+                        {
+                          project.projectName
+                        }
                       </option>
                     )
                   )}
@@ -1303,8 +1348,12 @@ const QABugReports: React.FC = () => {
 
                 <input
                   name="linkedTaskId"
-                  value={form.linkedTaskId}
-                  onChange={handleChange}
+                  value={
+                    form.linkedTaskId
+                  }
+                  onChange={
+                    handleChange
+                  }
                   className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-red-400"
                   placeholder="T-044"
                 />
@@ -1321,8 +1370,12 @@ const QABugReports: React.FC = () => {
 
                 <select
                   name="environment"
-                  value={form.environment}
-                  onChange={handleChange}
+                  value={
+                    form.environment
+                  }
+                  onChange={
+                    handleChange
+                  }
                   className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-red-400 bg-white"
                 >
 
@@ -1352,8 +1405,12 @@ const QABugReports: React.FC = () => {
 
                 <select
                   name="severity"
-                  value={form.severity}
-                  onChange={handleChange}
+                  value={
+                    form.severity
+                  }
+                  onChange={
+                    handleChange
+                  }
                   className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-red-400 bg-white"
                 >
 
@@ -1387,41 +1444,41 @@ const QABugReports: React.FC = () => {
 
                 <input
                   type="text"
-                  value={memberSearch}
-                  disabled={!form.projectId}
-                  onChange={(event) => {
+                  value={
+                    memberSearch
+                  }
+                  disabled={
+                    !form.projectId
+                  }
+                  onChange={(
+                    event
+                  ) => {
 
-                    const value =
-                      event.target.value;
+                    setMemberSearch(
+                      event.target.value
+                    );
 
-                    setMemberSearch(value);
-
-                    /*
-                     * When the user starts
-                     * searching again, clear
-                     * the previous selected
-                     * assignee.
-                     */
                     setForm(
                       (previous) => ({
                         ...previous,
-                        assignedTo: "",
+                        assignedTo:
+                          "",
                       })
                     );
 
                     setShowMemberDropdown(
                       true
                     );
-
                   }}
                   onFocus={() => {
 
-                    if (form.projectId) {
+                    if (
+                      form.projectId
+                    ) {
                       setShowMemberDropdown(
                         true
                       );
                     }
-
                   }}
                   placeholder={
                     !form.projectId
@@ -1474,7 +1531,9 @@ const QABugReports: React.FC = () => {
                             >
 
                               <div className="text-sm font-medium text-slate-700">
-                                {member.name}
+                                {
+                                  member.name
+                                }
                               </div>
 
                               <div className="text-xs text-slate-400">
@@ -1501,7 +1560,7 @@ const QABugReports: React.FC = () => {
 
             </div>
 
-            {/* STEPS TO REPRODUCE */}
+            {/* STEPS */}
 
             <div className="mt-4">
 
@@ -1514,7 +1573,9 @@ const QABugReports: React.FC = () => {
                 value={
                   form.stepsToReproduce
                 }
-                onChange={handleChange}
+                onChange={
+                  handleChange
+                }
                 rows={4}
                 className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm outline-none resize-none focus:border-red-400"
                 placeholder="Enter steps to reproduce the bug..."
@@ -1528,7 +1589,9 @@ const QABugReports: React.FC = () => {
 
               <button
                 type="submit"
-                disabled={saving}
+                disabled={
+                  saving
+                }
                 className="bg-red-500 hover:bg-red-600 disabled:opacity-60 text-white px-5 py-2.5 rounded-lg text-sm font-medium"
               >
                 {saving
@@ -1538,7 +1601,9 @@ const QABugReports: React.FC = () => {
 
               <button
                 type="button"
-                onClick={closeForm}
+                onClick={
+                  closeForm
+                }
                 className="border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 px-5 py-2.5 rounded-lg text-sm"
               >
                 Cancel
@@ -1563,7 +1628,9 @@ const QABugReports: React.FC = () => {
 
         <button
           type="button"
-          onClick={loadBugs}
+          onClick={
+            loadBugs
+          }
           className="hover:text-slate-600"
         >
           Refresh
@@ -1674,9 +1741,15 @@ const QABugReports: React.FC = () => {
                       className="border-b border-slate-100 last:border-b-0 hover:bg-slate-50"
                     >
 
+                      {/* BUG ID */}
+
                       <td className="px-3 py-4 text-sm text-slate-600">
-                        {bug.bugId}
+                        {
+                          bug.bugId
+                        }
                       </td>
+
+                      {/* TITLE */}
 
                       <td className="px-3 py-4">
 
@@ -1687,18 +1760,26 @@ const QABugReports: React.FC = () => {
                           </span>
 
                           <span className="text-sm text-slate-700">
-                            {bug.title}
+                            {
+                              bug.title
+                            }
                           </span>
 
                         </div>
 
                       </td>
 
+                      {/* PROJECT */}
+
                       <td className="px-3 py-4 text-sm text-slate-600">
-                        {getProjectName(
-                          bug.projectId
-                        )}
+                        {
+                          getProjectName(
+                            bug.projectId
+                          )
+                        }
                       </td>
+
+                      {/* SEVERITY */}
 
                       <td className="px-3 py-4">
 
@@ -1719,35 +1800,57 @@ const QABugReports: React.FC = () => {
                               : "bg-green-50 text-green-600"
                           }`}
                         >
-                          {bug.severity}
+                          {
+                            bug.severity
+                          }
                         </span>
 
                       </td>
+
+                      {/* STATUS */}
 
                       <td className="px-3 py-4">
 
                         <span className="inline-flex rounded-md bg-red-50 px-2 py-1 text-xs text-red-500">
-                          {status}
+                          {
+                            status
+                          }
                         </span>
 
                       </td>
 
-                      <td className="px-3 py-4 text-sm text-slate-600">
-                        {bug.linkedTaskId}
-                      </td>
+                      {/* LINKED TASK */}
 
                       <td className="px-3 py-4 text-sm text-slate-600">
-                        {bug.assignedTo}
+                        {
+                          bug.linkedTaskId
+                        }
                       </td>
 
+                      {/* ASSIGNEE */}
+
                       <td className="px-3 py-4 text-sm text-slate-600">
-                        {bug.environment}
+                        {
+                          bug.assignedTo
+                        }
                       </td>
+
+                      {/* ENVIRONMENT */}
+
+                      <td className="px-3 py-4 text-sm text-slate-600">
+                        {
+                          bug.environment
+                        }
+                      </td>
+
+                      {/* CREATED */}
 
                       <td className="px-3 py-4 text-sm text-slate-500 whitespace-nowrap">
-                        {formatDateTime(
-                          bug
-                        )}
+                        {
+                          formatDateTime(
+                            bug
+                          )
+                        }
                       </td>
 
                     </tr>
@@ -1768,4 +1871,4 @@ const QABugReports: React.FC = () => {
   );
 };
 
-export default QABugReports;;
+export default QABugReports;

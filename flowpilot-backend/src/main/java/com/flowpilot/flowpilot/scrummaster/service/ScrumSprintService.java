@@ -70,9 +70,23 @@ public class ScrumSprintService {
     // LIST
     // Newest sprint first
     // ============================================
-    public List<ScrumSprintDto.Response> listSprints() {
 
-        List<ScrumSprint> sprints = new ArrayList<>(sprintRepository.findAll());
+    /** Every sprint, newest first. */
+    public List<ScrumSprintDto.Response> listSprints() {
+        return listSprints(null);
+    }
+
+    /**
+     * Sprints for one project, newest first; every sprint when projectId is
+     * null. The board's sprint selector is filtered this way, so switching
+     * project cannot leave another project's sprint selected.
+     */
+    public List<ScrumSprintDto.Response> listSprints(Long projectId) {
+
+        List<ScrumSprint> sprints = new ArrayList<>(
+                projectId == null
+                        ? sprintRepository.findAll()
+                        : sprintRepository.findByProjectId(projectId));
 
         sprints.sort(
                 Comparator.comparing(
