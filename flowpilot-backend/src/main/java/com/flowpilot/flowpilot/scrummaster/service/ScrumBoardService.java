@@ -369,9 +369,9 @@ public class ScrumBoardService {
                                     + " Create one on the Sprints screen."));
         }
 
-        return sprintRepository.findFirstByStatus(ScrumSprint.Status.ACTIVE)
+        return sprintRepository.findCurrentOrLatest()
                 .orElseThrow(() -> new ScrumNotFoundException(
-                        "No active sprint. Create one and start it."));
+                        "No sprints yet. Create one on the Sprints screen."));
     }
 
 

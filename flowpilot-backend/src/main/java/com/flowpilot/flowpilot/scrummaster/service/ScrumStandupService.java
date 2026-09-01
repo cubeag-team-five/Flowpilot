@@ -251,9 +251,9 @@ public class ScrumStandupService {
                             "Sprint " + sprintId + " was not found."));
         }
 
-        return sprintRepository.findFirstByStatus(ScrumSprint.Status.ACTIVE)
+        return sprintRepository.findCurrentOrLatest()
                 .orElseThrow(() -> new ScrumNotFoundException(
-                        "No active sprint. Create one and start it."));
+                        "No sprints yet. Create one on the Sprints screen."));
     }
 
 

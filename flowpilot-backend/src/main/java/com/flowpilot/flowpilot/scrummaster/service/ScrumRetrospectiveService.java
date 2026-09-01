@@ -267,10 +267,12 @@ public class ScrumRetrospectiveService {
                             "Sprint " + sprintId + " was not found."));
         }
 
-        return sprintRepository.findFirstByStatus(ScrumSprint.Status.ACTIVE)
+        // The most recent sprint is also the one a retrospective is usually
+        // about, so the fallback is the right default here rather than a
+        // concession to it.
+        return sprintRepository.findCurrentOrLatest()
                 .orElseThrow(() -> new ScrumNotFoundException(
-                        "No active sprint. Name the sprint to retrospect on "
-                                + "with sprintId."));
+                        "No sprints yet. Create one on the Sprints screen."));
     }
 
 

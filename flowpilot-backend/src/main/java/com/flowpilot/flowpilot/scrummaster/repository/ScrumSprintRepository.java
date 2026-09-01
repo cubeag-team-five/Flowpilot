@@ -32,4 +32,20 @@ public interface ScrumSprintRepository
     // Fallback when a project has no active sprint: show its most recent one
     // rather than an error, so selecting a project always lands on a board.
     Optional<ScrumSprint> findFirstByProjectIdOrderBySprintNumberDesc(Long projectId);
+
+    /**
+     * The sprint the screens should default to.
+     *
+     * Between sprints there is no ACTIVE row at all — the last one is closed
+     * and the next is still PLANNED — and that is a normal state, not an
+     * error. Every screen used to throw there, which took the dashboard,
+     * board, standups and analytics down together and read in the browser
+     * console as a missing endpoint. Falling back to the most recent sprint
+     * keeps the module usable; its status is on screen, so nobody mistakes a
+     * closed sprint for a running one.
+     */
+    default Optional<ScrumSprint> findCurrentOrLatest() {
+        return findFirstByStatus(ScrumSprint.Status.ACTIVE)
+                .or(this::findFirstByOrderBySprintNumberDesc);
+    }
 }

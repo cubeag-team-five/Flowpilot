@@ -56,9 +56,9 @@ public class ScrumMasterDashboardService {
     public Map<String, Object> getDashboard() {
 
         ScrumSprint sprint = sprintRepository
-                .findFirstByStatus(ScrumSprint.Status.ACTIVE)
+                .findCurrentOrLatest()
                 .orElseThrow(() -> new ScrumNotFoundException(
-                        "No active sprint. Create one and start it."));
+                        "No sprints yet. Create one on the Sprints screen."));
 
         Map<String, Object> payload = new LinkedHashMap<>();
         payload.put("sprint", sprintService.toResponse(sprint));
