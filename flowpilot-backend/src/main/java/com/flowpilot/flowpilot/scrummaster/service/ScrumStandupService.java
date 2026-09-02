@@ -118,8 +118,9 @@ public class ScrumStandupService {
      * Upserts one member's entry for one day. People correct what they said
      * minutes after saying it, so a second save replaces the first rather than
      * colliding with the entity's sprint + member + date unique constraint.
-     */
+    */
     @Transactional
+    @SuppressWarnings("null")
     public SaveResult saveStandup(
             Long sprintId,
             ScrumStandupDto.SaveRequest request
@@ -164,9 +165,11 @@ public class ScrumStandupService {
                         sprint.getId(), member.getId(), standupDate)
                 .orElse(null);
 
-        boolean created = standup == null;
+        boolean created;
 
-        if (created) {
+        if (standup == null) {
+
+            created = true;
 
             standup = new ScrumStandup();
 
@@ -175,6 +178,7 @@ public class ScrumStandupService {
             standup.setStandupDate(standupDate);
 
         } else {
+            created = false;
             // Stamped in the module's zone too, so an edit's timestamp cannot
             // date from a different day than the entry it belongs to
             standup.setUpdatedAt(LocalDateTime.now(ScrumWorkingDays.ZONE));
@@ -199,6 +203,7 @@ public class ScrumStandupService {
 
     /** Removes one entry and hands back what was removed. */
     @Transactional
+    @SuppressWarnings("null")
     public ScrumStandupDto.Entry deleteStandup(Long standupId) {
 
         if (standupId == null) {

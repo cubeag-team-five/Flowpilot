@@ -1,6 +1,5 @@
 package com.flowpilot.flowpilot.admin.service;
 
-import com.flowpilot.flowpilot.common.model.User;
 import com.flowpilot.flowpilot.common.repository.UserRepository;
 import com.flowpilot.flowpilot.superadmin.dto.SuperAdminUserDto;
 import com.flowpilot.flowpilot.superadmin.model.SuperAdminUser;

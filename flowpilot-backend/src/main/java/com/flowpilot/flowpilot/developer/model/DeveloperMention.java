@@ -34,5 +34,6 @@ public class DeveloperMention {
     private String time;
 
     @Column(nullable = false)
+    @Builder.Default
     private Boolean unread = true;
 }

@@ -63,6 +63,7 @@ public class ScrumTaskService {
     // ============================================
     // ASSIGNABLE MEMBERS
     // ============================================
+    @SuppressWarnings("null")
     public List<ScrumTaskDto.Member> listMembers() {
 
         List<User> users = new ArrayList<>(userRepository.findAll());
@@ -108,6 +109,7 @@ public class ScrumTaskService {
     // toCard reads the lazily fetched sprint, so the mapping has to run inside
     // an open session no matter how open-in-view is configured
     @Transactional(readOnly = true)
+    @SuppressWarnings("null")
     public List<ScrumTaskDto.Card> listTasks() {
 
         List<ScrumTask> tasks = new ArrayList<>(taskRepository.findAll());
@@ -355,6 +357,7 @@ public class ScrumTaskService {
     // Returns the removed card so callers can name it
     // ============================================
     @Transactional
+    @SuppressWarnings("null")
     public ScrumTaskDto.Card deleteTask(Long taskId) {
 
         ScrumTask task = requireTask(taskId);
@@ -610,6 +613,7 @@ public class ScrumTaskService {
                         "Task " + taskId + " was not found"));
     }
 
+    @SuppressWarnings("null")
     private User requireUser(Long userId, String role) {
 
         return userRepository.findById(userId)
@@ -617,6 +621,7 @@ public class ScrumTaskService {
                         role + " " + userId + " was not found"));
     }
 
+    @SuppressWarnings("null")
     private ScrumSprint requireSprint(Long sprintId) {
 
         return sprintRepository.findById(sprintId)

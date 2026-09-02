@@ -129,6 +129,7 @@ public class DeveloperTasksService {
      * FETCH REAL PROJECT NAME
      * ==========================================
      */
+    @SuppressWarnings("null")
     private String getProjectName(
             Long projectId
     ) {

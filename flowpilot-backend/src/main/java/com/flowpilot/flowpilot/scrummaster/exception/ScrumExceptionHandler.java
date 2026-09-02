@@ -254,6 +254,7 @@ public class ScrumExceptionHandler {
     // Helpers
     // ============================================
 
+    @SuppressWarnings("null")
     private static ResponseEntity<Map<String, Object>> respond(
             HttpStatus status, String message) {
 

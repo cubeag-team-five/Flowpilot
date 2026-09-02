@@ -81,6 +81,7 @@ public class ScrumSprintService {
      * null. The board's sprint selector is filtered this way, so switching
      * project cannot leave another project's sprint selected.
      */
+    @SuppressWarnings("null")
     public List<ScrumSprintDto.Response> listSprints(Long projectId) {
 
         List<ScrumSprint> sprints = new ArrayList<>(
@@ -684,6 +685,7 @@ public class ScrumSprintService {
      * which would reuse a deleted sprint's number and make velocity history
      * refer to two different sprints under one label.
      */
+    @SuppressWarnings("null")
     private int nextSprintNumber() {
 
         return sprintRepository.findFirstByOrderBySprintNumberDesc()
@@ -737,6 +739,7 @@ public class ScrumSprintService {
                         "Sprint " + sprintId + " was not found"));
     }
 
+    @SuppressWarnings("null")
     private ScrumTask requireTask(Long taskId) {
 
         return taskRepository.findById(taskId)

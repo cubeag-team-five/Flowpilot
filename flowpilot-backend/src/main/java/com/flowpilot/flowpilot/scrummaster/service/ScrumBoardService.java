@@ -115,6 +115,7 @@ public class ScrumBoardService {
     // Read-only transaction: ScrumTask.sprint is lazy, so card mapping must
     // stay inside an open session no matter how open-in-view is configured
     @Transactional(readOnly = true)
+    @SuppressWarnings("null")
     public ScrumBoardDto.Response getBoard(
             Long projectId,
             Long sprintId,
@@ -522,6 +523,7 @@ public class ScrumBoardService {
      * module's team is made of `superadmin_users` rows, and email is the only
      * key the two tables share.
      */
+    @SuppressWarnings("null")
     private List<ScrumTaskDto.Member> loadMembers(Long projectId) {
 
         Comparator<User> byName = Comparator.comparing(

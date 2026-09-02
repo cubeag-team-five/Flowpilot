@@ -19,6 +19,7 @@ public class DeveloperMentionsService {
 
     private final QABugRepository qaBugRepository;
 
+    @SuppressWarnings("null")
     public List<DeveloperMentionDto> getAllMentions() {
 
         return qaBugRepository.findAll()

@@ -51,6 +51,7 @@ public class QATestCaseService {
      * =========================================================
      */
     @Transactional(readOnly = true)
+    @SuppressWarnings("null")
     public QATestCase getTestCase(Long id) {
 
         return testCaseRepository.findById(id)
@@ -174,6 +175,7 @@ public class QATestCaseService {
      * =========================================================
      */
     @Transactional
+    @SuppressWarnings("null")
     public QATestCase updateStatus(
             Long id,
             String status) {
@@ -251,6 +253,7 @@ public class QATestCaseService {
      * =========================================================
      */
     @Transactional
+    @SuppressWarnings("null")
     public int syncScrumMasterTasks() {
 
         List<ScrumBoardTask> scrumTasks =

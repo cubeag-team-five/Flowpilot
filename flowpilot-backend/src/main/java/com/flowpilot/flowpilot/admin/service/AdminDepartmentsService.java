@@ -163,6 +163,7 @@ public class AdminDepartmentsService {
     // DELETE DEPARTMENT
     // =========================================================
 
+    @SuppressWarnings("null")
     public void deleteDepartment(Long departmentId) {
 
         if (departmentId == null) {

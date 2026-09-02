@@ -1,7 +1,6 @@
 package com.flowpilot.flowpilot.admin.service;
 
 import com.flowpilot.flowpilot.admin.dto.AdminDashboardDto;
-import com.flowpilot.flowpilot.admin.model.AdminDepartment;
 import com.flowpilot.flowpilot.admin.repository.AdminDepartmentsRepository;
 import com.flowpilot.flowpilot.superadmin.model.SuperAdminUser;
 import com.flowpilot.flowpilot.superadmin.repository.SuperAdminUserRepository;
@@ -14,7 +13,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
-import java.util.Comparator;
+
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -232,9 +231,7 @@ public class AdminDashboardService {
                 )
 
                 .sorted(
-                        Comparator.comparing(
-                                SuperAdminUser::getCreatedAt
-                        ).reversed()
+                        (left, right) -> right.getCreatedAt().compareTo(left.getCreatedAt())
                 )
 
                 .limit(5)

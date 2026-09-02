@@ -205,6 +205,7 @@ public class SuperAdminUsersService {
     // CREATE USER
     // =========================================================
 
+    @SuppressWarnings("null")
     public SuperAdminUserDto createUser(
             SuperAdminUserDto dto
     ) {
@@ -465,6 +466,7 @@ public class SuperAdminUsersService {
     // UPDATE USER
     // =========================================================
 
+    @SuppressWarnings("null")
     public SuperAdminUserDto updateUser(
             Long employeeId,
             SuperAdminUserDto dto

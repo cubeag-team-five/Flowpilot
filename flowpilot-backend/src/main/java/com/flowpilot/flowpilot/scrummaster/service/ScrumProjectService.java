@@ -48,6 +48,7 @@ public class ScrumProjectService {
     }
 
 
+    @SuppressWarnings("null")
     public ScrumProjectDto.Project getProject(Long projectId) {
 
         return toDto(projectsRepository

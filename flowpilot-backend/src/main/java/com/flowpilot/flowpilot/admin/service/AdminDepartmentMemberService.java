@@ -38,6 +38,7 @@ public class AdminDepartmentMemberService {
     // =========================================================
 
     @Transactional(readOnly = true)
+    @SuppressWarnings("null")
     public List<AdminDepartmentMember> getMembers(
             Long departmentId
     ) {
@@ -58,6 +59,7 @@ public class AdminDepartmentMemberService {
     // ADD MEMBER
     // =========================================================
 
+    @SuppressWarnings("null")
     public AdminDepartmentMember addMember(
             Long departmentId,
             AdminDepartmentMemberDto dto

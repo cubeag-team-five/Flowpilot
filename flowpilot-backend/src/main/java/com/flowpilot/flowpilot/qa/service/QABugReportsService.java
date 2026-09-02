@@ -1,7 +1,5 @@
 package com.flowpilot.flowpilot.qa.service;
 
-import com.flowpilot.flowpilot.pm.model.PMProject;
-import com.flowpilot.flowpilot.pm.repository.PMProjectsRepository;
 import com.flowpilot.flowpilot.qa.model.QABugReport;
 import com.flowpilot.flowpilot.qa.repository.QABugRepository;
 
@@ -15,17 +13,11 @@ public class QABugReportsService {
 
     private final QABugRepository bugRepository;
 
-    private final PMProjectsRepository pmProjectsRepository;
-
-    public QABugReportsService(
-            QABugRepository bugRepository,
-            PMProjectsRepository pmProjectsRepository) {
+    public QABugReportsService(QABugRepository bugRepository) {
 
         this.bugRepository =
                 bugRepository;
 
-        this.pmProjectsRepository =
-                pmProjectsRepository;
     }
 
     /*

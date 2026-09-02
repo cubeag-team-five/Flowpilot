@@ -153,6 +153,7 @@ public class ScrumRetrospectiveService {
 
     /** Only the fields that were sent are changed. */
     @Transactional
+    @SuppressWarnings("null")
     public ScrumRetrospectiveDto.Item updateItem(
             Long itemId,
             ScrumRetrospectiveDto.UpdateRequest request
@@ -217,6 +218,7 @@ public class ScrumRetrospectiveService {
 
     /** Removes one item and hands back what was removed. */
     @Transactional
+    @SuppressWarnings("null")
     public ScrumRetrospectiveDto.Item deleteItem(Long itemId) {
 
         ScrumRetrospective item = requireItem(itemId);
@@ -289,6 +291,7 @@ public class ScrumRetrospectiveService {
     }
 
 
+    @SuppressWarnings("null")
     private User requireUser(Long ownerId) {
 
         return userRepository.findById(ownerId)
