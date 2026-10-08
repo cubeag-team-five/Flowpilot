@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { LayoutGrid, CheckSquare, Layers, Clock, Bell } from 'lucide-react';
 import { DashboardLayout } from '../common/DashboardLayout';
-import { DeveloperDashboardView } from './DeveloperDashboardView';
+import DeveloperDashboardView from './DeveloperDashboardView';
 import { DeveloperTasks } from './DeveloperTasks';
 import { DeveloperSprintBoard } from './DeveloperSprintBoard';
 import { DeveloperTimeLog } from './DeveloperTimeLog';
