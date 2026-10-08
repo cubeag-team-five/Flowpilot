@@ -79,30 +79,13 @@ const DeveloperDashboardView: React.FC<
     useState("");
 
   // =====================================================
-  // PAGE SWITCHING
-  // =====================================================
-
-  if (activePage === "tasks") {
-    return <DeveloperTasks />;
-  }
-
-  if (activePage === "sprint-board") {
-    return <DeveloperSprintBoard />;
-  }
-
-  if (activePage === "time-log") {
-    return <DeveloperTimeLog />;
-  }
-
-  if (activePage === "mentions") {
-    return <DeveloperMentions />;
-  }
-
-  // =====================================================
   // FETCH DASHBOARD
   // =====================================================
 
   useEffect(() => {
+    if (activePage !== "dashboard") {
+      return;
+    }
 
     const loadDashboard = async () => {
 
@@ -167,7 +150,7 @@ const DeveloperDashboardView: React.FC<
 
     loadDashboard();
 
-  }, []);
+  }, [activePage]);
 
   // =====================================================
   // DAILY HOURS
@@ -190,6 +173,26 @@ const DeveloperDashboardView: React.FC<
     );
 
   }, [dashboard]);
+
+  // =====================================================
+  // PAGE SWITCHING
+  // =====================================================
+
+  if (activePage === "tasks") {
+    return <DeveloperTasks />;
+  }
+
+  if (activePage === "sprint-board") {
+    return <DeveloperSprintBoard />;
+  }
+
+  if (activePage === "time-log") {
+    return <DeveloperTimeLog />;
+  }
+
+  if (activePage === "mentions") {
+    return <DeveloperMentions />;
+  }
 
   // =====================================================
   // STATUS CLASSES
