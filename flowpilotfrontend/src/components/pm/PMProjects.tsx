@@ -1503,26 +1503,6 @@ export function PMProjects() {
                     </select>
                   </FormField>
                 </div>
-
-                {/* PROGRESS */}
-
-                <div className="mt-4">
-                  <FormField label="Progress %">
-                    <input
-                      type="number"
-                      name="progress"
-                      min="0"
-                      max="100"
-                      value={
-                        formData.progress
-                      }
-                      onChange={
-                        handleChange
-                      }
-                      className="form-input"
-                    />
-                  </FormField>
-                </div>
               </div>
 
               {/* FOOTER */}

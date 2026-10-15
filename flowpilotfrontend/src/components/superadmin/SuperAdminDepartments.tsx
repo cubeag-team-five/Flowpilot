@@ -142,23 +142,7 @@ export const SuperAdminDepartments: React.FC = () => {
 
       const token = localStorage.getItem('token');
 
-      // 1. Fetch explicit department members
-      const deptMembersRes = await fetch(
-        `http://localhost:8080/api/admin/departments/${department.id}/members`,
-        {
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-
-      let explicitMembers: DepartmentMember[] = [];
-      if (deptMembersRes.ok) {
-        explicitMembers = await deptMembersRes.json();
-      }
-
-      // 2. Fetch all system users and filter by department name
+      // Fetch real system users from superadmin users table
       const usersRes = await fetch('http://localhost:8080/api/superadmin/users', {
         headers: {
           'Content-Type': 'application/json',
@@ -166,18 +150,16 @@ export const SuperAdminDepartments: React.FC = () => {
         },
       });
 
-      let systemMembers: DepartmentMember[] = [];
       if (usersRes.ok) {
         const users = await usersRes.json();
         const deptName = department.name.trim().toLowerCase();
-        systemMembers = users
+
+        const filteredMembers: DepartmentMember[] = users
           .filter((u: any) => {
-            if (!u.department) return false;
+            if (!u.department || !u.department.trim()) return false;
             const uDept = u.department.trim().toLowerCase();
             return (
               uDept === deptName ||
-              uDept.includes(deptName) ||
-              deptName.includes(uDept) ||
               (deptName.includes('quality') && uDept.includes('quality'))
             );
           })
@@ -188,22 +170,11 @@ export const SuperAdminDepartments: React.FC = () => {
             employeeId: String(u.employeeId),
             designation: u.designation || u.role || 'Member',
           }));
+
+        setDepartmentMembers(filteredMembers);
+      } else {
+        setDepartmentMembers([]);
       }
-
-      // Combine and remove duplicates by email or employeeId
-      const combined = [...explicitMembers];
-      systemMembers.forEach((sm) => {
-        const exists = combined.some(
-          (m) =>
-            m.email?.toLowerCase() === sm.email?.toLowerCase() ||
-            String(m.employeeId) === String(sm.employeeId)
-        );
-        if (!exists) {
-          combined.push(sm);
-        }
-      });
-
-      setDepartmentMembers(combined);
     } catch (error) {
       console.error('Error fetching department members:', error);
       setDepartmentMembers([]);

@@ -15,6 +15,7 @@ type BugReport = {
   assignedTo: string;
   createdBy?: string;
   stepsToReproduce: string;
+  screenshot?: string;
   status?: string;
   createdAt?: string;
   filedDate?: string;
@@ -29,6 +30,18 @@ type BugForm = {
   severity: string;
   assignedTo: string;
   stepsToReproduce: string;
+  screenshot?: string;
+};
+
+type BugReply = {
+  id: number;
+  bugId?: string;
+  qaBugReportId?: number;
+  senderName: string;
+  senderRole: string;
+  message: string;
+  createdAt?: string;
+  time?: string;
 };
 
 type Project = {
@@ -78,6 +91,7 @@ const emptyForm: BugForm = {
   severity: "Medium",
   assignedTo: "",
   stepsToReproduce: "",
+  screenshot: "",
 };
 
 /* =========================================================
@@ -316,6 +330,24 @@ const QABugReports: React.FC = () => {
 
   const [showForm, setShowForm] =
     useState(false);
+
+  const [selectedBug, setSelectedBug] =
+    useState<BugReport | null>(null);
+
+  const [replies, setReplies] =
+    useState<BugReply[]>([]);
+
+  const [loadingReplies, setLoadingReplies] =
+    useState(false);
+
+  const [replyText, setReplyText] =
+    useState("");
+
+  const [submittingReply, setSubmittingReply] =
+    useState(false);
+
+  const [previewImage, setPreviewImage] =
+    useState<string | null>(null);
 
   const [loading, setLoading] =
     useState(false);
@@ -847,6 +879,31 @@ const QABugReports: React.FC = () => {
   };
 
   /* =========================================================
+     HANDLE SCREENSHOT FILE UPLOAD
+  ========================================================= */
+
+  const handleScreenshotChange = (
+    event: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 5 * 1024 * 1024) {
+      setError("Screenshot image size exceeds 5MB limit.");
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setForm((prev) => ({
+        ...prev,
+        screenshot: reader.result as string,
+      }));
+    };
+    reader.readAsDataURL(file);
+  };
+
+  /* =========================================================
      CLOSE FORM
   ========================================================= */
 
@@ -857,6 +914,77 @@ const QABugReports: React.FC = () => {
     setMemberSearch("");
     setShowMemberDropdown(false);
     setError("");
+  };
+
+  /* =========================================================
+     BUG DETAILS & REPLIES
+  ========================================================= */
+
+  const openBugDetails = async (bug: BugReport) => {
+    setSelectedBug(bug);
+    setReplies([]);
+    setReplyText("");
+
+    if (!bug.id) return;
+
+    try {
+      setLoadingReplies(true);
+      const response = await fetch(`${BUG_API_URL}/${bug.id}/replies`, {
+        method: "GET",
+        headers: getHeaders(),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setReplies(Array.isArray(data) ? data : []);
+      }
+    } catch (err) {
+      console.error("Error loading bug replies:", err);
+    } finally {
+      setLoadingReplies(false);
+    }
+  };
+
+  const closeBugDetails = () => {
+    setSelectedBug(null);
+    setReplies([]);
+    setReplyText("");
+  };
+
+  const handleSendReply = async () => {
+    if (!selectedBug?.id || !replyText.trim()) return;
+
+    const user = getCurrentUser();
+    const currentName = getUserName(user) || "QA Engineer";
+
+    try {
+      setSubmittingReply(true);
+      const response = await fetch(
+        `${BUG_API_URL}/${selectedBug.id}/replies`,
+        {
+          method: "POST",
+          headers: getHeaders(),
+          body: JSON.stringify({
+            senderName: currentName,
+            senderRole: "QA_ENGINEER",
+            message: replyText.trim(),
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error("Failed to post reply");
+      }
+
+      const savedReply = await response.json();
+      setReplies((prev) => [...prev, savedReply]);
+      setReplyText("");
+    } catch (err) {
+      console.error("Error sending reply:", err);
+      alert("Failed to send reply. Please try again.");
+    } finally {
+      setSubmittingReply(false);
+    }
   };
 
   /* =========================================================
@@ -950,6 +1078,9 @@ const QABugReports: React.FC = () => {
 
                 stepsToReproduce:
                   form.stepsToReproduce.trim(),
+
+                screenshot:
+                  form.screenshot || null,
 
                 status:
                   "Open",
@@ -1583,6 +1714,57 @@ const QABugReports: React.FC = () => {
 
             </div>
 
+            {/* SCREENSHOT ATTACHMENT */}
+            <div className="mt-4">
+              <label className="block mb-2 text-xs font-medium text-slate-600">
+                ATTACH SCREENSHOT (OPTIONAL)
+              </label>
+
+              <div className="flex flex-wrap items-center gap-4">
+                <label className="cursor-pointer inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50 transition shadow-sm border-dashed">
+                  <svg className="w-5 h-5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                  <span>{form.screenshot ? "Change Screenshot..." : "Upload Screenshot (PNG, JPG)"}</span>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleScreenshotChange}
+                    className="hidden"
+                  />
+                </label>
+
+                {form.screenshot && (
+                  <div className="flex items-center gap-3 bg-slate-50 border border-slate-200 rounded-lg p-2">
+                    <img
+                      src={form.screenshot}
+                      alt="Screenshot Preview"
+                      className="h-12 w-16 object-cover rounded border border-slate-200 cursor-pointer shadow-sm hover:opacity-90"
+                      onClick={() => setPreviewImage(form.screenshot || null)}
+                      title="Click to preview full screenshot"
+                    />
+                    <div className="text-xs">
+                      <p className="font-semibold text-slate-700">Screenshot Attached</p>
+                      <button
+                        type="button"
+                        onClick={() => setPreviewImage(form.screenshot || null)}
+                        className="text-blue-500 hover:underline"
+                      >
+                        Preview full size
+                      </button>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setForm((prev) => ({ ...prev, screenshot: "" }))}
+                      className="ml-2 text-red-500 hover:text-red-700 text-xs font-semibold px-2 py-1 rounded hover:bg-red-50"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+
             {/* BUTTONS */}
 
             <div className="flex gap-2 mt-5">
@@ -1713,6 +1895,10 @@ const QABugReports: React.FC = () => {
 
                 <th className="px-3 py-3 text-left text-xs font-medium text-slate-500">
                   CREATED
+                </th>
+
+                <th className="px-3 py-3 text-left text-xs font-medium text-slate-500">
+                  SCREENSHOT / DISCUSSION
                 </th>
 
               </tr>
@@ -1853,6 +2039,32 @@ const QABugReports: React.FC = () => {
                         }
                       </td>
 
+                      {/* SCREENSHOT & DISCUSSION */}
+                      <td className="px-3 py-4 whitespace-nowrap">
+                        <div className="flex items-center gap-2">
+                          {bug.screenshot ? (
+                            <button
+                              type="button"
+                              onClick={() => setPreviewImage(bug.screenshot || null)}
+                              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded bg-blue-50 text-blue-700 hover:bg-blue-100 text-xs font-medium border border-blue-200 transition"
+                              title="Click to view full screenshot"
+                            >
+                              <span>🖼️</span> Screenshot
+                            </button>
+                          ) : (
+                            <span className="text-xs text-slate-400 italic">No image</span>
+                          )}
+
+                          <button
+                            type="button"
+                            onClick={() => openBugDetails(bug)}
+                            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded bg-indigo-50 text-indigo-700 hover:bg-indigo-100 text-xs font-medium border border-indigo-200 transition"
+                          >
+                            <span>💬</span> Discussion
+                          </button>
+                        </div>
+                      </td>
+
                     </tr>
 
                   );
@@ -1866,6 +2078,226 @@ const QABugReports: React.FC = () => {
         )}
 
       </div>
+
+      {/* =========================================================
+         BUG DETAILS & DISCUSSION MODAL
+      ========================================================= */}
+      {selectedBug && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] flex flex-col overflow-hidden animate-in fade-in zoom-in duration-150">
+            {/* Header */}
+            <div className="p-5 border-b border-slate-100 flex items-start justify-between bg-gradient-to-r from-slate-50 to-indigo-50/30">
+              <div>
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="font-mono text-xs font-bold px-2 py-0.5 rounded bg-red-100 text-red-700 border border-red-200">
+                    {selectedBug.bugId}
+                  </span>
+                  <span className="text-xs font-medium px-2 py-0.5 rounded bg-slate-200 text-slate-700">
+                    {selectedBug.environment}
+                  </span>
+                  <span
+                    className={`text-xs font-medium px-2 py-0.5 rounded ${
+                      selectedBug.severity?.toLowerCase() === "critical"
+                        ? "bg-red-100 text-red-700"
+                        : selectedBug.severity?.toLowerCase() === "high"
+                        ? "bg-orange-100 text-orange-700"
+                        : "bg-blue-100 text-blue-700"
+                    }`}
+                  >
+                    {selectedBug.severity}
+                  </span>
+                </div>
+                <h3 className="text-lg font-bold text-slate-800">
+                  {selectedBug.title}
+                </h3>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Project: {getProjectName(selectedBug.projectId)} · Task: {selectedBug.linkedTaskId}
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={closeBugDetails}
+                className="text-slate-400 hover:text-slate-600 rounded-lg p-1 hover:bg-slate-100 transition text-lg leading-none"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Scrollable Content */}
+            <div className="p-5 overflow-y-auto space-y-5 flex-1">
+              {/* Metadata details */}
+              <div className="grid grid-cols-2 gap-3 text-xs bg-slate-50 p-3.5 rounded-xl border border-slate-200/70">
+                <div>
+                  <span className="text-slate-500 font-medium">Assigned Developer:</span>
+                  <p className="text-slate-800 font-semibold mt-0.5">{selectedBug.assignedTo || "Unassigned"}</p>
+                </div>
+                <div>
+                  <span className="text-slate-500 font-medium">Reported by QA:</span>
+                  <p className="text-slate-800 font-semibold mt-0.5">{selectedBug.createdBy || "QA"}</p>
+                </div>
+              </div>
+
+              {/* Steps to Reproduce */}
+              <div>
+                <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
+                  <span>📋</span> Steps to Reproduce
+                </h4>
+                <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs text-slate-700 font-mono whitespace-pre-wrap leading-relaxed">
+                  {selectedBug.stepsToReproduce}
+                </div>
+              </div>
+
+              {/* Screenshot preview */}
+              {selectedBug.screenshot && (
+                <div>
+                  <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
+                    <span>🖼️</span> Attached Screenshot
+                  </h4>
+                  <div
+                    onClick={() => setPreviewImage(selectedBug.screenshot || null)}
+                    className="cursor-pointer group relative rounded-xl border border-slate-200 overflow-hidden bg-slate-900 inline-block max-w-full"
+                  >
+                    <img
+                      src={selectedBug.screenshot}
+                      alt="Bug Screenshot"
+                      className="max-h-56 rounded-xl object-contain hover:opacity-90 transition"
+                    />
+                    <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 flex items-center justify-center transition text-white text-xs font-medium">
+                      🔍 Click to enlarge
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Discussion Thread */}
+              <div className="border-t border-slate-200 pt-4">
+                <div className="flex items-center justify-between mb-3">
+                  <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+                    <span>💬</span> Bug Discussion & Developer Collaboration
+                  </h4>
+                  <span className="text-[11px] text-slate-400">
+                    {replies.length} message{replies.length === 1 ? "" : "s"}
+                  </span>
+                </div>
+
+                {loadingReplies ? (
+                  <div className="text-center py-6 text-xs text-slate-400">
+                    Loading conversation...
+                  </div>
+                ) : replies.length === 0 ? (
+                  <div className="bg-slate-50 border border-dashed border-slate-200 rounded-xl p-4 text-center text-xs text-slate-500">
+                    No developer replies yet. You can post a message or clarification below.
+                  </div>
+                ) : (
+                  <div className="space-y-3 mb-4 max-h-60 overflow-y-auto pr-1">
+                    {replies.map((reply) => {
+                      const isDev =
+                        reply.senderRole?.toUpperCase().includes("DEV");
+
+                      return (
+                        <div
+                          key={reply.id}
+                          className={`p-3 rounded-xl border text-xs ${
+                            isDev
+                              ? "bg-indigo-50/60 border-indigo-200/80 ml-4"
+                              : "bg-emerald-50/60 border-emerald-200/80 mr-4"
+                          }`}
+                        >
+                          <div className="flex items-center justify-between gap-2 mb-1">
+                            <div className="flex items-center gap-1.5">
+                              <span
+                                className={`font-semibold ${
+                                  isDev ? "text-indigo-900" : "text-emerald-900"
+                                }`}
+                              >
+                                {reply.senderName}
+                              </span>
+                              <span
+                                className={`text-[10px] px-1.5 py-0.2 rounded font-medium ${
+                                  isDev
+                                    ? "bg-indigo-100 text-indigo-700"
+                                    : "bg-emerald-100 text-emerald-700"
+                                }`}
+                              >
+                                {isDev ? "DEVELOPER" : "QA ENGINEER"}
+                              </span>
+                            </div>
+                            <span className="text-[10px] text-slate-400">
+                              {reply.time || (reply.createdAt ? new Date(reply.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "")}
+                            </span>
+                          </div>
+                          <p className="text-slate-700 leading-relaxed whitespace-pre-wrap">
+                            {reply.message}
+                          </p>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {/* Reply Box */}
+                <div className="mt-3">
+                  <div className="flex gap-2">
+                    <textarea
+                      value={replyText}
+                      onChange={(e) => setReplyText(e.target.value)}
+                      placeholder="Write a message to the developer..."
+                      rows={2}
+                      className="flex-1 rounded-xl border border-slate-200 px-3 py-2 text-xs outline-none resize-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400"
+                    />
+                    <button
+                      type="button"
+                      disabled={submittingReply || !replyText.trim()}
+                      onClick={handleSendReply}
+                      className="self-end bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white px-4 py-2 rounded-xl text-xs font-semibold shadow-sm transition"
+                    >
+                      {submittingReply ? "Sending..." : "Send"}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="p-4 border-t border-slate-100 bg-slate-50 flex justify-end">
+              <button
+                type="button"
+                onClick={closeBugDetails}
+                className="border border-slate-200 bg-white hover:bg-slate-100 text-slate-700 px-4 py-2 rounded-xl text-xs font-medium shadow-sm transition"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* =========================================================
+         FULLSCREEN SCREENSHOT LIGHTBOX
+      ========================================================= */}
+      {previewImage && (
+        <div
+          onClick={() => setPreviewImage(null)}
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4 cursor-pointer"
+        >
+          <div className="relative max-w-4xl max-h-[90vh]">
+            <img
+              src={previewImage}
+              alt="Screenshot Preview"
+              className="max-w-full max-h-[85vh] object-contain rounded-xl shadow-2xl border border-white/10"
+            />
+            <button
+              type="button"
+              onClick={() => setPreviewImage(null)}
+              className="absolute -top-3 -right-3 bg-white text-slate-800 rounded-full p-2 shadow-lg hover:bg-slate-100 transition"
+              title="Close preview"
+            >
+              ✕
+            </button>
+          </div>
+        </div>
+      )}
 
     </div>
   );

@@ -13,7 +13,7 @@ import {
   FiX,
   FiCalendar,
   FiChevronDown,
-  FiChevronUp
+  FiCheckSquare
 } from 'react-icons/fi';
 import { TYPE, SURFACE, STATUS, COLUMN_TONE, PRIORITY_STYLE, labelChip, FIELD } from './scrumUI';
 import { ScrumTaskDetail } from './ScrumTaskDetail';
@@ -50,6 +50,7 @@ import {
  * board is always correct without it, it just opens on "All projects".
  */
 const PROJECT_KEY = 'scrum.board.projectId';
+const COLUMN_NAMES_KEY = 'scrum.board.customColumnLabels';
 
 /**
  * HTML5 drag and drop has no touch implementation, and a card that cannot be
@@ -198,10 +199,22 @@ export const ScrumBoard: React.FC = () => {
   const [label, setLabel] = useState('');
   const [unassigned, setUnassigned] = useState(false);
 
-  // Forms
+  // Forms & Modals
   const [creating, setCreating] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
+  const [detailId, setDetailId] = useState<number | null>(null);
+  const [settingsColumn, setSettingsColumn] = useState<BoardColumn | null>(null);
   const [saving, setSaving] = useState(false);
+
+  /** Custom status display names set by Scrum Master */
+  const [customLabels, setCustomLabels] = useState<Record<string, string>>(() => {
+    try {
+      const stored = window.localStorage.getItem(COLUMN_NAMES_KEY);
+      return stored ? JSON.parse(stored) : {};
+    } catch {
+      return {};
+    }
+  });
 
   // Drag and drop
   const dragEnabled = useDragEnabled();
@@ -306,16 +319,21 @@ export const ScrumBoard: React.FC = () => {
     const byStatus = new Map(board?.columns.map((column) => [column.status, column]) ?? []);
 
     return BOARD_COLUMNS.map((status) => {
-      const column =
-        byStatus.get(status) ?? {
-          status,
-          label: STATUS_LABEL[status],
-          taskCount: 0,
-          totalPoints: 0,
-          wipLimit: null,
-          wipExceeded: false,
-          cards: []
-        };
+      const baseColumn = byStatus.get(status);
+      const customName = customLabels[status];
+      const label = customName || baseColumn?.label || STATUS_LABEL[status];
+
+      const column = baseColumn
+        ? { ...baseColumn, label }
+        : {
+            status,
+            label,
+            taskCount: 0,
+            totalPoints: 0,
+            wipLimit: null,
+            wipExceeded: false,
+            cards: []
+          };
 
       if (status !== 'TESTING') return column;
 
@@ -334,7 +352,7 @@ export const ScrumBoard: React.FC = () => {
         cards: [...review.cards, ...column.cards]
       };
     });
-  }, [board]);
+  }, [board, customLabels]);
 
   /** Every card on the board, for the dependency picker in the detail panel. */
   const allCards = useMemo(
@@ -422,43 +440,51 @@ export const ScrumBoard: React.FC = () => {
     await runOnCard(card.id, () => deleteTask(card.id), `${card.taskKey} deleted`);
   };
 
-  const handleWipLimit = async (column: BoardColumn) => {
-    const answer = window.prompt(
-      `WIP limit for ${column.label}. Leave blank for no limit.`,
-      column.wipLimit === null ? '' : String(column.wipLimit)
-    );
-
-    if (answer === null) {
-      return;
+  const handleSaveColumnSettings = async (columnStatus: TaskStatus, newLabel: string, limit: number | null) => {
+    const updated = { ...customLabels };
+    if (newLabel && newLabel !== STATUS_LABEL[columnStatus]) {
+      updated[columnStatus] = newLabel;
+    } else {
+      delete updated[columnStatus];
+    }
+    setCustomLabels(updated);
+    try {
+      window.localStorage.setItem(COLUMN_NAMES_KEY, JSON.stringify(updated));
+    } catch {
+      // storage quota or private windows
     }
 
-    const trimmed = answer.trim();
-    const limit = trimmed === '' ? null : Number(trimmed);
-
-    if (limit !== null && (!Number.isInteger(limit) || limit < 0)) {
-      setError('A WIP limit must be a whole number of cards, or blank.');
-      return;
-    }
-
-    setWipBusy(column.status);
+    setWipBusy(columnStatus);
     setError('');
     setNotice('');
 
     try {
-      await setWipLimit(column.status, limit, {
+      await setWipLimit(columnStatus, limit, {
         projectId: projectId === '' ? undefined : projectId,
         sprintId: activeSprintId ?? undefined
       });
+      const displayLabel = updated[columnStatus] || STATUS_LABEL[columnStatus];
       setNotice(
         limit === null
-          ? `WIP limit removed from ${column.label}`
-          : `${column.label} limited to ${limit} cards`
+          ? `Column settings updated for ${displayLabel}`
+          : `${displayLabel} limited to ${limit} cards`
       );
       await load();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not save the WIP limit');
+      setError(err instanceof Error ? err.message : 'Could not save column settings');
     } finally {
       setWipBusy(null);
+    }
+  };
+
+  const handleResetColumnLabel = (columnStatus: TaskStatus) => {
+    const updated = { ...customLabels };
+    delete updated[columnStatus];
+    setCustomLabels(updated);
+    try {
+      window.localStorage.setItem(COLUMN_NAMES_KEY, JSON.stringify(updated));
+    } catch {
+      // storage quota
     }
   };
 
@@ -467,6 +493,7 @@ export const ScrumBoard: React.FC = () => {
   // Resolved from the board's own cards, so the dialog closes by itself if a
   // refresh removes the card underneath it rather than editing a stale copy
   const editingCard = editingId === null ? null : cardById.get(editingId) ?? null;
+  const detailCard = detailId === null ? null : cardById.get(detailId) ?? null;
 
   const handleCreate = async (draft: TaskDraft) => {
     setSaving(true);
@@ -694,7 +721,12 @@ export const ScrumBoard: React.FC = () => {
               <span className="text-slate-600 font-medium">{board.projectName} · </span>
             )}
             {board.totalTasks} cards · {board.totalPoints} points ·{' '}
-            <span className="capitalize">{board.sprintStatus.toLowerCase()}</span>
+            {board.sprintStatus && (
+              <>
+                {' · '}
+                <span className="capitalize">{board.sprintStatus.toLowerCase()}</span>
+              </>
+            )}
             {refreshing && <span className="text-slate-400"> · updating…</span>}
           </p>
         </div>
@@ -732,7 +764,7 @@ export const ScrumBoard: React.FC = () => {
             )}
             {sprints.map((sprint) => (
               <option key={sprint.id} value={sprint.id}>
-                {sprint.name} · {sprint.status.toLowerCase()}
+                {sprint.name}{sprint.status ? ` · ${sprint.status.toLowerCase()}` : ''}
               </option>
             ))}
           </select>
@@ -797,7 +829,7 @@ export const ScrumBoard: React.FC = () => {
               <option value="">{unassigned ? 'Unassigned only selected' : 'Any assignee'}</option>
               {board.members.map((member) => (
                 <option key={member.id} value={member.id}>
-                  {member.name ?? member.email}
+                  {member.name ?? member.email} • {member.department || 'General'} ({member.role || 'Member'})
                 </option>
               ))}
             </select>
@@ -942,9 +974,10 @@ export const ScrumBoard: React.FC = () => {
                 </span>
                 <button
                   type="button"
-                  onClick={() => void handleWipLimit(column)}
+                  onClick={() => setSettingsColumn(column)}
                   disabled={wipBusy === column.status}
-                  aria-label={`Set the WIP limit for ${column.label}`}
+                  aria-label={`Configure status name and WIP limit for ${column.label}`}
+                  title="Status name & WIP limit settings"
                   className="shrink-0 p-1 rounded cursor-pointer text-slate-400 hover:text-slate-600
                     focus-visible:outline-2 focus-visible:outline-offset-2
                     focus-visible:outline-emerald-500 disabled:cursor-wait"
@@ -1008,6 +1041,8 @@ export const ScrumBoard: React.FC = () => {
                           setEditingId(card.id);
                           setCreating(false);
                         }}
+                        onDetailOpen={() => setDetailId(card.id)}
+                        onRefresh={() => void load()}
                       />
                     ))}
                   </ul>
@@ -1018,8 +1053,7 @@ export const ScrumBoard: React.FC = () => {
         })}
       </div>
 
-      {/* Editing lives in a modal, so it is rendered once for the board rather
-          than inside whichever card is being edited */}
+      {/* Editing lives in a modal */}
       {editingCard !== null && (
         <TaskEditDialog
           card={editingCard}
@@ -1027,6 +1061,29 @@ export const ScrumBoard: React.FC = () => {
           saving={saving}
           onCancel={() => setEditingId(null)}
           onSubmit={(draft) => handleEdit(editingCard, draft)}
+        />
+      )}
+
+      {/* Details (Sub-tasks, dependencies, attachments, discussion) lives in a spacious modal */}
+      {detailCard !== null && (
+        <TaskDetailDialog
+          card={detailCard}
+          members={board.members}
+          siblings={allCards}
+          onClose={() => setDetailId(null)}
+          onRefresh={() => void load()}
+        />
+      )}
+
+      {/* Column settings modal (Rename status display name & WIP limit) */}
+      {settingsColumn !== null && (
+        <ColumnSettingsDialog
+          column={settingsColumn}
+          currentLabel={customLabels[settingsColumn.status] || STATUS_LABEL[settingsColumn.status]}
+          wipBusy={wipBusy === settingsColumn.status}
+          onCancel={() => setSettingsColumn(null)}
+          onResetLabel={() => handleResetColumnLabel(settingsColumn.status)}
+          onSave={(newLabel, limit) => handleSaveColumnSettings(settingsColumn.status, newLabel, limit)}
         />
       )}
     </div>
@@ -1120,6 +1177,82 @@ const TaskEditDialog: React.FC<{
   );
 };
 
+/**
+ * Task details (sub-tasks, dependencies, attachments, discussion) open in a spacious
+ * modal dialog so cards on the board stay compact, readable, and uniform.
+ */
+const TaskDetailDialog: React.FC<{
+  card: Card;
+  members: Member[];
+  siblings: Card[];
+  onClose: () => void;
+  onRefresh: () => void;
+}> = ({ card, members, siblings, onClose, onRefresh }) => {
+  const ref = useRef<HTMLDialogElement>(null);
+  const titleId = `detail-dialog-${card.id}-title`;
+
+  useEffect(() => {
+    const dialog = ref.current;
+
+    if (dialog !== null && !dialog.open) {
+      dialog.showModal();
+    }
+  }, []);
+
+  return (
+    <dialog
+      ref={ref}
+      aria-labelledby={titleId}
+      onCancel={(event) => {
+        event.preventDefault();
+        onClose();
+      }}
+      onClick={(event) => {
+        if (event.target === ref.current) {
+          onClose();
+        }
+      }}
+      className="m-auto w-[calc(100%-2rem)] max-w-2xl max-h-[88vh] rounded-2xl border border-slate-200
+        bg-white p-0 shadow-2xl backdrop:bg-slate-900/40 overflow-hidden flex flex-col"
+    >
+      <div className={`${SURFACE.padTight} border-b border-slate-100 flex items-start justify-between gap-3 bg-slate-50/80`}>
+        <div className="min-w-0">
+          <div className="flex items-center gap-2 mb-1">
+            <span className={`${TYPE.code} text-slate-500 font-bold px-1.5 py-0.5 rounded bg-slate-200/70`}>
+              {card.taskKey}
+            </span>
+            <span className={`${TYPE.meta} font-semibold px-2 py-0.5 rounded-full ${STATUS.done.soft} ${STATUS.done.text}`}>
+              {STATUS_LABEL[card.status]}
+            </span>
+          </div>
+          <h3 id={titleId} className={`${TYPE.title} text-slate-900 text-lg leading-snug`}>
+            {card.title}
+          </h3>
+        </div>
+
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label="Close task details"
+          className="shrink-0 p-1.5 rounded-lg cursor-pointer text-slate-400 hover:text-slate-600 hover:bg-slate-200/60 transition-colors
+            focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-500"
+        >
+          <FiX size={18} aria-hidden="true" />
+        </button>
+      </div>
+
+      <div className="p-4 sm:p-5 overflow-y-auto max-h-[calc(88vh-4.5rem)]">
+        <ScrumTaskDetail
+          card={card}
+          members={members}
+          siblings={siblings}
+          onSubtaskChange={onRefresh}
+        />
+      </div>
+    </dialog>
+  );
+};
+
 const BoardCard: React.FC<{
   card: Card;
   members: Member[];
@@ -1136,10 +1269,12 @@ const BoardCard: React.FC<{
   onClone: (card: Card) => Promise<void>;
   onDelete: (card: Card) => Promise<void>;
   onEditOpen: () => void;
+  onDetailOpen: () => void;
+  onRefresh?: () => void;
 }> = ({
   card,
-  members,
-  siblings,
+  members: _members,
+  siblings: _siblings,
   busy,
   editing,
   dragEnabled,
@@ -1150,11 +1285,9 @@ const BoardCard: React.FC<{
   onClone,
   onDelete,
   onEditOpen,
+  onDetailOpen,
+  onRefresh: _onRefresh,
 }) => {
-  // Detail is collapsed by default: mounting it fetches dependencies,
-  // attachments and comments, which is three requests nobody asked for yet.
-  const [showDetail, setShowDetail] = useState(false);
-
   const attention = needsAttention(card);
   const priorityStyle = PRIORITY_STYLE[card.priority];
 
@@ -1196,6 +1329,22 @@ const BoardCard: React.FC<{
               className="ml-auto flex items-baseline gap-2 shrink-0 transition-opacity
                 group-hover:opacity-0 group-focus-within:opacity-0"
             >
+              {card.subtaskCount !== undefined && card.subtaskCount > 0 && (
+                <button
+                  type="button"
+                  onClick={onDetailOpen}
+                  className={`${TYPE.meta} inline-flex items-center gap-0.5 font-semibold rounded px-1 py-0.5 cursor-pointer ${
+                    card.completedSubtaskCount === card.subtaskCount
+                      ? 'bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100'
+                      : 'bg-slate-100 text-slate-600 border border-slate-200 hover:bg-slate-200'
+                  }`}
+                  title={`${card.completedSubtaskCount ?? 0} of ${card.subtaskCount} sub-tasks completed — click to view`}
+                >
+                  <FiCheckSquare size={10} aria-hidden="true" />
+                  {card.completedSubtaskCount ?? 0}/{card.subtaskCount}
+                </button>
+              )}
+
               {card.dueDate && (
                 <span
                   className={`${TYPE.meta} whitespace-nowrap
@@ -1217,7 +1366,10 @@ const BoardCard: React.FC<{
             </span>
           </div>
 
-          <p className={`${TYPE.body} font-medium text-slate-900 leading-snug mt-1 break-words`}>
+          <p
+            onClick={onDetailOpen}
+            className={`${TYPE.body} font-medium text-slate-900 leading-snug mt-1 break-words cursor-pointer hover:text-emerald-700 transition-colors`}
+          >
             {card.title}
           </p>
 
@@ -1240,16 +1392,26 @@ const BoardCard: React.FC<{
 
           {/* Footer: who, how long, when due, and where it can go next */}
           <div className="flex items-center gap-2 mt-2.5 pt-2.5 border-t border-slate-100">
-            <span
-              title={card.assigneeName ?? 'Unassigned'}
-              className={`w-6 h-6 rounded-full shrink-0 grid place-items-center ${TYPE.code}
-                font-semibold ${card.assigneeId === null
-                  ? 'bg-slate-50 text-slate-300 border border-dashed border-slate-300'
-                  : 'bg-slate-100 text-slate-600'}`}
-            >
-              <span aria-hidden="true">{card.assigneeId === null ? '?' : card.assigneeInitials}</span>
-              <span className="sr-only">{card.assigneeName ?? 'Unassigned'}</span>
-            </span>
+            <div className="flex items-center gap-1.5 min-w-0">
+              <span
+                title={card.assigneeName ? `${card.assigneeName} • ${card.assigneeDepartment || 'General'} (${card.assigneeRole || 'Member'})${card.assigneeEmail ? ` — ${card.assigneeEmail}` : ''}` : 'Unassigned'}
+                className={`w-6 h-6 rounded-full shrink-0 grid place-items-center ${TYPE.code}
+                  font-semibold ${card.assigneeId === null
+                    ? 'bg-slate-50 text-slate-300 border border-dashed border-slate-300'
+                    : 'bg-slate-100 text-slate-600'}`}
+              >
+                <span aria-hidden="true">{card.assigneeId === null ? '?' : card.assigneeInitials}</span>
+                <span className="sr-only">{card.assigneeName ?? 'Unassigned'}</span>
+              </span>
+              {card.assigneeName && (
+                <div className="flex flex-col min-w-0 max-w-[105px] leading-tight" title={`${card.assigneeName} (${card.assigneeDepartment || ''})`}>
+                  <span className="truncate text-[10px] font-bold text-slate-700">{card.assigneeName}</span>
+                  {card.assigneeDepartment && (
+                    <span className="truncate text-[8px] font-semibold text-teal-600">{card.assigneeDepartment}</span>
+                  )}
+                </div>
+              )}
+            </div>
 
             {/* Ageing is only worth showing once a card has actually sat somewhere */}
             {(card.daysInColumn > 0 || card.stuck) && (
@@ -1301,18 +1463,10 @@ const BoardCard: React.FC<{
               group-focus-within:opacity-100"
           >
             <IconButton
-              label={
-                showDetail
-                  ? `Hide detail for ${card.taskKey}`
-                  : `Show dependencies, files and comments for ${card.taskKey}`
-              }
+              label={`Show sub-tasks, dependencies, files and comments for ${card.taskKey}`}
               disabled={busy}
-              onClick={() => setShowDetail((open) => !open)}
-              icon={
-                showDetail
-                  ? <FiChevronUp size={13} aria-hidden="true" />
-                  : <FiChevronDown size={13} aria-hidden="true" />
-              }
+              onClick={onDetailOpen}
+              icon={<FiChevronDown size={13} aria-hidden="true" />}
             />
             <IconButton
               label={`Edit ${card.taskKey}`}
@@ -1334,10 +1488,6 @@ const BoardCard: React.FC<{
               icon={<FiTrash2 size={13} aria-hidden="true" />}
             />
           </span>
-
-      {showDetail && (
-            <ScrumTaskDetail card={card} members={members} siblings={siblings} />
-          )}
 
     </li>
   );
@@ -1497,13 +1647,15 @@ const TaskForm: React.FC<{
           >
             <option value="">Unassigned</option>
             {members.map((member) => (
-              <option key={member.id} value={member.id}>{member.name ?? member.email}</option>
+              <option key={member.id} value={member.id}>
+                {member.name ?? member.email} • {member.department || 'General'} ({member.role || 'Member'}) — {member.email}
+              </option>
             ))}
           </select>
         </div>
 
         <div>
-          <label className={labelClass} htmlFor={`${idPrefix}-due`}>Due date</label>
+          <label className={labelClass} htmlFor={`${idPrefix}-due`}>Due date (Optional)</label>
           <input
             id={`${idPrefix}-due`}
             type="date"
@@ -1547,5 +1699,161 @@ const TaskForm: React.FC<{
         </button>
       </div>
     </form>
+  );
+};
+
+/**
+ * Allows the Scrum Master to customize the display status name for a column
+ * (e.g. rename "In progress" to "Development") and set its WIP limit.
+ */
+const ColumnSettingsDialog: React.FC<{
+  column: BoardColumn;
+  currentLabel: string;
+  wipBusy: boolean;
+  onCancel: () => void;
+  onSave: (newLabel: string, wipLimit: number | null) => Promise<void>;
+  onResetLabel: () => void;
+}> = ({ column, currentLabel, wipBusy, onCancel, onSave, onResetLabel }) => {
+  const ref = useRef<HTMLDialogElement>(null);
+  const [label, setLabel] = useState(currentLabel);
+  const [limitStr, setLimitStr] = useState(column.wipLimit === null ? '' : String(column.wipLimit));
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    const dialog = ref.current;
+    if (dialog && !dialog.open) {
+      dialog.showModal();
+    }
+  }, []);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+
+    const trimmedLimit = limitStr.trim();
+    const limit = trimmedLimit === '' ? null : Number(trimmedLimit);
+
+    if (limit !== null && (!Number.isInteger(limit) || limit < 0)) {
+      setError('WIP limit must be a non-negative whole number or blank.');
+      return;
+    }
+
+    setSaving(true);
+    try {
+      await onSave(label.trim(), limit);
+      onCancel();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not save column settings');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <dialog
+      ref={ref}
+      onCancel={(e) => {
+        e.preventDefault();
+        onCancel();
+      }}
+      onClick={(e) => {
+        if (e.target === ref.current) onCancel();
+      }}
+      className="m-auto w-[calc(100%-2rem)] max-w-md rounded-2xl border border-slate-200 bg-white p-0 shadow-2xl backdrop:bg-slate-900/40"
+    >
+      <div className={SURFACE.pad}>
+        <div className="flex items-start justify-between gap-3 mb-4">
+          <div>
+            <h3 className={`${TYPE.title} text-slate-900`}>Column & Status Settings</h3>
+            <p className={`${TYPE.meta} text-slate-500`}>
+              Customize status name and WIP limit for <span className="font-semibold text-slate-700">{STATUS_LABEL[column.status]}</span>
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={onCancel}
+            aria-label="Close settings"
+            className="p-1 rounded cursor-pointer text-slate-400 hover:text-slate-600"
+          >
+            <FiX size={16} />
+          </button>
+        </div>
+
+        {error && (
+          <p className={`${TYPE.meta} ${STATUS.blocked.text} mb-3 font-medium`} role="alert">
+            {error}
+          </p>
+        )}
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className={`${TYPE.eyebrow} text-slate-600 block mb-1`} htmlFor="col-custom-label">
+              Status / Column Display Name
+            </label>
+            <input
+              id="col-custom-label"
+              type="text"
+              value={label}
+              onChange={(e) => setLabel(e.target.value)}
+              placeholder={STATUS_LABEL[column.status]}
+              className={`${TYPE.body} ${FIELD.input}`}
+            />
+            <p className={`${TYPE.meta} text-slate-400 mt-1`}>
+              Original default: <span className="font-medium text-slate-500">{STATUS_LABEL[column.status]}</span>
+            </p>
+          </div>
+
+          <div>
+            <label className={`${TYPE.eyebrow} text-slate-600 block mb-1`} htmlFor="col-wip-limit">
+              WIP Limit (Max Cards)
+            </label>
+            <input
+              id="col-wip-limit"
+              type="number"
+              min="0"
+              step="1"
+              value={limitStr}
+              onChange={(e) => setLimitStr(e.target.value)}
+              placeholder="Leave blank for no limit"
+              className={`${TYPE.body} ${FIELD.input}`}
+            />
+            <p className={`${TYPE.meta} text-slate-400 mt-1`}>
+              Highlights column in red if total cards in column exceed this limit.
+            </p>
+          </div>
+
+          <div className="flex items-center justify-between pt-3 border-t border-slate-100">
+            <button
+              type="button"
+              onClick={() => {
+                onResetLabel();
+                setLabel(STATUS_LABEL[column.status]);
+              }}
+              className={`${TYPE.meta} text-slate-500 hover:text-slate-800 underline cursor-pointer`}
+            >
+              Reset name to default
+            </button>
+
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={onCancel}
+                className={`${TYPE.meta} ${FIELD.button} ${FIELD.secondary}`}
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={saving || wipBusy}
+                className={`${TYPE.meta} ${FIELD.button} ${FIELD.primary}`}
+              >
+                {saving ? 'Saving…' : 'Save settings'}
+              </button>
+            </div>
+          </div>
+        </form>
+      </div>
+    </dialog>
   );
 };

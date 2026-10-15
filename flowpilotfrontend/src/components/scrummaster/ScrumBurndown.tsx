@@ -174,7 +174,7 @@ export const ScrumBurndown: React.FC = () => {
           >
             {sprints.map((sprint) => (
               <option key={sprint.id} value={sprint.id}>
-                {sprint.name} · {sprint.status.toLowerCase()}
+                {sprint.name}{sprint.status ? ` · ${sprint.status.toLowerCase()}` : ''}
               </option>
             ))}
           </select>

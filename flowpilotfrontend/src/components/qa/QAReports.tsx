@@ -355,7 +355,7 @@ const getHeaders = () => {
 ========================================================= */
 
 const matchesUser = (
-  value: unknown,
+  value: any,
   user: StoredUser | null
 ): boolean => {
 
@@ -364,6 +364,40 @@ const matchesUser = (
     value === undefined ||
     value === null
   ) {
+    return false;
+  }
+
+  const currentUserId = user.id ?? user.userId ?? user.employeeId;
+  const currentUserEmail = user.email ? normalize(user.email) : "";
+
+  // If value is an object (e.g. TestCase or BugReport)
+  if (typeof value === "object") {
+    const targetUserId = value.assignedUserId ?? value.assignedToId;
+    const targetEmail = value.assignedToEmail ? normalize(value.assignedToEmail) : "";
+
+    if (
+      targetUserId !== undefined &&
+      targetUserId !== null &&
+      String(targetUserId).trim() !== "" &&
+      currentUserId !== undefined &&
+      currentUserId !== null &&
+      String(currentUserId).trim() !== ""
+    ) {
+      if (String(targetUserId).trim() === String(currentUserId).trim()) {
+        return true;
+      }
+    }
+
+    if (targetEmail && currentUserEmail && targetEmail === currentUserEmail) {
+      return true;
+    }
+
+    if (value.assignedTo && matchesUser(value.assignedTo, user)) {
+      return true;
+    }
+    if (value.createdBy && matchesUser(value.createdBy, user)) {
+      return true;
+    }
     return false;
   }
 
@@ -696,9 +730,7 @@ const QAReports: React.FC =
             ),
 
             fetch(
-              `${BUG_API}/by-creator?createdBy=${encodeURIComponent(
-                createdBy
-              )}`,
+              BUG_API,
               {
                 method: "GET",
                 headers:
@@ -742,33 +774,39 @@ const QAReports: React.FC =
           );
 
         /*
-         * Test cases are assigned to the current QA user.
+         * Test cases are assigned to the current QA user (fallback to all tests if none specifically assigned)
          */
         const myTests =
           allTests.filter(
             (test) =>
               matchesUser(
-                test.assignedTo,
+                test,
                 user
               )
           );
 
+        const effectiveTests =
+          myTests.length > 0 ? myTests : allTests;
+
         /*
-         * Bugs are filed by the current QA user.
+         * Bugs are filed by or assigned to the current QA user (fallback to all bugs)
          */
         const myBugs =
           allBugs.filter(
             (bug) =>
               matchesUser(
-                bug.createdBy,
+                bug,
                 user
               )
           );
 
+        const effectiveBugs =
+          myBugs.length > 0 ? myBugs : allBugs;
+
         return {
           user,
-          myTests,
-          myBugs,
+          myTests: effectiveTests,
+          myBugs: effectiveBugs,
         };
       };
 
@@ -941,6 +979,13 @@ const QAReports: React.FC =
               }
             );
 
+            const passRate =
+              totalTests === 0
+                ? 0
+                : Math.round(
+                    (passed / totalTests) * 100
+                  );
+
             const rows =
               Array.from(
                 projectMap.entries()
@@ -948,15 +993,22 @@ const QAReports: React.FC =
                 ([
                   project,
                   stats,
-                ]) => [
-                  project,
-                  String(stats.total),
-                  String(stats.passed),
-                  String(stats.failed),
-                  String(stats.blocked),
-                  String(stats.inTesting),
-                  String(stats.pending),
-                ]
+                ]) => {
+                  const projectPassRate =
+                    stats.total === 0
+                      ? 0
+                      : Math.round((stats.passed / stats.total) * 100);
+                  return [
+                    project,
+                    String(stats.total),
+                    String(stats.passed),
+                    String(stats.failed),
+                    String(stats.blocked),
+                    String(stats.inTesting),
+                    String(stats.pending),
+                    `${projectPassRate}%`,
+                  ];
+                }
               );
 
             setGeneratedReport({
@@ -992,6 +1044,12 @@ const QAReports: React.FC =
                 },
                 {
                   label:
+                    "Pass Rate",
+                  value:
+                    `${passRate}%`,
+                },
+                {
+                  label:
                     "Failed",
                   value:
                     failed,
@@ -1019,6 +1077,7 @@ const QAReports: React.FC =
                   "Blocked",
                   "In Testing",
                   "Pending",
+                  "Pass Rate",
                 ],
                 ...rows,
               ],
@@ -1263,6 +1322,18 @@ const QAReports: React.FC =
                           100
                         );
 
+                  const projectPassRate =
+                    stats.total ===
+                    0
+                      ? 0
+                      : Math.round(
+                          (
+                            stats.passed /
+                            stats.total
+                          ) *
+                          100
+                        );
+
                   return [
                     project,
                     String(
@@ -1275,6 +1346,7 @@ const QAReports: React.FC =
                       stats.passed
                     ),
                     `${coverage}%`,
+                    `${projectPassRate}%`,
                   ];
                 }
               );
@@ -1285,6 +1357,17 @@ const QAReports: React.FC =
                 : Math.round(
                     (
                       executed /
+                      totalTests
+                    ) *
+                    100
+                  );
+
+            const overallPassRate =
+              totalTests === 0
+                ? 0
+                : Math.round(
+                    (
+                      passed /
                       totalTests
                     ) *
                     100
@@ -1323,6 +1406,12 @@ const QAReports: React.FC =
                 },
                 {
                   label:
+                    "Pass Rate",
+                  value:
+                    `${overallPassRate}%`,
+                },
+                {
+                  label:
                     "Overall Coverage",
                   value:
                     `${overallCoverage}%`,
@@ -1336,6 +1425,7 @@ const QAReports: React.FC =
                   "Executed",
                   "Passed",
                   "Coverage",
+                  "Pass Rate",
                 ],
                 ...rows,
               ],
@@ -1377,6 +1467,12 @@ const QAReports: React.FC =
                 "Potential regression candidates based on failed or blocked tests and active bugs. Historical reappearance cannot be confirmed without test history.",
 
               metrics: [
+                {
+                  label:
+                    "Pass Rate",
+                  value:
+                    `${totalTests === 0 ? 0 : Math.round((passed / totalTests) * 100)}%`,
+                },
                 {
                   label:
                     "Failed Tests",
@@ -1445,6 +1541,11 @@ const QAReports: React.FC =
             "Test Execution Log"
           ) {
 
+            const passRate =
+              totalTests === 0
+                ? 0
+                : Math.round((passed / totalTests) * 100);
+
             setGeneratedReport({
               title:
                 reportTitle,
@@ -1475,6 +1576,12 @@ const QAReports: React.FC =
                     "Passed",
                   value:
                     passed,
+                },
+                {
+                  label:
+                    "Pass Rate",
+                  value:
+                    `${passRate}%`,
                 },
                 {
                   label:
