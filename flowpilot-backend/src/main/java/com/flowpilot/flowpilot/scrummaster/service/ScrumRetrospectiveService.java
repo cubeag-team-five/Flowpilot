@@ -60,7 +60,24 @@ public class ScrumRetrospectiveService {
     @Transactional(readOnly = true)
     public ScrumRetrospectiveDto.Response getRetrospective(Long sprintId) {
 
-        ScrumSprint sprint = resolveSprint(sprintId);
+        ScrumSprint sprint;
+        try {
+            sprint = resolveSprint(sprintId);
+        } catch (ScrumNotFoundException e) {
+            if (sprintId == null) {
+                return new ScrumRetrospectiveDto.Response(
+                        null,
+                        "No Sprint",
+                        null,
+                        null,
+                        List.of(),
+                        List.of(),
+                        List.of(),
+                        taskService.listMembers()
+                );
+            }
+            throw e;
+        }
 
         // One query, then split by kind: three round trips would only cost more
         // to arrive at the same three lists

@@ -1,11 +1,12 @@
 package com.flowpilot.flowpilot.superadmin.service;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.stereotype.Service;
 
-
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class EmailService {
@@ -63,7 +64,11 @@ public class EmailService {
                 "FlowPilot Team"
         );
 
-        mailSender.send(message);
+        try {
+            mailSender.send(message);
+        } catch (Exception e) {
+            log.error("Failed to send welcome email to {}: {}", recipientEmail, e.getMessage());
+        }
     }
 
 
@@ -127,6 +132,10 @@ public class EmailService {
             "FlowPilot Security Team"
     );
 
-    mailSender.send(message);
+    try {
+        mailSender.send(message);
+    } catch (Exception e) {
+        log.error("Failed to send failed login alert email: {}", e.getMessage());
+    }
 }
 }

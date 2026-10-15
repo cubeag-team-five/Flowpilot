@@ -88,6 +88,17 @@ public class ScrumBoardController {
         );
     }
 
+    @PatchMapping("/tasks/{taskId}/move")
+    public ResponseEntity<ScrumTaskDto.Card> moveTaskAlias(
+            @PathVariable Long taskId,
+            @RequestBody ScrumBoardDto.MoveRequest request
+    ) {
+
+        return ResponseEntity.ok(
+                boardService.moveTask(taskId, request)
+        );
+    }
+
 
     // ============================================
     // PUT

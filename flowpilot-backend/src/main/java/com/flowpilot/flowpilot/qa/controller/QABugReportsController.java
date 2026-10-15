@@ -80,4 +80,38 @@ public class QABugReportsController {
                 savedBug
         );
     }
+
+    /*
+     * =========================================================
+     * GET REPLIES FOR BUG
+     * =========================================================
+     */
+    @GetMapping("/{id}/replies")
+    public ResponseEntity<List<com.flowpilot.flowpilot.qa.dto.QABugReplyDto>>
+    getReplies(@PathVariable Long id) {
+
+        return ResponseEntity.ok(
+                bugReportsService.getReplies(id)
+        );
+    }
+
+    /*
+     * =========================================================
+     * ADD REPLY TO BUG (QA OR DEVELOPER)
+     * =========================================================
+     */
+    @PostMapping("/{id}/replies")
+    public ResponseEntity<com.flowpilot.flowpilot.qa.dto.QABugReplyDto>
+    addReply(
+            @PathVariable Long id,
+            @RequestBody java.util.Map<String, String> payload
+    ) {
+        String senderName = payload.getOrDefault("senderName", "QA Engineer");
+        String senderRole = payload.getOrDefault("senderRole", "QA_ENGINEER");
+        String message = payload.getOrDefault("message", "");
+
+        return ResponseEntity.ok(
+                bugReportsService.addReply(id, senderName, senderRole, message)
+        );
+    }
 }

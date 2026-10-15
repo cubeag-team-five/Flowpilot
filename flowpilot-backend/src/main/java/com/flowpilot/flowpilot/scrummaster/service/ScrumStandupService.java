@@ -68,7 +68,25 @@ public class ScrumStandupService {
     @Transactional(readOnly = true)
     public ScrumStandupDto.Response getStandup(Long sprintId, LocalDate date) {
 
-        ScrumSprint sprint = resolveSprint(sprintId);
+        ScrumSprint sprint;
+        try {
+            sprint = resolveSprint(sprintId);
+        } catch (ScrumNotFoundException e) {
+            if (sprintId == null) {
+                LocalDate standupDate = date == null ? ScrumWorkingDays.today() : date;
+                return new ScrumStandupDto.Response(
+                        null,
+                        "No Sprint",
+                        standupDate,
+                        0,
+                        0,
+                        List.of(),
+                        taskService.listMembers(),
+                        List.of()
+                );
+            }
+            throw e;
+        }
 
         // "Today" has to be the sprint's today, not the JVM host's: on a
         // server in another zone the morning standup opens on a date the sprint

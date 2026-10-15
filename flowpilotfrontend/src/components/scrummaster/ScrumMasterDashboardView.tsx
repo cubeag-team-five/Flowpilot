@@ -18,6 +18,7 @@ import {
 } from './scrumUI';
 import {
   fetchDashboard,
+  isNoActiveSprint,
   STATUS_LABEL,
   PRIORITY_LABEL,
   type Card,
@@ -55,13 +56,7 @@ const formatDay = (iso: string | null): string => {
     : date.toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
 };
 
-/**
- * The API client throws the backend's message rather than the status code, so
- * the "no sprint yet" 404 is recognised by its message. It is the expected
- * state for a new team rather than a failure, so it must not render as an error.
- */
-const isNoActiveSprint = (message: string): boolean =>
-  message.toLowerCase().includes('no active sprint');
+
 
 export const ScrumMasterDashboardView: React.FC = () => {
   const [data, setData] = useState<Dashboard | null>(null);

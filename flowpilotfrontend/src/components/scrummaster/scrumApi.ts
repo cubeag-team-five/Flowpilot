@@ -412,8 +412,13 @@ export interface BoardFilters {
   unassigned?: boolean;
 }
 
-export const fetchBoard = (filters: BoardFilters = {}) =>
-  request<Board>(`/board${query(filters)}`);
+export const fetchBoard = (filters: BoardFilters = {}) => {
+  const sanitized: BoardFilters = { ...filters };
+  if (sanitized.unassigned && sanitized.assigneeId !== undefined) {
+    delete sanitized.assigneeId;
+  }
+  return request<Board>(`/board${query(sanitized)}`);
+};
 
 export const moveTask = (taskId: number, status: TaskStatus, blockedReason?: string) =>
   request<Card>(`/board/tasks/${taskId}/status`, {
@@ -509,13 +514,16 @@ export const deleteStandup = (standupId: number) =>
 export const fetchRetrospective = (sprintId?: number) =>
   request<Retrospective>(`/retrospective${query({ sprintId })}`);
 
-export const createRetroItem = (body: {
-  kind: RetroKind;
-  text: string;
-  ownerId?: number | null;
-  dueLabel?: string | null;
-  dueDate?: string | null;
-}) => request<RetroItem>('/retrospective', { method: 'POST', body: JSON.stringify(body) });
+export const createRetroItem = (
+  body: {
+    kind: RetroKind;
+    text: string;
+    ownerId?: number | null;
+    dueLabel?: string | null;
+    dueDate?: string | null;
+  },
+  sprintId?: number
+) => request<RetroItem>(`/retrospective${query({ sprintId })}`, { method: 'POST', body: JSON.stringify(body) });
 
 export const updateRetroItem = (
   itemId: number,
@@ -715,3 +723,21 @@ export const deleteAttachment = (attachmentId: number) =>
 /** Absolute URL for an attachment, since downloads leave the API client. */
 export const attachmentUrl = (attachment: Attachment): string =>
   `http://localhost:8080${attachment.downloadUrl}`;
+
+/**
+ * Recognises expected "no sprint yet" 404 responses across Scrum Master modules.
+ * This is the normal initial state for new projects/teams, not a fatal crash.
+ */
+export const isNoActiveSprint = (message: string): boolean => {
+  if (!message) return false;
+  const m = message.toLowerCase();
+  return (
+    m.includes('no active sprint') ||
+    m.includes('no sprint') ||
+    m.includes('has no sprint') ||
+    m.includes('sprint not found') ||
+    m.includes('was not found') ||
+    m.includes('sprints yet')
+  );
+};
+

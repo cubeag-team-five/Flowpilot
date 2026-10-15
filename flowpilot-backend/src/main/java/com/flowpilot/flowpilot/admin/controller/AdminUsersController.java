@@ -31,6 +31,21 @@ public class AdminUsersController {
 
 
     // =========================================================
+    // CREATE USER (ADMIN)
+    // =========================================================
+
+    @PostMapping
+    public ResponseEntity<SuperAdminUserDto> createUser(
+            @RequestBody SuperAdminUserDto dto
+    ) {
+
+        return ResponseEntity
+                .status(org.springframework.http.HttpStatus.CREATED)
+                .body(adminUsersService.createUser(dto));
+    }
+
+
+    // =========================================================
     // GET USER BY EMPLOYEE ID
     // =========================================================
 

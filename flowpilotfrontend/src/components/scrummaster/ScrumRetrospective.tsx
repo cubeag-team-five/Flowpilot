@@ -153,9 +153,9 @@ export const ScrumRetrospective: React.FC = () => {
   };
 
   /** Throws on failure so the form that called it can show the reason in place. */
-  const addItem = async (input: NewItem) => {
+  const addItem = async (input: NewItem, targetSprintId?: number) => {
     setActionError('');
-    await createRetroItem(input);
+    await createRetroItem(input, targetSprintId);
     await load(data?.sprintId);
   };
 
@@ -201,7 +201,7 @@ export const ScrumRetrospective: React.FC = () => {
    * deleting are all keyed by item id and work on a closed sprint as normal.
    * Drop this gate once the client can pass a sprint id on create.
    */
-  const canAdd = activeSprint !== null && activeSprint.id === data.sprintId;
+  const canAdd = true;
 
   const renderPanel = (panel: Panel) => {
     const items = itemsByKind[panel.kind];
@@ -252,7 +252,7 @@ export const ScrumRetrospective: React.FC = () => {
               kind={panel.kind}
               placeholder={panel.placeholder}
               members={data.members}
-              onSubmit={addItem}
+              onSubmit={(input) => addItem(input, data.sprintId)}
             />
           </footer>
         )}
