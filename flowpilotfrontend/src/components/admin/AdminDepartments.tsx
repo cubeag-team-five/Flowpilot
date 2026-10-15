@@ -588,13 +588,15 @@ export const AdminDepartments: React.FC = () => {
 
   const availableHeadUsers =
     users.filter((user) => {
-      if (
-        isUserAlreadyAssigned(
-          user.employeeId,
-          editingDepartmentId ?? undefined
-        )
-      ) {
-        return false;
+      // When editing a department, only show members belonging to that department
+      if (editingDepartment) {
+        const deptName = editingDepartment.name.trim().toLowerCase();
+        if (!user.department || !user.department.trim()) return false;
+        const uDept = user.department.trim().toLowerCase();
+        const belongsToDept =
+          uDept === deptName ||
+          (deptName.includes('quality') && uDept.includes('quality'));
+        if (!belongsToDept) return false;
       }
 
       if (
@@ -1575,37 +1577,51 @@ export const AdminDepartments: React.FC = () => {
           true
         );
 
-        const response =
+        // Fetch real system users from backend users table
+        const usersRes =
           await fetch(
-            `${API_BASE_URL}/departments/${department.id}/members`,
+            `${API_BASE_URL}/users`,
             {
               method: 'GET',
-
               headers: {
-                Authorization:
-                  `Bearer ${token}`,
-
-                'Content-Type':
-                  'application/json',
+                Authorization: `Bearer ${token}`,
+                'Content-Type': 'application/json',
               },
             }
           );
 
-        if (!response.ok) {
+        if (!usersRes.ok) {
           throw new Error(
             'Failed to fetch department members.'
           );
         }
 
-        const data: Member[] =
-          await response.json();
+        const allUsers: BackendUser[] = await usersRes.json();
+        const deptName = department.name.trim().toLowerCase();
+
+        const filteredMembers: Member[] = allUsers
+          .filter((u) => {
+            if (!u.department || !u.department.trim()) return false;
+            const uDept = u.department.trim().toLowerCase();
+            return (
+              uDept === deptName ||
+              (deptName.includes('quality') && uDept.includes('quality'))
+            );
+          })
+          .map((u) => ({
+            id: u.employeeId,
+            fullName: u.name,
+            email: u.email,
+            employeeId: String(u.employeeId),
+            designation: u.designation || u.role || 'Member',
+          }));
 
         setDepartmentMembers(
           (previous) => ({
             ...previous,
 
             [department.id]:
-              data,
+              filteredMembers,
           })
         );
 
@@ -1618,7 +1634,7 @@ export const AdminDepartments: React.FC = () => {
                   ? {
                       ...item,
                       members:
-                        data.length,
+                        filteredMembers.length,
                     }
                   : item
             )
@@ -1630,7 +1646,7 @@ export const AdminDepartments: React.FC = () => {
               ? {
                   ...previous,
                   members:
-                    data.length,
+                    filteredMembers.length,
                 }
               : previous
         );

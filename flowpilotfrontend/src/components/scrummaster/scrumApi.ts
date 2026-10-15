@@ -131,6 +131,7 @@ export interface Member {
   email: string;
   role: string;
   initials: string;
+  department?: string | null;
 }
 
 export interface Card {
@@ -149,12 +150,27 @@ export interface Card {
   assigneeId: number | null;
   assigneeName: string | null;
   assigneeInitials: string;
+  assigneeDepartment?: string | null;
+  assigneeEmail?: string | null;
+  assigneeRole?: string | null;
   reporterId: number | null;
   reporterName: string | null;
   sprintId: number | null;
   daysInColumn: number;
   stuck: boolean;
   overdue: boolean;
+  subtaskCount?: number;
+  completedSubtaskCount?: number;
+}
+
+export interface Subtask {
+  id: number;
+  taskId: number;
+  title: string;
+  completed: boolean;
+  assigneeId: number | null;
+  assigneeName: string | null;
+  assigneeInitials: string;
 }
 
 export interface BoardColumn {
@@ -740,4 +756,69 @@ export const isNoActiveSprint = (message: string): boolean => {
     m.includes('sprints yet')
   );
 };
+
+// ============================================
+// SUBTASKS
+// ============================================
+
+export const fetchSubtasks = (taskId: number) =>
+  request<Subtask[]>(`/subtasks/task/${taskId}`);
+
+export const createSubtask = (taskId: number, title: string, assigneeId?: number | null) =>
+  request<Subtask>(`/subtasks/task/${taskId}`, {
+    method: 'POST',
+    body: JSON.stringify({ title, assigneeId: assigneeId ?? null })
+  });
+
+export const updateSubtask = (
+  subtaskId: number,
+  body: { title?: string; completed?: boolean; assigneeId?: number | null; unassign?: boolean }
+) =>
+  request<Subtask>(`/subtasks/${subtaskId}`, {
+    method: 'PATCH',
+    body: JSON.stringify(body)
+  });
+
+export const toggleSubtask = (subtaskId: number) =>
+  request<Subtask>(`/subtasks/${subtaskId}/toggle`, {
+    method: 'PATCH'
+  });
+
+export const deleteSubtask = (subtaskId: number) =>
+  request<{ success: boolean }>(`/subtasks/${subtaskId}`, {
+    method: 'DELETE'
+  });
+
+// ============================================
+// REQUIREMENTS DOCUMENTS
+// ============================================
+
+export interface RequirementDoc {
+  id: number;
+  projectId?: number | null;
+  projectName?: string;
+  title: string;
+  docType: string;
+  content: string;
+  fileUrl?: string | null;
+  version: string;
+  status: string;
+  createdBy: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export const fetchRequirementDocs = (projectId?: number) =>
+  request<RequirementDoc[]>(`/requirements${query({ projectId })}`);
+
+export const createRequirementDoc = (body: Partial<RequirementDoc>) =>
+  request<RequirementDoc>('/requirements', { method: 'POST', body: JSON.stringify(body) });
+
+export const updateRequirementDoc = (id: number, body: Partial<RequirementDoc>) =>
+  request<RequirementDoc>(`/requirements/${id}`, { method: 'PUT', body: JSON.stringify(body) });
+
+export const deleteRequirementDoc = (id: number) =>
+  request<void>(`/requirements/${id}`, { method: 'DELETE' });
+
+
 

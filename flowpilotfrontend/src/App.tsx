@@ -45,12 +45,19 @@ export function App() {
   if (currentView === 'dashboard' && activeRole) {
     const logout = () => { setActiveRole(''); setCurrentView('landing'); };
     switch (activeRole) {
+      case 'SUPER_ADMIN':
       case 'Super Admin': return <SuperAdminLayout onLogout={logout} />;
+      case 'ADMIN':
       case 'Admin': return <AdminLayout onLogout={logout} />;
+      case 'PROJECT_MANAGER':
       case 'Project Manager': return <PMLayout onLogout={logout} />;
+      case 'SCRUM_MASTER':
       case 'Scrum Master': return <ScrumMasterLayout onLogout={logout} />;
+      case 'DEVELOPER':
       case 'Developer': return <DeveloperLayout onLogout={logout} />;
+      case 'QA_ENGINEER':
       case 'QA Engineer': return <QALayout onLogout={logout} />;
+      case 'VIEWER':
       case 'Viewer': return <ViewerLayout onLogout={logout} />;
       default: return <SuperAdminLayout onLogout={logout} />;
     }
