@@ -43,12 +43,11 @@ public class AuthService {
          * Verify that the role selected during login
          * matches the role assigned to the user.
          */
-        if (request.getRole() == null ||
-                user.getRole() == null ||
-                !request.getRole().trim().equalsIgnoreCase(
-                        user.getRole().trim()
-                )) {
+        String reqRole = normalizeRole(request.getRole());
+        String userRole = normalizeRole(user.getRole());
 
+        if (reqRole.isEmpty() || !reqRole.equals(userRole)) {
+                
             throw new BadCredentialsException(
                     "You are not authorized to login with this role"
             );
@@ -86,5 +85,15 @@ public class AuthService {
                 user.getName(),
                 user.getId()
         );
+    }
+
+    private String normalizeRole(String role) {
+        if (role == null) {
+            return "";
+        }
+        return role.trim()
+                .toUpperCase()
+                .replace(" ", "_")
+                .replace("-", "_");
     }
 }

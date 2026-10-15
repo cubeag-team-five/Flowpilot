@@ -58,6 +58,12 @@ public class QABugReport {
     )
     private String stepsToReproduce;
 
+    @Column(
+            name = "screenshot",
+            columnDefinition = "TEXT"
+    )
+    private String screenshot;
+
     private String status;
 
     @Column(name = "created_at")
@@ -258,5 +264,13 @@ public class QABugReport {
 
         this.createdAt =
                 createdAt;
+    }
+
+    public String getScreenshot() {
+        return screenshot;
+    }
+
+    public void setScreenshot(String screenshot) {
+        this.screenshot = screenshot;
     }
 }

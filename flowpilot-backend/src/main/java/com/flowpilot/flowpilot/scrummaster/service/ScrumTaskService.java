@@ -47,16 +47,22 @@ public class ScrumTaskService {
     private final ScrumTaskRepository taskRepository;
     private final ScrumSprintRepository sprintRepository;
     private final UserRepository userRepository;
+    private final com.flowpilot.flowpilot.superadmin.repository.SuperAdminUserRepository superAdminUserRepository;
+    private final com.flowpilot.flowpilot.scrummaster.repository.ScrumSubtaskRepository subtaskRepository;
 
 
     public ScrumTaskService(
             ScrumTaskRepository taskRepository,
             ScrumSprintRepository sprintRepository,
-            UserRepository userRepository
+            UserRepository userRepository,
+            com.flowpilot.flowpilot.superadmin.repository.SuperAdminUserRepository superAdminUserRepository,
+            com.flowpilot.flowpilot.scrummaster.repository.ScrumSubtaskRepository subtaskRepository
     ) {
         this.taskRepository = taskRepository;
         this.sprintRepository = sprintRepository;
         this.userRepository = userRepository;
+        this.superAdminUserRepository = superAdminUserRepository;
+        this.subtaskRepository = subtaskRepository;
     }
 
 
@@ -78,6 +84,7 @@ public class ScrumTaskService {
         List<ScrumTaskDto.Member> members = new ArrayList<>(users.size());
 
         for (User user : users) {
+            String department = resolveDepartment(user.getEmail(), user.getRole());
 
             members.add(
                     new ScrumTaskDto.Member(
@@ -85,12 +92,33 @@ public class ScrumTaskService {
                             user.getName(),
                             user.getEmail(),
                             user.getRole(),
-                            initialsOf(user.getName())
+                            initialsOf(user.getName()),
+                            department
                     )
             );
         }
 
         return members;
+    }
+
+    private String resolveDepartment(String email, String role) {
+        if (email != null && !email.isBlank() && superAdminUserRepository != null) {
+            var opt = superAdminUserRepository.findByEmail(email.trim());
+            if (opt.isPresent() && opt.get().getDepartment() != null && !opt.get().getDepartment().isBlank()) {
+                return opt.get().getDepartment().trim();
+            }
+        }
+        if (role != null && !role.isBlank()) {
+            return switch (role.trim().toUpperCase()) {
+                case "DEVELOPER" -> "Engineering";
+                case "QA" -> "Quality Assurance";
+                case "SCRUMMASTER", "SCRUM_MASTER" -> "Scrum Team";
+                case "PM", "PROJECT_MANAGER" -> "Project Management";
+                case "ADMIN" -> "Administration";
+                default -> "General";
+            };
+        }
+        return "Engineering";
     }
 
 
@@ -132,13 +160,26 @@ public class ScrumTaskService {
 
 
     // ============================================
+    // GET SINGLE TASK
+    // ============================================
+    public ScrumTaskDto.Card getTask(Long taskId) {
+        return toCard(requireTask(taskId));
+    }
+
+
+    // ============================================
     // BACKLOG
     // Tasks not yet pulled into any sprint
     // ============================================
     public List<ScrumTaskDto.Card> listBacklog() {
+        return listBacklog(null);
+    }
 
-        List<ScrumTask> tasks =
-                taskRepository.findBySprintIsNullOrderByTaskKeyAsc();
+    public List<ScrumTaskDto.Card> listBacklog(Long projectId) {
+
+        List<ScrumTask> tasks = (projectId != null)
+                ? taskRepository.findBySprintIsNullAndProjectIdOrderByTaskKeyAsc(projectId)
+                : taskRepository.findBySprintIsNullOrderByTaskKeyAsc();
 
         List<ScrumTaskDto.Card> cards = new ArrayList<>(tasks.size());
 
@@ -199,6 +240,10 @@ public class ScrumTaskService {
 
         if (request.sprintId() != null) {
             task.setSprint(requireSprint(request.sprintId()));
+        }
+
+        if (request.projectId() != null) {
+            task.setProjectId(request.projectId());
         }
 
         // moveTo rather than setStatus even on a fresh row, so enteredStatusAt
@@ -458,6 +503,9 @@ public class ScrumTaskService {
         User reporter = task.getReporter();
         ScrumSprint sprint = task.getSprint();
 
+        int subtaskCount = task.getId() != null ? subtaskRepository.countByTaskId(task.getId()) : 0;
+        int completedSubtaskCount = task.getId() != null ? subtaskRepository.countByTaskIdAndCompletedTrue(task.getId()) : 0;
+
         return new ScrumTaskDto.Card(
                 task.getId(),
                 task.getTaskKey(),
@@ -473,16 +521,21 @@ public class ScrumTaskService {
                 task.getBlockedReason(),
                 assignee == null ? null : assignee.getId(),
                 assignee == null ? null : assignee.getName(),
-                // Left null rather than the entity's "?" so a client can tell
-                // an unassigned card from a member with a missing name
                 assignee == null ? null : task.getAssigneeInitials(),
+                assignee == null ? null : resolveDepartment(assignee.getEmail(), assignee.getRole()),
+                assignee == null ? null : assignee.getEmail(),
+                assignee == null ? null : assignee.getRole(),
                 reporter == null ? null : reporter.getId(),
                 reporter == null ? null : reporter.getName(),
                 // Reading the id off the lazy proxy does not load the sprint
                 sprint == null ? null : sprint.getId(),
                 task.getDaysInColumn(),
                 isStuck(task),
-                task.isOverdue()
+                task.isOverdue(),
+                subtaskCount,
+                completedSubtaskCount,
+                task.getProjectId(),
+                null
         );
     }
 

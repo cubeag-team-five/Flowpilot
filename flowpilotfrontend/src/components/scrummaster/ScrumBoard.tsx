@@ -21,6 +21,7 @@ import {
   fetchBoard,
   fetchSprints,
   fetchProjects,
+  isNoActiveSprint,
   moveTask,
   setWipLimit,
   createTask,
@@ -157,13 +158,7 @@ const formatDue = (iso: string): string => {
     : date.toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
 };
 
-/**
- * The API client throws the backend's message rather than a status code, so the
- * "no active sprint" 404 is recognised by its text. It is the normal state for
- * a new team, not a fault, so it must not render as an error.
- */
-const isNoActiveSprint = (message: string): boolean =>
-  message.toLowerCase().includes('no active sprint');
+
 
 export const ScrumBoard: React.FC = () => {
   const [board, setBoard] = useState<Board | null>(null);
@@ -223,11 +218,11 @@ export const ScrumBoard: React.FC = () => {
     () => ({
       projectId: projectId === '' ? undefined : projectId,
       sprintId: sprintId === '' ? undefined : sprintId,
-      assigneeId: assigneeId === '' ? undefined : assigneeId,
+      assigneeId: unassigned ? undefined : (assigneeId === '' ? undefined : assigneeId),
       priority: priority === '' ? undefined : priority,
       label: label || undefined,
       search: search || undefined,
-      unassigned: unassigned || undefined
+      unassigned: unassigned ? true : undefined
     }),
     [projectId, sprintId, assigneeId, priority, label, search, unassigned]
   );
@@ -239,6 +234,7 @@ export const ScrumBoard: React.FC = () => {
     try {
       setBoard(await fetchBoard(filters));
     } catch (err) {
+      setBoard(null);
       setError(err instanceof Error ? err.message : 'Could not load the board');
     } finally {
       setLoading(false);
@@ -545,39 +541,131 @@ export const ScrumBoard: React.FC = () => {
     );
   }
 
-  // No running sprint is the expected state for a new team, not a failure
+  // No running sprint is the expected state for a new team/project, not a failure
   if (error && isNoActiveSprint(error)) {
     return (
-      <div className={`${SURFACE.card} ${SURFACE.pad} max-w-2xl`}>
-        <div className="flex items-center gap-2">
-          <FiCalendar size={16} className="text-slate-400 shrink-0" aria-hidden="true" />
-          <h2 className={`${TYPE.title} text-slate-900`}>No sprint is running</h2>
+      <div className="space-y-4">
+        {/* Header with project picker so the user can easily switch to another project */}
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div className="min-w-0">
+            <h2 className={`${TYPE.title} text-slate-900`}>Scrum Board</h2>
+            <p className={`${TYPE.meta} text-slate-500`}>
+              {projectId !== ''
+                ? (projects.find((p) => p.id === projectId)?.name ?? `Project ${projectId}`)
+                : 'All projects'}
+              {refreshing && <span className="text-slate-400"> · updating…</span>}
+            </p>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2">
+            <label className="sr-only" htmlFor="board-project">Project</label>
+            <select
+              id="board-project"
+              value={projectId}
+              onChange={(event) =>
+                handleProjectChange(
+                  event.target.value === '' ? '' : Number(event.target.value)
+                )}
+              className={`${TYPE.meta} ${FIELD.select} max-w-[14rem] truncate`}
+            >
+              <option value="">All projects</option>
+              {projects.map((project) => (
+                <option key={project.id} value={project.id}>
+                  {project.name ?? project.code ?? `Project ${project.id}`}
+                </option>
+              ))}
+            </select>
+
+            <button
+              type="button"
+              onClick={() => void load()}
+              className={`${TYPE.meta} ${FIELD.button} ${FIELD.secondary}`}
+            >
+              <FiRefreshCw size={13} className={refreshing ? 'animate-spin' : undefined} aria-hidden="true" /> Refresh
+            </button>
+          </div>
         </div>
-        <p className={`${TYPE.body} text-slate-600 mt-3 leading-relaxed`}>
-          Open <span className="font-medium text-slate-900">Sprint Cycles</span>, create a sprint, pull in the work the team is committing to, then press Start. The board fills in from that moment.
-        </p>
-        <button
-          type="button"
-          onClick={() => void load()}
-          className={`${TYPE.meta} ${FIELD.button} ${FIELD.secondary} mt-4`}
-        >
-          <FiRefreshCw size={13} aria-hidden="true" /> Check again
-        </button>
+
+        <div className={`${SURFACE.card} ${SURFACE.pad} max-w-2xl`}>
+          <div className="flex items-center gap-2">
+            <FiCalendar size={16} className="text-slate-400 shrink-0" aria-hidden="true" />
+            <h2 className={`${TYPE.title} text-slate-900`}>No sprint is running</h2>
+          </div>
+          <p className={`${TYPE.body} text-slate-600 mt-3 leading-relaxed`}>
+            {projectId !== ''
+              ? 'This project has no sprint yet. Open Sprint Cycles to create and start a sprint for this project, or select a different project above.'
+              : 'Open Sprint Cycles, create a sprint, pull in the work the team is committing to, then press Start. The board fills in from that moment.'}
+          </p>
+          <div className="flex flex-wrap items-center gap-3 mt-4">
+            <button
+              type="button"
+              onClick={() => void load()}
+              className={`${TYPE.meta} ${FIELD.button} ${FIELD.secondary}`}
+            >
+              <FiRefreshCw size={13} className={refreshing ? 'animate-spin' : undefined} aria-hidden="true" /> Check again
+            </button>
+            {projectId !== '' && (
+              <button
+                type="button"
+                onClick={() => handleProjectChange('')}
+                className={`${TYPE.meta} ${FIELD.button} ${FIELD.secondary}`}
+              >
+                View all projects
+              </button>
+            )}
+          </div>
+        </div>
       </div>
     );
   }
 
   if (error && !board) {
     return (
-      <div className={`${SURFACE.card} ${SURFACE.pad} border-rose-500/20`}>
-        <p className={`${TYPE.body} text-rose-600`} role="alert">{error}</p>
-        <button
-          type="button"
-          onClick={() => void load()}
-          className={`${TYPE.meta} ${FIELD.button} ${FIELD.secondary} mt-3`}
-        >
-          <FiRefreshCw size={13} aria-hidden="true" /> Try again
-        </button>
+      <div className="space-y-4">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div className="min-w-0">
+            <h2 className={`${TYPE.title} text-slate-900`}>Scrum Board</h2>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2">
+            <label className="sr-only" htmlFor="board-project-err">Project</label>
+            <select
+              id="board-project-err"
+              value={projectId}
+              onChange={(event) =>
+                handleProjectChange(
+                  event.target.value === '' ? '' : Number(event.target.value)
+                )}
+              className={`${TYPE.meta} ${FIELD.select} max-w-[14rem] truncate`}
+            >
+              <option value="">All projects</option>
+              {projects.map((project) => (
+                <option key={project.id} value={project.id}>
+                  {project.name ?? project.code ?? `Project ${project.id}`}
+                </option>
+              ))}
+            </select>
+
+            <button
+              type="button"
+              onClick={() => void load()}
+              className={`${TYPE.meta} ${FIELD.button} ${FIELD.secondary}`}
+            >
+              <FiRefreshCw size={13} className={refreshing ? 'animate-spin' : undefined} aria-hidden="true" /> Refresh
+            </button>
+          </div>
+        </div>
+
+        <div className={`${SURFACE.card} ${SURFACE.pad} border-rose-500/20`}>
+          <p className={`${TYPE.body} text-rose-600`} role="alert">{error}</p>
+          <button
+            type="button"
+            onClick={() => void load()}
+            className={`${TYPE.meta} ${FIELD.button} ${FIELD.secondary} mt-3`}
+          >
+            <FiRefreshCw size={13} className={refreshing ? 'animate-spin' : undefined} aria-hidden="true" /> Try again
+          </button>
+        </div>
       </div>
     );
   }
@@ -695,13 +783,18 @@ export const ScrumBoard: React.FC = () => {
             <label className="sr-only" htmlFor="board-assignee">Assignee</label>
             <select
               id="board-assignee"
-              value={assigneeId}
-              onChange={(event) =>
-                setAssigneeId(event.target.value === '' ? '' : Number(event.target.value))
-              }
-              className={`${TYPE.body} ${FIELD.select} w-full py-2`}
+              value={unassigned ? '' : assigneeId}
+              disabled={unassigned}
+              onChange={(event) => {
+                const val = event.target.value === '' ? '' : Number(event.target.value);
+                setAssigneeId(val);
+                if (val !== '') {
+                  setUnassigned(false);
+                }
+              }}
+              className={`${TYPE.body} ${FIELD.select} w-full py-2 disabled:opacity-60 disabled:cursor-not-allowed`}
             >
-              <option value="">Any assignee</option>
+              <option value="">{unassigned ? 'Unassigned only selected' : 'Any assignee'}</option>
               {board.members.map((member) => (
                 <option key={member.id} value={member.id}>
                   {member.name ?? member.email}
@@ -750,7 +843,13 @@ export const ScrumBoard: React.FC = () => {
             <input
               type="checkbox"
               checked={unassigned}
-              onChange={(event) => setUnassigned(event.target.checked)}
+              onChange={(event) => {
+                const checked = event.target.checked;
+                setUnassigned(checked);
+                if (checked) {
+                  setAssigneeId('');
+                }
+              }}
               className="w-4 h-4 rounded border-slate-300 accent-emerald-600
                 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-500"
             />

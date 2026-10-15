@@ -111,6 +111,17 @@ public class ScrumTask {
     @JoinColumn(name = "sprint_id")
     private ScrumSprint sprint;
 
+    @Column(name = "project_id")
+    private Long projectId;
+
+    public Long getProjectId() {
+        return projectId;
+    }
+
+    public void setProjectId(Long projectId) {
+        this.projectId = projectId;
+    }
+
     @Column(name = "entered_status_at", nullable = false)
     private LocalDateTime enteredStatusAt;
 

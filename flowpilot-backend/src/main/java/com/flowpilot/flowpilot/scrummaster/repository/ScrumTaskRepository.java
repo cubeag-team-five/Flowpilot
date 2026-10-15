@@ -17,6 +17,8 @@ public interface ScrumTaskRepository
     /** Backlog: everything not attached to a sprint. */
     List<ScrumTask> findBySprintIsNullOrderByTaskKeyAsc();
 
+    List<ScrumTask> findBySprintIsNullAndProjectIdOrderByTaskKeyAsc(Long projectId);
+
     long countBySprintIdAndStatus(Long sprintId, ScrumTask.Status status);
 
     long countBySprintId(Long sprintId);
@@ -86,4 +88,10 @@ public interface ScrumTaskRepository
         GROUP BY t.priority
     """)
     List<Object[]> distributionByPriority(@Param("sprintId") Long sprintId);
+
+    List<ScrumTask> findByAssigneeId(Long assigneeId);
+
+    List<ScrumTask> findByAssigneeIdOrderByStatusAscTaskKeyAsc(Long assigneeId);
+
+    List<ScrumTask> findByAssigneeEmailIgnoreCase(String email);
 }

@@ -8,6 +8,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -80,6 +81,7 @@ public class ScrumBoardService {
     private final UserRepository userRepository;
     private final ScrumTaskService taskService;
     private final ScrumProjectService projectService;
+    private final com.flowpilot.flowpilot.superadmin.repository.SuperAdminUserRepository superAdminUserRepository;
 
 
     public ScrumBoardService(
@@ -88,7 +90,8 @@ public class ScrumBoardService {
             ScrumWipLimitRepository wipLimitRepository,
             UserRepository userRepository,
             ScrumTaskService taskService,
-            ScrumProjectService projectService
+            ScrumProjectService projectService,
+            com.flowpilot.flowpilot.superadmin.repository.SuperAdminUserRepository superAdminUserRepository
     ) {
         this.taskRepository = taskRepository;
         this.sprintRepository = sprintRepository;
@@ -96,6 +99,7 @@ public class ScrumBoardService {
         this.userRepository = userRepository;
         this.taskService = taskService;
         this.projectService = projectService;
+        this.superAdminUserRepository = superAdminUserRepository;
     }
 
 
@@ -122,7 +126,38 @@ public class ScrumBoardService {
             BoardFilter filter
     ) {
 
-        ScrumSprint sprint = resolveSprint(projectId, sprintId);
+        Optional<ScrumSprint> sprintOpt = findSprint(projectId, sprintId);
+
+        if (sprintOpt.isEmpty()) {
+            if (sprintId != null) {
+                throw new ScrumNotFoundException("Sprint " + sprintId + " not found.");
+            }
+            List<ScrumBoardDto.Column> emptyColumns = new ArrayList<>();
+            Map<ScrumTask.Status, Integer> limits = loadWipLimits();
+            for (Map.Entry<ScrumTask.Status, String> column : COLUMN_LABELS.entrySet()) {
+                ScrumTask.Status status = column.getKey();
+                Integer wipLimit = limits.get(status);
+                emptyColumns.add(new ScrumBoardDto.Column(
+                        status.name(),
+                        column.getValue(),
+                        0, 0, wipLimit, false, 0, List.of()
+                ));
+            }
+            return new ScrumBoardDto.Response(
+                    projectId,
+                    projectNameOf(projectId),
+                    null,
+                    "No Sprints",
+                    null,
+                    0,
+                    0,
+                    List.of(),
+                    loadMembers(projectId),
+                    emptyColumns
+            );
+        }
+
+        ScrumSprint sprint = sprintOpt.get();
 
         // The sprint is the authority on the project, not the request: asking
         // for no project and landing on a sprint still tells the client which
@@ -333,65 +368,55 @@ public class ScrumBoardService {
     // HELPERS
     // ============================================
 
-    private ScrumSprint resolveSprint(Long projectId, Long sprintId) {
+    private Optional<ScrumSprint> findSprint(Long projectId, Long sprintId) {
 
         if (sprintId != null) {
 
-            ScrumSprint sprint = sprintRepository.findById(sprintId)
-                    .orElseThrow(() -> new ScrumNotFoundException(
-                            "Sprint " + sprintId + " not found."));
+            Optional<ScrumSprint> sprintOpt = sprintRepository.findById(sprintId);
 
-            // Both were named and they disagree. Refusing beats rendering one
-            // project's cards under another project's heading, which is the
-            // kind of wrong that gets acted on before it gets noticed.
-            if (projectId != null && !projectId.equals(sprint.getProjectId())) {
+            if (sprintOpt.isPresent()) {
+                ScrumSprint sprint = sprintOpt.get();
+                if (projectId != null && !projectId.equals(sprint.getProjectId())) {
 
-                throw new ScrumValidationException(
-                        "Sprint " + sprintId + " belongs to "
-                                + (sprint.getProjectId() == null
-                                        ? "no project"
-                                        : "project " + sprint.getProjectId())
-                                + ", not project " + projectId + ".");
+                    throw new ScrumValidationException(
+                            "Sprint " + sprintId + " belongs to "
+                                    + (sprint.getProjectId() == null
+                                            ? "no project"
+                                            : "project " + sprint.getProjectId())
+                                    + ", not project " + projectId + ".");
+                }
             }
 
-            return sprint;
+            return sprintOpt;
         }
 
         if (projectId != null) {
 
-            // Active first, else the newest one, so choosing a project always
-            // lands on a board instead of an error the user cannot act on.
             return sprintRepository
-                    .findFirstByProjectIdAndStatus(projectId, ScrumSprint.Status.ACTIVE)
+                    .findFirstByProjectIdAndStatusOrderBySprintNumberDesc(projectId, ScrumSprint.Status.ACTIVE)
+                    .or(() -> sprintRepository
+                            .findFirstByProjectIdAndStatusOrderByIdDesc(projectId, ScrumSprint.Status.ACTIVE))
+                    .or(() -> sprintRepository
+                            .findFirstByProjectIdAndStatusOrderBySprintNumberDesc(projectId, ScrumSprint.Status.PLANNED))
                     .or(() -> sprintRepository
                             .findFirstByProjectIdOrderBySprintNumberDesc(projectId))
-                    .orElseThrow(() -> new ScrumNotFoundException(
-                            "Project " + projectId + " has no sprint yet."
-                                    + " Create one on the Sprints screen."));
+                    .or(() -> sprintRepository
+                            .findFirstByProjectIdOrderByIdDesc(projectId));
         }
 
-        return sprintRepository.findCurrentOrLatest()
-                .orElseThrow(() -> new ScrumNotFoundException(
-                        "No sprints yet. Create one on the Sprints screen."));
+        return sprintRepository.findCurrentOrLatest();
     }
 
 
-    /** Project name for the board header; null ids and gone projects read null. */
     private String projectNameOf(Long projectId) {
 
         if (projectId == null) {
             return null;
         }
 
-        try {
-            return projectService.getProject(projectId).name();
-
-        } catch (ScrumNotFoundException gone) {
-
-            // A sprint can outlive the project it was planned under. That is
-            // the PM module's business, not a reason to fail the whole board.
-            return null;
-        }
+        return projectService.findProject(projectId)
+                .map(ScrumProjectDto.Project::name)
+                .orElse(null);
     }
 
 
@@ -562,9 +587,30 @@ public class ScrumBoardService {
                         user.getName(),
                         user.getEmail(),
                         user.getRole(),
-                        initialsOf(user.getName())
+                        initialsOf(user.getName()),
+                        resolveDepartment(user.getEmail(), user.getRole())
                 ))
                 .toList();
+    }
+
+    private String resolveDepartment(String email, String role) {
+        if (email != null && !email.isBlank() && superAdminUserRepository != null) {
+            var opt = superAdminUserRepository.findByEmail(email.trim());
+            if (opt.isPresent() && opt.get().getDepartment() != null && !opt.get().getDepartment().isBlank()) {
+                return opt.get().getDepartment().trim();
+            }
+        }
+        if (role != null && !role.isBlank()) {
+            return switch (role.trim().toUpperCase()) {
+                case "DEVELOPER" -> "Engineering";
+                case "QA" -> "Quality Assurance";
+                case "SCRUMMASTER", "SCRUM_MASTER" -> "Scrum Team";
+                case "PM", "PROJECT_MANAGER" -> "Project Management";
+                case "ADMIN" -> "Administration";
+                default -> "General";
+            };
+        }
+        return "Engineering";
     }
 
 

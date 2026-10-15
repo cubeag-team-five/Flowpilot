@@ -42,7 +42,7 @@ export const SuperAdminDepartments: React.FC = () => {
   const [showMembers, setShowMembers] = useState(false);
 
   /*
-   * Fetch departments
+   * Fetch departments & calculate real project counts from PM Projects
    */
   useEffect(() => {
     const fetchDepartments = async () => {
@@ -51,24 +51,73 @@ export const SuperAdminDepartments: React.FC = () => {
 
         const token = localStorage.getItem('token');
 
-        const response = await fetch(
-          'http://localhost:8080/api/admin/departments',
-          {
-            method: 'GET',
+        const [deptRes, projRes] = await Promise.all([
+          fetch('http://localhost:8080/api/admin/departments', {
             headers: {
               'Content-Type': 'application/json',
               Authorization: `Bearer ${token}`,
             },
-          }
-        );
+          }),
+          fetch('http://localhost:8080/api/pm/projects', {
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${token}`,
+            },
+          }),
+        ]);
 
-        if (!response.ok) {
+        if (!deptRes.ok) {
           throw new Error('Failed to fetch departments');
         }
 
-        const data: Department[] = await response.json();
+        const data: Department[] = await deptRes.json();
+        let projects: any[] = [];
+        if (projRes.ok) {
+          projects = await projRes.json();
+        }
 
-        setDepartments(data);
+        // Fetch users to know which user belongs to which department for project counting
+        const usersRes = await fetch('http://localhost:8080/api/superadmin/users', {
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        let usersMap: Record<number, string> = {};
+        if (usersRes.ok) {
+          const users = await usersRes.json();
+          users.forEach((u: any) => {
+            if (u.employeeId && u.department) {
+              usersMap[u.employeeId] = u.department.trim().toLowerCase();
+            }
+          });
+        }
+
+        // Map real project count per department
+        const updatedDepartments = data.map((dept) => {
+          const deptNameLower = dept.name.trim().toLowerCase();
+          const count = projects.filter((p) => {
+            if (!p.teamMemberIds || !Array.isArray(p.teamMemberIds)) return false;
+            return p.teamMemberIds.some((empId: number) => {
+              const uDept = usersMap[empId];
+              return (
+                uDept &&
+                (uDept === deptNameLower ||
+                  uDept.includes(deptNameLower) ||
+                  deptNameLower.includes(uDept) ||
+                  (deptNameLower.includes('quality') && uDept.includes('quality')))
+              );
+            });
+          }).length;
+
+          return {
+            ...dept,
+            progress: count, // Store real project count in department progress field or standard count
+          };
+        });
+
+        setDepartments(updatedDepartments);
       } catch (error) {
         console.error('Error fetching departments:', error);
       } finally {
@@ -80,10 +129,9 @@ export const SuperAdminDepartments: React.FC = () => {
   }, []);
 
   /*
-   * Fetch members from adminmember table
-   *
-   * Backend endpoint:
-   * GET /api/admin/departments/{departmentId}/members
+   * Fetch members for selected department.
+   * Fetches users from SuperAdmin users pool assigned to this department,
+   * plus explicit department members.
    */
   const handleManageMembers = async (department: Department) => {
     try {
@@ -94,10 +142,10 @@ export const SuperAdminDepartments: React.FC = () => {
 
       const token = localStorage.getItem('token');
 
-      const response = await fetch(
+      // 1. Fetch explicit department members
+      const deptMembersRes = await fetch(
         `http://localhost:8080/api/admin/departments/${department.id}/members`,
         {
-          method: 'GET',
           headers: {
             'Content-Type': 'application/json',
             Authorization: `Bearer ${token}`,
@@ -105,30 +153,65 @@ export const SuperAdminDepartments: React.FC = () => {
         }
       );
 
-      if (!response.ok) {
-        throw new Error(
-          `Failed to fetch members: ${response.status}`
-        );
+      let explicitMembers: DepartmentMember[] = [];
+      if (deptMembersRes.ok) {
+        explicitMembers = await deptMembersRes.json();
       }
 
-      /*
-       * These records come from the backend.
-       * Backend should fetch them from adminmember table.
-       */
-      const data: DepartmentMember[] = await response.json();
+      // 2. Fetch all system users and filter by department name
+      const usersRes = await fetch('http://localhost:8080/api/superadmin/users', {
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+      });
 
-      setDepartmentMembers(data);
+      let systemMembers: DepartmentMember[] = [];
+      if (usersRes.ok) {
+        const users = await usersRes.json();
+        const deptName = department.name.trim().toLowerCase();
+        systemMembers = users
+          .filter((u: any) => {
+            if (!u.department) return false;
+            const uDept = u.department.trim().toLowerCase();
+            return (
+              uDept === deptName ||
+              uDept.includes(deptName) ||
+              deptName.includes(uDept) ||
+              (deptName.includes('quality') && uDept.includes('quality'))
+            );
+          })
+          .map((u: any) => ({
+            id: u.employeeId,
+            fullName: u.name,
+            email: u.email,
+            employeeId: String(u.employeeId),
+            designation: u.designation || u.role || 'Member',
+          }));
+      }
+
+      // Combine and remove duplicates by email or employeeId
+      const combined = [...explicitMembers];
+      systemMembers.forEach((sm) => {
+        const exists = combined.some(
+          (m) =>
+            m.email?.toLowerCase() === sm.email?.toLowerCase() ||
+            String(m.employeeId) === String(sm.employeeId)
+        );
+        if (!exists) {
+          combined.push(sm);
+        }
+      });
+
+      setDepartmentMembers(combined);
     } catch (error) {
-      console.error(
-        'Error fetching department members:',
-        error
-      );
-
+      console.error('Error fetching department members:', error);
       setDepartmentMembers([]);
     } finally {
       setLoadingMembers(false);
     }
   };
+
 
   /*
    * Close members modal
@@ -143,98 +226,77 @@ export const SuperAdminDepartments: React.FC = () => {
    * Existing department styles
    */
   const getDepartmentStyle = (name: string) => {
-    switch (name.toLowerCase()) {
-      case 'engineering':
-        return {
-          icon: <Settings size={18} />,
-          iconBg: 'bg-cyan-50',
-          iconColor: 'text-slate-400',
-          buttonBg: 'bg-cyan-50',
-          buttonColor: 'text-cyan-400',
-          borderColor: 'border-cyan-100',
-          memberColor: 'text-slate-900',
-          projectColor: 'text-cyan-400',
-          projects: 8,
-        };
+    const lower = name.toLowerCase();
 
-      case 'product':
-        return {
-          icon: <Package size={18} />,
-          iconBg: 'bg-purple-50',
-          iconColor: 'text-purple-400',
-          buttonBg: 'bg-purple-50',
-          buttonColor: 'text-purple-400',
-          borderColor: 'border-purple-100',
-          memberColor: 'text-slate-900',
-          projectColor: 'text-purple-400',
-          projects: 5,
-        };
+    let icon = <Briefcase size={18} />;
+    let iconBg = 'bg-slate-50';
+    let iconColor = 'text-slate-400';
+    let buttonBg = 'bg-slate-50';
+    let buttonColor = 'text-slate-400';
+    let borderColor = 'border-slate-100';
+    let memberColor = 'text-slate-900';
+    let projectColor = 'text-slate-400';
 
-      case 'quality assurance':
-        return {
-          icon: <ShieldCheck size={18} />,
-          iconBg: 'bg-emerald-50',
-          iconColor: 'text-emerald-400',
-          buttonBg: 'bg-emerald-50',
-          buttonColor: 'text-emerald-500',
-          borderColor: 'border-emerald-100',
-          memberColor: 'text-slate-900',
-          projectColor: 'text-emerald-500',
-          projects: 6,
-        };
-
-      case 'design':
-        return {
-          icon: <Palette size={18} />,
-          iconBg: 'bg-orange-50',
-          iconColor: 'text-pink-400',
-          buttonBg: 'bg-orange-50',
-          buttonColor: 'text-orange-500',
-          borderColor: 'border-orange-100',
-          memberColor: 'text-slate-900',
-          projectColor: 'text-orange-500',
-          projects: 4,
-        };
-
-      case 'operations':
-        return {
-          icon: <Briefcase size={18} />,
-          iconBg: 'bg-rose-50',
-          iconColor: 'text-blue-400',
-          buttonBg: 'bg-rose-50',
-          buttonColor: 'text-rose-500',
-          borderColor: 'border-rose-100',
-          memberColor: 'text-slate-900',
-          projectColor: 'text-red-500',
-          projects: 3,
-        };
-
-      case 'leadership':
-        return {
-          icon: <Crown size={18} />,
-          iconBg: 'bg-slate-50',
-          iconColor: 'text-orange-400',
-          buttonBg: 'bg-slate-50',
-          buttonColor: 'text-slate-400',
-          borderColor: 'border-slate-100',
-          memberColor: 'text-slate-900',
-          projectColor: 'text-slate-400',
-          projects: 24,
-        };
-
-      default:
-        return {
-          icon: <Briefcase size={18} />,
-          iconBg: 'bg-slate-50',
-          iconColor: 'text-slate-400',
-          buttonBg: 'bg-slate-50',
-          buttonColor: 'text-slate-400',
-          borderColor: 'border-slate-100',
-          memberColor: 'text-slate-900',
-          projectColor: 'text-slate-400',
-          projects: 0,
-        };
+    if (lower.includes('engineering')) {
+      icon = <Settings size={18} />;
+      iconBg = 'bg-cyan-50';
+      iconColor = 'text-slate-400';
+      buttonBg = 'bg-cyan-50';
+      buttonColor = 'text-cyan-400';
+      borderColor = 'border-cyan-100';
+      projectColor = 'text-cyan-400';
+    } else if (lower.includes('product')) {
+      icon = <Package size={18} />;
+      iconBg = 'bg-purple-50';
+      iconColor = 'text-purple-400';
+      buttonBg = 'bg-purple-50';
+      buttonColor = 'text-purple-400';
+      borderColor = 'border-purple-100';
+      projectColor = 'text-purple-400';
+    } else if (lower.includes('quality')) {
+      icon = <ShieldCheck size={18} />;
+      iconBg = 'bg-emerald-50';
+      iconColor = 'text-emerald-400';
+      buttonBg = 'bg-emerald-50';
+      buttonColor = 'text-emerald-500';
+      borderColor = 'border-emerald-100';
+      projectColor = 'text-emerald-500';
+    } else if (lower.includes('design')) {
+      icon = <Palette size={18} />;
+      iconBg = 'bg-orange-50';
+      iconColor = 'text-pink-400';
+      buttonBg = 'bg-orange-50';
+      buttonColor = 'text-orange-500';
+      borderColor = 'border-orange-100';
+      projectColor = 'text-orange-500';
+    } else if (lower.includes('operations')) {
+      icon = <Briefcase size={18} />;
+      iconBg = 'bg-rose-50';
+      iconColor = 'text-blue-400';
+      buttonBg = 'bg-rose-50';
+      buttonColor = 'text-rose-500';
+      borderColor = 'border-rose-100';
+      projectColor = 'text-red-500';
+    } else if (lower.includes('leadership')) {
+      icon = <Crown size={18} />;
+      iconBg = 'bg-slate-50';
+      iconColor = 'text-orange-400';
+      buttonBg = 'bg-slate-50';
+      buttonColor = 'text-slate-400';
+      borderColor = 'border-slate-100';
+      projectColor = 'text-slate-400';
     }
+
+    return {
+      icon,
+      iconBg,
+      iconColor,
+      buttonBg,
+      buttonColor,
+      borderColor,
+      memberColor,
+      projectColor,
+    };
   };
 
   return (
@@ -463,7 +525,7 @@ export const SuperAdminDepartments: React.FC = () => {
                         max-sm:leading-[23px]
                       `}
                     >
-                      {style.projects}
+                      {department.progress ?? 0}
                     </div>
                   </div>
                 </div>

@@ -16,6 +16,10 @@ public interface QATestCaseRepository
             Long scrumTaskId
     );
 
+    Optional<QATestCase> findByLinkedTask(
+            String linkedTask
+    );
+
     List<QATestCase> findByAssignedToIgnoreCase(
             String assignedTo
     );

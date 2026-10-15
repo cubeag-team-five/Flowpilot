@@ -55,16 +55,24 @@ public class ScrumMasterDashboardService {
 
     public Map<String, Object> getDashboard() {
 
-        ScrumSprint sprint = sprintRepository
-                .findCurrentOrLatest()
-                .orElseThrow(() -> new ScrumNotFoundException(
-                        "No sprints yet. Create one on the Sprints screen."));
-
+        java.util.Optional<ScrumSprint> sprintOpt = sprintRepository.findCurrentOrLatest();
         Map<String, Object> payload = new LinkedHashMap<>();
+
+        if (sprintOpt.isEmpty()) {
+            payload.put("sprint", null);
+            payload.put("kpis", Map.of());
+            payload.put("ceremonies", List.of());
+            payload.put("stuckTasks", List.of());
+            payload.put("hasSprints", false);
+            return payload;
+        }
+
+        ScrumSprint sprint = sprintOpt.get();
         payload.put("sprint", sprintService.toResponse(sprint));
         payload.put("kpis", analyticsService.buildKpis(sprint));
         payload.put("ceremonies", ceremonies(sprint));
         payload.put("stuckTasks", stuckTasks(sprint));
+        payload.put("hasSprints", true);
 
         return payload;
     }

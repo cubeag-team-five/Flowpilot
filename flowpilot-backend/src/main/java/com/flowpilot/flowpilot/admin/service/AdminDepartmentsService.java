@@ -16,13 +16,16 @@ public class AdminDepartmentsService {
 
     private final AdminDepartmentsRepository repository;
     private final AdminDepartmentMemberRepository memberRepository;
+    private final com.flowpilot.flowpilot.superadmin.repository.SuperAdminUserRepository superAdminUserRepository;
 
     public AdminDepartmentsService(
             AdminDepartmentsRepository repository,
-            AdminDepartmentMemberRepository memberRepository) {
+            AdminDepartmentMemberRepository memberRepository,
+            com.flowpilot.flowpilot.superadmin.repository.SuperAdminUserRepository superAdminUserRepository) {
 
         this.repository = repository;
         this.memberRepository = memberRepository;
+        this.superAdminUserRepository = superAdminUserRepository;
     }
 
     // =========================================================
@@ -77,14 +80,22 @@ public class AdminDepartmentsService {
         List<AdminDepartment> departments =
                 repository.findAll();
 
+        List<com.flowpilot.flowpilot.superadmin.model.SuperAdminUser> allUsers =
+                superAdminUserRepository.findAll();
+
         for (AdminDepartment department : departments) {
+            String deptNameLower = department.getName().trim().toLowerCase();
 
-            int memberCount =
-                    memberRepository
-                            .findByDepartment(department)
-                            .size();
+            long count = allUsers.stream()
+                    .filter(u -> {
+                        if (u.getDepartment() == null || u.getDepartment().isBlank()) return false;
+                        String uDept = u.getDepartment().trim().toLowerCase();
+                        return uDept.equals(deptNameLower) ||
+                               (deptNameLower.contains("quality") && uDept.contains("quality"));
+                    })
+                    .count();
 
-            department.setMembers(memberCount);
+            department.setMembers((int) count);
         }
 
         return departments;
