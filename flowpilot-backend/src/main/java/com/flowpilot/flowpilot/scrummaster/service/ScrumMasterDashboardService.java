@@ -84,8 +84,7 @@ public class ScrumMasterDashboardService {
      * are not meant to be moving yet.
      */
     private List<ScrumTaskDto.Card> stuckTasks(ScrumSprint sprint) {
-
-        List<ScrumTaskDto.Card> stuck = new ArrayList<>();
+        List<ScrumTask> idleTasks = new ArrayList<>();
 
         for (ScrumTask task : taskRepository
                 .findBySprintIdOrderByStatusAscTaskKeyAsc(sprint.getId())) {
@@ -95,11 +94,11 @@ public class ScrumMasterDashboardService {
                     && task.getStatus() != ScrumTask.Status.BACKLOG;
 
             if (idle && shouldBeMoving) {
-                stuck.add(taskService.toCard(task));
+                idleTasks.add(task);
             }
         }
 
-        return stuck;
+        return taskService.toCards(idleTasks);
     }
 
 

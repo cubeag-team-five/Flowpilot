@@ -49,6 +49,7 @@ export const ScrumTaskDetail: React.FC<Props> = ({ card, members, siblings, onSu
   const [subtasks, setSubtasks] = useState<Subtask[]>([]);
   const [newSubtaskTitle, setNewSubtaskTitle] = useState('');
   const [newSubtaskAssigneeId, setNewSubtaskAssigneeId] = useState('');
+  const [subtaskAssigneeSearch, setSubtaskAssigneeSearch] = useState('');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
 
@@ -217,17 +218,33 @@ export const ScrumTaskDetail: React.FC<Props> = ({ card, members, siblings, onSu
             className={`${TYPE.meta} ${FIELD.input} flex-1 py-1.5`}
           />
           <div className="flex items-center gap-1.5 shrink-0">
+            <input
+              type="text"
+              placeholder="Search..."
+              value={subtaskAssigneeSearch}
+              onChange={(e) => setSubtaskAssigneeSearch(e.target.value)}
+              className={`${TYPE.meta} text-[11px] px-1.5 py-1 border border-slate-200 rounded bg-slate-50 focus:bg-white focus:outline-none focus:border-emerald-500 w-20`}
+            />
             <select
               value={newSubtaskAssigneeId}
               onChange={(e) => setNewSubtaskAssigneeId(e.target.value)}
               className={`${TYPE.meta} ${FIELD.select} py-1.5 min-w-[7.5rem]`}
             >
               <option value="">Unassigned</option>
-              {members.map((m) => (
-                <option key={m.id} value={m.id}>
-                  {m.name || m.email}
-                </option>
-              ))}
+              {members
+                .filter((m) => {
+                  if (!subtaskAssigneeSearch.trim()) return true;
+                  const q = subtaskAssigneeSearch.toLowerCase();
+                  return (
+                    (m.name && m.name.toLowerCase().includes(q)) ||
+                    (m.email && m.email.toLowerCase().includes(q))
+                  );
+                })
+                .map((m) => (
+                  <option key={m.id} value={m.id}>
+                    {m.name || m.email}
+                  </option>
+                ))}
             </select>
             <button
               type="submit"

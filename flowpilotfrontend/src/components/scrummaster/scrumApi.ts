@@ -28,7 +28,33 @@ const readError = async (response: Response): Promise<string> => {
   }
 };
 
+interface CacheEntry<T> {
+  data: T;
+  timestamp: number;
+}
+
+const apiCache = new Map<string, CacheEntry<unknown>>();
+const CACHE_TTL_MS = 6000; // 6 seconds instant cache for seamless tab switching
+
+/** Instantly flushes the cache whenever cards, sprints, or retro items are mutated. */
+export const clearScrumApiCache = () => {
+  apiCache.clear();
+};
+
 const request = async <T>(path: string, init?: RequestInit): Promise<T> => {
+  const method = (init?.method || 'GET').toUpperCase();
+  const isGet = method === 'GET';
+
+  // Any mutation (POST, PATCH, DELETE, PUT) instantly evicts the cache
+  if (!isGet) {
+    clearScrumApiCache();
+  } else {
+    const cached = apiCache.get(path);
+    if (cached && Date.now() - cached.timestamp < CACHE_TTL_MS) {
+      return cached.data as T;
+    }
+  }
+
   let response: Response;
 
   try {
@@ -45,7 +71,11 @@ const request = async <T>(path: string, init?: RequestInit): Promise<T> => {
     return undefined as T;
   }
 
-  return response.json() as Promise<T>;
+  const result = (await response.json()) as T;
+  if (isGet) {
+    apiCache.set(path, { data: result, timestamp: Date.now() });
+  }
+  return result;
 };
 
 type QueryValue = string | number | boolean | undefined | null;
@@ -86,8 +116,6 @@ export type TaskStatus = (typeof TASK_STATUSES)[number];
  * task becomes unreachable by losing its column.
  */
 export const BOARD_COLUMNS: readonly TaskStatus[] = [
-  'BACKLOG',
-  'SPRINT_READY',
   'TODO',
   'IN_PROGRESS',
   'TESTING',

@@ -1,7 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   FiAlertTriangle,
-  FiArrowRight,
   FiClock,
   FiCopy,
   FiEdit2,
@@ -308,7 +307,7 @@ export const ScrumBoard: React.FC = () => {
   };
 
   /**
-   * Seven columns always, in BOARD_COLUMNS order.
+   * Six active sprint columns, in BOARD_COLUMNS order (Backlog has its own dedicated page).
    *
    * Review has no column of its own — see BOARD_COLUMNS — so its cards are
    * carried into Testing rather than dropped: a missing column reads as lost
@@ -929,17 +928,8 @@ export const ScrumBoard: React.FC = () => {
         </section>
       )}
 
-      <p className={`${TYPE.meta} text-slate-400 inline-flex items-center gap-1.5 lg:hidden`}>
-        Swipe to see more columns
-        <FiArrowRight size={13} aria-hidden="true" />
-      </p>
-
-      {/* Below lg the eight columns are a snap carousel; from lg they are a grid */}
-      <div
-        className="flex items-start gap-3 overflow-x-auto snap-x snap-mandatory pb-2 -mx-4 px-4
-          sm:-mx-5 sm:px-5 lg:grid lg:grid-cols-7 lg:items-stretch lg:mx-0 lg:px-0
-          lg:overflow-visible"
-      >
+      {/* 5-Column Grid: full width layout without horizontal scrolling */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-3.5 w-full items-start">
         {columns.map((column) => {
           const tone = STATUS[COLUMN_TONE[column.status]];
           const dropping = dropTarget === column.status;
@@ -948,25 +938,25 @@ export const ScrumBoard: React.FC = () => {
             <section
               key={column.status}
               aria-labelledby={`column-${column.status}`}
-              className="w-[78vw] shrink-0 snap-start sm:w-[60vw] lg:w-auto lg:shrink lg:min-w-0"
+              className="w-full min-w-0 flex flex-col rounded-2xl bg-slate-50/80 border border-slate-200/80 p-2.5 shadow-xs transition-all"
             >
               <div
-                className={`flex items-center gap-1.5 px-2 py-2 rounded-xl border
+                className={`flex items-center gap-1.5 px-2.5 py-2 rounded-xl border transition-colors shadow-2xs
                   ${column.wipExceeded
                     ? `${STATUS.blocked.soft} ${STATUS.blocked.ring}`
                     : `${tone.soft} ${tone.ring}`}`}
               >
-                <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${tone.rail}`} aria-hidden="true" />
+                <span className={`w-2 h-2 rounded-full shrink-0 ${tone.rail}`} aria-hidden="true" />
                 <h3
                   id={`column-${column.status}`}
-                  className={`${TYPE.eyebrow} truncate
-                    ${column.wipExceeded ? STATUS.blocked.text : 'text-slate-600'}`}
+                  className={`text-[11px] font-bold uppercase tracking-wider whitespace-nowrap
+                    ${column.wipExceeded ? STATUS.blocked.text : 'text-slate-700'}`}
                 >
                   {column.label}
                 </h3>
                 <span
-                  className={`${TYPE.meta} tabular-nums ml-auto shrink-0
-                    ${column.wipExceeded ? `${STATUS.blocked.text} font-semibold` : 'text-slate-500'}`}
+                  className={`text-[11px] font-semibold tabular-nums px-1.5 py-0.5 rounded-md ml-auto shrink-0 border
+                    ${column.wipExceeded ? `${STATUS.blocked.text} bg-rose-50 border-rose-200` : 'text-slate-600 bg-white/90 border-slate-200/70'}`}
                 >
                   {column.wipLimit === null
                     ? column.taskCount
@@ -978,21 +968,20 @@ export const ScrumBoard: React.FC = () => {
                   disabled={wipBusy === column.status}
                   aria-label={`Configure status name and WIP limit for ${column.label}`}
                   title="Status name & WIP limit settings"
-                  className="shrink-0 p-1 rounded cursor-pointer text-slate-400 hover:text-slate-600
+                  className="shrink-0 p-1 rounded-md cursor-pointer text-slate-400 hover:text-slate-700 hover:bg-black/5
                     focus-visible:outline-2 focus-visible:outline-offset-2
-                    focus-visible:outline-emerald-500 disabled:cursor-wait"
+                    focus-visible:outline-emerald-500 disabled:cursor-wait transition-colors"
                 >
-                  <FiSliders size={13} aria-hidden="true" />
+                  <FiSliders size={12} aria-hidden="true" />
                 </button>
               </div>
 
-              <p className={`${TYPE.meta} text-slate-400 px-2 mt-1 tabular-nums`}>
-                {column.totalPoints} points
-                {/* WIP is advisory: it never blocks a move, it only says the queue is long */}
+              <div className="flex items-center justify-between px-1.5 mt-1.5 mb-1 text-[11px] text-slate-400 tabular-nums">
+                <span>{column.totalPoints} points</span>
                 {column.wipExceeded && (
-                  <span className={`${STATUS.blocked.text} font-medium`}> · over WIP limit</span>
+                  <span className={`${STATUS.blocked.text} font-semibold`}> · over WIP limit</span>
                 )}
-              </p>
+              </div>
 
               <div
                 onDragOver={(event) => {
@@ -1005,13 +994,17 @@ export const ScrumBoard: React.FC = () => {
                   event.preventDefault();
                   handleDrop(column.status);
                 }}
-                className={`mt-2 space-y-2 rounded-xl min-h-24 p-1
-                  transition-colors ${dropping ? 'bg-emerald-500/10 ring-2 ring-emerald-500/40' : ''}`}
+                className={`mt-1 flex-1 flex flex-col space-y-2 rounded-xl min-h-[360px] p-1 transition-colors
+                  ${dropping ? 'bg-emerald-500/10 ring-2 ring-emerald-500/40' : ''}`}
               >
                 {column.cards.length === 0 ? (
-                  <p className={`${TYPE.meta} text-slate-400 px-1.5 py-3`}>
-                    {filterActive ? 'No cards match the filters' : 'Empty'}
-                  </p>
+                  filterActive ? (
+                    <div className="flex-1 flex items-center justify-center p-4 rounded-xl border border-dashed border-slate-200/60 text-center min-h-[140px]">
+                      <p className="text-xs font-medium text-slate-400">No matching cards</p>
+                    </div>
+                  ) : (
+                    <div className="flex-1 rounded-xl border border-dashed border-slate-200/50 min-h-[140px]" />
+                  )
                 ) : (
                   <ul className="space-y-2">
                     {column.cards.map((card) => (
@@ -1527,6 +1520,7 @@ const TaskForm: React.FC<{
 }> = ({ idPrefix, initial, members, saving, submitLabel, showStatus, onCancel, onSubmit }) => {
   const [draft, setDraft] = useState<TaskDraft>(initial);
   const [invalid, setInvalid] = useState('');
+  const [assigneeSearch, setAssigneeSearch] = useState('');
 
   const set = <K extends keyof TaskDraft>(key: K, value: TaskDraft[K]) =>
     setDraft((current) => ({ ...current, [key]: value }));
@@ -1638,7 +1632,16 @@ const TaskForm: React.FC<{
         </div>
 
         <div>
-          <label className={labelClass} htmlFor={`${idPrefix}-assignee`}>Assignee</label>
+          <div className="flex items-center justify-between mb-1">
+            <label className={labelClass} htmlFor={`${idPrefix}-assignee`}>Assignee</label>
+            <input
+              type="text"
+              placeholder="Search employee..."
+              value={assigneeSearch}
+              onChange={(e) => setAssigneeSearch(e.target.value)}
+              className="text-[11px] px-2 py-0.5 border border-slate-200 rounded-md bg-slate-50 focus:bg-white focus:outline-none focus:border-emerald-500 w-32"
+            />
+          </div>
           <select
             id={`${idPrefix}-assignee`}
             value={draft.assigneeId}
@@ -1646,11 +1649,22 @@ const TaskForm: React.FC<{
             className={`${TYPE.body} ${FIELD.select} w-full py-2`}
           >
             <option value="">Unassigned</option>
-            {members.map((member) => (
-              <option key={member.id} value={member.id}>
-                {member.name ?? member.email} • {member.department || 'General'} ({member.role || 'Member'}) — {member.email}
-              </option>
-            ))}
+            {members
+              .filter((member) => {
+                if (!assigneeSearch.trim()) return true;
+                const q = assigneeSearch.toLowerCase();
+                return (
+                  (member.name && member.name.toLowerCase().includes(q)) ||
+                  (member.email && member.email.toLowerCase().includes(q)) ||
+                  (member.department && member.department.toLowerCase().includes(q)) ||
+                  (member.role && member.role.toLowerCase().includes(q))
+                );
+              })
+              .map((member) => (
+                <option key={member.id} value={member.id}>
+                  {member.name ?? member.email} • {member.department || 'General'} ({member.role || 'Member'}) — {member.email}
+                </option>
+              ))}
           </select>
         </div>
 

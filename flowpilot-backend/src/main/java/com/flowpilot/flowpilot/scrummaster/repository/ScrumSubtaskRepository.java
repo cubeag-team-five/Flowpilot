@@ -16,5 +16,15 @@ public interface ScrumSubtaskRepository extends JpaRepository<ScrumSubtask, Long
 
     int countByTaskIdAndCompletedTrue(Long taskId);
 
+    @org.springframework.data.jpa.repository.Query("""
+        SELECT s.task.id, COUNT(s), SUM(CASE WHEN s.completed = true THEN 1 ELSE 0 END)
+        FROM ScrumSubtask s
+        WHERE s.task.id IN :taskIds
+        GROUP BY s.task.id
+    """)
+    List<Object[]> countSubtasksGroupedByTaskId(
+            @org.springframework.data.repository.query.Param("taskIds") java.util.Collection<Long> taskIds
+    );
+
     void deleteByTaskId(Long taskId);
 }

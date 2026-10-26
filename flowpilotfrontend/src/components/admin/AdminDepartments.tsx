@@ -144,6 +144,9 @@ export const AdminDepartments: React.FC = () => {
   const [showUserDropdown, setShowUserDropdown] =
     useState(false);
 
+  const [memberSearchTerm, setMemberSearchTerm] =
+    useState('');
+
   const [memberDropdownInitialSelection, setMemberDropdownInitialSelection] =
     useState<number[]>([]);
 
@@ -205,6 +208,9 @@ export const AdminDepartments: React.FC = () => {
 
   const [selectedNewMemberIds, setSelectedNewMemberIds] =
     useState<number[]>([]);
+
+  const [memberChecklistSearch, setMemberChecklistSearch] =
+    useState('');
 
   const [addMemberDropdownInitialSelection, setAddMemberDropdownInitialSelection] =
     useState<number[]>([]);
@@ -2894,9 +2900,21 @@ export const AdminDepartments: React.FC = () => {
                       "
                     >
 
+                      {/* SEARCH BAR FOR EMPLOYEES */}
+                      <div className="sticky top-0 z-10 border-b border-slate-100 bg-slate-50 p-2">
+                        <input
+                          type="text"
+                          placeholder="Search employees by name, role, email..."
+                          value={memberSearchTerm}
+                          onChange={(e) => setMemberSearchTerm(e.target.value)}
+                          onClick={(e) => e.stopPropagation()}
+                          className="w-full rounded-md border border-slate-200 bg-white px-2.5 py-1.5 text-xs text-slate-800 placeholder-slate-400 focus:border-slate-900 focus:outline-none"
+                        />
+                      </div>
+
                       <div
                         className="
-                          max-h-[230px]
+                          max-h-[200px]
                           overflow-y-auto
                           p-1
                         "
@@ -2914,8 +2932,17 @@ export const AdminDepartments: React.FC = () => {
                           >
                             Loading users...
                           </div>
-                        ) : availableUsersForNewDepartment.length ===
-                          0 ? (
+                        ) : availableUsersForNewDepartment.filter((user) => {
+                            if (!memberSearchTerm.trim()) return true;
+                            const q = memberSearchTerm.toLowerCase();
+                            return (
+                              user.name.toLowerCase().includes(q) ||
+                              user.email.toLowerCase().includes(q) ||
+                              String(user.employeeId).includes(q) ||
+                              (user.role && user.role.toLowerCase().includes(q)) ||
+                              (user.designation && user.designation.toLowerCase().includes(q))
+                            );
+                          }).length === 0 ? (
                           <div
                             className="
                               px-3
@@ -2925,11 +2952,24 @@ export const AdminDepartments: React.FC = () => {
                               text-slate-500
                             "
                           >
-                            No available users.
+                            {memberSearchTerm.trim()
+                              ? "No matching employees found."
+                              : "No available users."}
                           </div>
                         ) : (
-                          availableUsersForNewDepartment.map(
-                            (user) => {
+                          availableUsersForNewDepartment
+                            .filter((user) => {
+                              if (!memberSearchTerm.trim()) return true;
+                              const q = memberSearchTerm.toLowerCase();
+                              return (
+                                user.name.toLowerCase().includes(q) ||
+                                user.email.toLowerCase().includes(q) ||
+                                String(user.employeeId).includes(q) ||
+                                (user.role && user.role.toLowerCase().includes(q)) ||
+                                (user.designation && user.designation.toLowerCase().includes(q))
+                              );
+                            })
+                            .map((user) => {
                               const selected =
                                 isUserSelected(
                                   user.employeeId
@@ -3670,6 +3710,14 @@ export const AdminDepartments: React.FC = () => {
                         Existing members are already selected.
                       </p>
 
+                      <input
+                        type="text"
+                        placeholder="Search employee by name, email..."
+                        value={memberChecklistSearch}
+                        onChange={(e) => setMemberChecklistSearch(e.target.value)}
+                        className="mt-2 w-full rounded border border-slate-200 bg-slate-50 px-2 py-1 text-xs text-slate-800 outline-none focus:bg-white focus:border-slate-400"
+                      />
+
                     </div>
 
                     <div
@@ -3693,8 +3741,15 @@ export const AdminDepartments: React.FC = () => {
                           Loading members...
                         </div>
                       ) : (
-                        availableUsersForAddMember.length ===
-                        0 ? (
+                        availableUsersForAddMember.filter((u) => {
+                          if (!memberChecklistSearch.trim()) return true;
+                          const q = memberChecklistSearch.toLowerCase();
+                          return (
+                            u.name.toLowerCase().includes(q) ||
+                            u.email.toLowerCase().includes(q) ||
+                            String(u.employeeId).includes(q)
+                          );
+                        }).length === 0 ? (
                           <div
                             className="
                               px-3
@@ -3704,10 +3759,20 @@ export const AdminDepartments: React.FC = () => {
                               text-slate-500
                             "
                           >
-                            No available users to add.
+                            No matching users found.
                           </div>
                         ) : (
-                          availableUsersForAddMember.map(
+                          availableUsersForAddMember
+                            .filter((u) => {
+                              if (!memberChecklistSearch.trim()) return true;
+                              const q = memberChecklistSearch.toLowerCase();
+                              return (
+                                u.name.toLowerCase().includes(q) ||
+                                u.email.toLowerCase().includes(q) ||
+                                String(u.employeeId).includes(q)
+                              );
+                            })
+                            .map(
                             (user) => {
                               const existing =
                                 isCurrentDepartmentMember(

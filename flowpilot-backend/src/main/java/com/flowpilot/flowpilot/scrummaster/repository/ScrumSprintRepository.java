@@ -48,16 +48,22 @@ public interface ScrumSprintRepository
 
     Optional<ScrumSprint> findFirstByProjectIdOrderByIdDesc(Long projectId);
 
+    @org.springframework.data.jpa.repository.Query("""
+        SELECT s FROM ScrumSprint s
+        ORDER BY CASE
+            WHEN s.status = com.flowpilot.flowpilot.scrummaster.model.ScrumSprint$Status.ACTIVE THEN 1
+            WHEN s.status = com.flowpilot.flowpilot.scrummaster.model.ScrumSprint$Status.PLANNED THEN 2
+            ELSE 3
+        END ASC, s.sprintNumber DESC, s.id DESC
+    """)
+    List<ScrumSprint> findPrioritizedSprints();
+
     /**
      * The sprint the screens should default to.
-     *
-     * Prefers ACTIVE sprint first (highest sprint number), then PLANNED, then COMPLETED/latest.
+     * Executes in a single fast indexed query.
      */
     default Optional<ScrumSprint> findCurrentOrLatest() {
-        return findFirstByStatusOrderBySprintNumberDesc(ScrumSprint.Status.ACTIVE)
-                .or(() -> findFirstByStatusOrderByIdDesc(ScrumSprint.Status.ACTIVE))
-                .or(() -> findFirstByStatusOrderBySprintNumberDesc(ScrumSprint.Status.PLANNED))
-                .or(this::findFirstByOrderBySprintNumberDesc)
-                .or(this::findFirstByOrderByIdDesc);
+        List<ScrumSprint> sprints = findPrioritizedSprints();
+        return sprints.isEmpty() ? Optional.empty() : Optional.of(sprints.get(0));
     }
 }
