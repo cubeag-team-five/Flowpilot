@@ -78,20 +78,7 @@ const getToken = () => {
 export const DeveloperDashboardView: React.FC<DeveloperDashboardViewProps> = ({
   activePage = "dashboard"
 }) => {
-  /* =========================================================
-     PAGE SWITCHING
-     ========================================================= */
-  if (activePage === "sprint-board") {
-    return <DeveloperSprintBoard />;
-  }
 
-  if (activePage === "time-log") {
-    return <DeveloperTimeLog />;
-  }
-
-  if (activePage === "mentions") {
-    return <DeveloperMentions />;
-  }
 
   /* =========================================================
      REAL-TIME DASHBOARD STATE
@@ -223,6 +210,21 @@ export const DeveloperDashboardView: React.FC<DeveloperDashboardViewProps> = ({
   const myTasksPoints = boardData?.myTasksPoints ?? myAssignedTasks.reduce((s, t) => s + (t.points || 0), 0);
   const myTasksCompletedPoints = boardData?.myTasksCompletedPoints ?? myAssignedTasks.filter((t) => t.status === "Done").reduce((s, t) => s + (t.points || 0), 0);
   const weeklyHoursTotal = Number(timeLogData?.weeklyTotal) || dailyHours.reduce((s, d) => s + d.hours, 0);
+
+  /* =========================================================
+     PAGE SWITCHING (AFTER ALL HOOKS)
+     ========================================================= */
+  if (activePage === "sprint-board") {
+    return <DeveloperSprintBoard />;
+  }
+
+  if (activePage === "time-log") {
+    return <DeveloperTimeLog />;
+  }
+
+  if (activePage === "mentions") {
+    return <DeveloperMentions />;
+  }
 
   return (
     <div className="w-full space-y-5">
