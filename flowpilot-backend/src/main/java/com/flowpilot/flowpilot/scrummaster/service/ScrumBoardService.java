@@ -167,11 +167,8 @@ public class ScrumBoardService {
         List<ScrumTask> tasks =
                 taskRepository.findBySprintIdOrderByStatusAscTaskKeyAsc(sprint.getId());
 
-        // Map once: the card mapper already normalises labels, ageing and the
-        // stuck flag, so filtering works off the same view the client renders
-        List<ScrumTaskDto.Card> allCards = tasks.stream()
-                .map(taskService::toCard)
-                .toList();
+        // Map in batch with single-query subtask counts
+        List<ScrumTaskDto.Card> allCards = taskService.toCards(tasks);
 
         // Labels come from the unfiltered set: filtering by a label must not
         // remove that label from the control the user just used
@@ -594,23 +591,7 @@ public class ScrumBoardService {
     }
 
     private String resolveDepartment(String email, String role) {
-        if (email != null && !email.isBlank() && superAdminUserRepository != null) {
-            var opt = superAdminUserRepository.findByEmail(email.trim());
-            if (opt.isPresent() && opt.get().getDepartment() != null && !opt.get().getDepartment().isBlank()) {
-                return opt.get().getDepartment().trim();
-            }
-        }
-        if (role != null && !role.isBlank()) {
-            return switch (role.trim().toUpperCase()) {
-                case "DEVELOPER" -> "Engineering";
-                case "QA" -> "Quality Assurance";
-                case "SCRUMMASTER", "SCRUM_MASTER" -> "Scrum Team";
-                case "PM", "PROJECT_MANAGER" -> "Project Management";
-                case "ADMIN" -> "Administration";
-                default -> "General";
-            };
-        }
-        return "Engineering";
+        return taskService.resolveDepartment(email, role);
     }
 
 

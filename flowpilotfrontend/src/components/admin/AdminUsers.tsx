@@ -10,6 +10,7 @@ import {
   Plus,
   Search,
   CheckCircle2,
+  Key,
 } from 'lucide-react';
 
 interface User {
@@ -110,6 +111,11 @@ export const AdminUsers: React.FC = () => {
   const [showAddModal, setShowAddModal] = useState(false);
   const [addForm, setAddForm] = useState<AddEmployeeForm>(initialAddForm);
   const [adding, setAdding] = useState(false);
+
+  // Reset Password State
+  const [resetModalUser, setResetModalUser] = useState<User | null>(null);
+  const [customResetPassword, setCustomResetPassword] = useState('');
+  const [resettingPassword, setResettingPassword] = useState(false);
 
   const getToken = (): string | null => {
     return localStorage.getItem('token') || localStorage.getItem('jwt');
@@ -346,6 +352,55 @@ export const AdminUsers: React.FC = () => {
     } catch (err) {
       console.error('Error toggling status:', err);
       setError('Unable to change status.');
+    }
+  };
+
+  // Reset User Password
+  const handleResetPassword = async () => {
+    if (!resetModalUser) return;
+
+    setResettingPassword(true);
+    setError('');
+    try {
+      const token = getToken();
+      if (!token) throw new Error('Authentication token not found.');
+
+      const response = await fetch(`${API_BASE_URL}/${resetModalUser.employeeId}/reset-password`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          newPassword: customResetPassword.trim() || undefined,
+        }),
+      });
+
+      const responseText = await response.text();
+      let data: any = null;
+      try {
+        data = responseText ? JSON.parse(responseText) : null;
+      } catch {
+        data = null;
+      }
+
+      if (!response.ok) {
+        throw new Error(
+          data?.message || data?.error || responseText || 'Failed to reset password.'
+        );
+      }
+
+      setSuccessMsg(
+        `Password for ${resetModalUser.name} (${resetModalUser.email}) reset and emailed!`
+      );
+      setTimeout(() => setSuccessMsg(''), 5000);
+      setResetModalUser(null);
+      setCustomResetPassword('');
+    } catch (err: any) {
+      console.error('Error resetting password:', err);
+      setError(err.message || 'Failed to reset password.');
+    } finally {
+      setResettingPassword(false);
     }
   };
 
@@ -744,6 +799,18 @@ export const AdminUsers: React.FC = () => {
                           </button>
                           <button
                             type="button"
+                            onClick={() => {
+                              setResetModalUser(user);
+                              setCustomResetPassword('');
+                            }}
+                            title="Reset Password & Email to User"
+                            className="inline-flex items-center gap-1 rounded-md border border-amber-300 bg-amber-50 px-2 py-1 text-xs font-bold text-amber-700 transition hover:bg-amber-100"
+                          >
+                            <Key size={11} />
+                            Reset Pass
+                          </button>
+                          <button
+                            type="button"
                             onClick={() => toggleUserStatus(user)}
                             className="inline-flex items-center gap-1 rounded-md border border-slate-200 bg-slate-50 px-2 py-1 text-xs font-bold text-slate-600 transition hover:bg-slate-100"
                           >
@@ -801,6 +868,17 @@ export const AdminUsers: React.FC = () => {
                   </button>
                   <button
                     type="button"
+                    onClick={() => {
+                      setResetModalUser(user);
+                      setCustomResetPassword('');
+                    }}
+                    className="rounded bg-amber-50 border border-amber-300 px-2 py-1 text-[11px] font-bold text-amber-700 inline-flex items-center gap-1"
+                  >
+                    <Key size={11} />
+                    Reset Pass
+                  </button>
+                  <button
+                    type="button"
                     onClick={() => toggleUserStatus(user)}
                     className="rounded bg-slate-100 px-2 py-1 text-[11px] font-bold text-slate-600"
                   >
@@ -812,6 +890,84 @@ export const AdminUsers: React.FC = () => {
           })}
         </div>
       </div>
+
+      {/* RESET PASSWORD MODAL */}
+      {resetModalUser && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm animate-fade-in">
+          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl border border-slate-100">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center font-bold">
+                  <Key size={16} />
+                </div>
+                <div>
+                  <h3 className="text-sm font-extrabold text-slate-900">
+                    Reset User Password
+                  </h3>
+                  <p className="text-[11px] text-slate-500">
+                    {resetModalUser.name} ({resetModalUser.email})
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setResetModalUser(null);
+                  setCustomResetPassword('');
+                }}
+                className="text-slate-400 hover:text-slate-600 p-1 rounded-md"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            <div className="mt-4 space-y-3">
+              <p className="text-xs text-slate-600 leading-relaxed">
+                Resetting password will generate credentials and immediately email them to{' '}
+                <span className="font-semibold text-slate-900">{resetModalUser.email}</span>.
+              </p>
+
+              <div>
+                <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">
+                  Custom Password (Optional)
+                </label>
+                <input
+                  type="text"
+                  value={customResetPassword}
+                  onChange={(e) => setCustomResetPassword(e.target.value)}
+                  placeholder="Leave blank to auto-generate (FlowPilot@XXXX)"
+                  className="w-full rounded-lg border border-slate-200 px-3 py-2 text-xs text-slate-800 outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-400/20"
+                />
+                <p className="text-[10px] text-slate-400 mt-1">
+                  If left blank, a secure temporary password will be randomly generated.
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-6 flex items-center justify-end gap-2 border-t border-slate-100 pt-4">
+              <button
+                type="button"
+                onClick={() => {
+                  setResetModalUser(null);
+                  setCustomResetPassword('');
+                }}
+                className="rounded-lg border border-slate-200 px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-50 transition"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={resettingPassword}
+                onClick={handleResetPassword}
+                className="inline-flex items-center gap-1.5 rounded-lg bg-amber-500 px-4 py-2 text-xs font-bold text-white shadow-sm hover:bg-amber-600 transition disabled:opacity-50"
+              >
+                <Key size={13} />
+                {resettingPassword ? 'Resetting & Emailing...' : 'Reset & Send Email'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

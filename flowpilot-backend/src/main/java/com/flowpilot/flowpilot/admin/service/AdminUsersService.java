@@ -37,6 +37,10 @@ public class AdminUsersService {
         return superAdminUsersService.createUser(dto);
     }
 
+    public String resetPassword(Long employeeId, String customPassword) {
+        return superAdminUsersService.resetPassword(employeeId, customPassword);
+    }
+
 
     // =========================================================
     // GET ALL USERS

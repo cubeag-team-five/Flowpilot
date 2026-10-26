@@ -85,6 +85,7 @@ export const ScrumBacklogs: React.FC = () => {
     assigneeId: '',
     dueDate: '',
   });
+  const [memberAssigneeSearch, setMemberAssigneeSearch] = useState('');
 
   const [showSprintModal, setShowSprintModal] = useState(false);
   const [sprintForm, setSprintForm] = useState({
@@ -1089,18 +1090,37 @@ export const ScrumBacklogs: React.FC = () => {
 
                 {/* Assignee */}
                 <div>
-                  <label className="mb-1 block text-[11px] font-bold text-slate-600">Assign To Team Member</label>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="block text-[11px] font-bold text-slate-600">Assign To Team Member</label>
+                    <input
+                      type="text"
+                      placeholder="Search member..."
+                      value={memberAssigneeSearch}
+                      onChange={(e) => setMemberAssigneeSearch(e.target.value)}
+                      className="text-[11px] px-2 py-0.5 border border-slate-200 rounded bg-slate-50 focus:bg-white focus:outline-none focus:border-emerald-500 w-32"
+                    />
+                  </div>
                   <select
                     value={storyForm.assigneeId}
                     onChange={(e) => setStoryForm({ ...storyForm, assigneeId: e.target.value })}
                     className="w-full rounded-md border border-slate-200 px-3 py-2 text-xs text-slate-800 outline-none focus:border-emerald-500"
                   >
                     <option value="">Unassigned</option>
-                    {members.map((m) => (
-                      <option key={m.id} value={m.id}>
-                        {m.name || m.email} ({m.role || 'Member'})
-                      </option>
-                    ))}
+                    {members
+                      .filter((m) => {
+                        if (!memberAssigneeSearch.trim()) return true;
+                        const q = memberAssigneeSearch.toLowerCase();
+                        return (
+                          (m.name && m.name.toLowerCase().includes(q)) ||
+                          (m.email && m.email.toLowerCase().includes(q)) ||
+                          (m.role && m.role.toLowerCase().includes(q))
+                        );
+                      })
+                      .map((m) => (
+                        <option key={m.id} value={m.id}>
+                          {m.name || m.email} ({m.role || 'Member'})
+                        </option>
+                      ))}
                   </select>
                 </div>
 

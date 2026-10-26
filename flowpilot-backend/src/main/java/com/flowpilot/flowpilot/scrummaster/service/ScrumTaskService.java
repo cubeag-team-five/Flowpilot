@@ -101,13 +101,29 @@ public class ScrumTaskService {
         return members;
     }
 
-    private String resolveDepartment(String email, String role) {
-        if (email != null && !email.isBlank() && superAdminUserRepository != null) {
-            var opt = superAdminUserRepository.findByEmail(email.trim());
-            if (opt.isPresent() && opt.get().getDepartment() != null && !opt.get().getDepartment().isBlank()) {
-                return opt.get().getDepartment().trim();
-            }
+    private final java.util.Map<String, String> departmentCache = new java.util.concurrent.ConcurrentHashMap<>();
+
+    public void clearDepartmentCache() {
+        departmentCache.clear();
+    }
+
+    public String resolveDepartment(String email, String role) {
+        if (email != null && !email.isBlank()) {
+            String key = email.trim().toLowerCase(java.util.Locale.ROOT);
+            return departmentCache.computeIfAbsent(key, k -> {
+                if (superAdminUserRepository != null) {
+                    var opt = superAdminUserRepository.findByEmail(email.trim());
+                    if (opt.isPresent() && opt.get().getDepartment() != null && !opt.get().getDepartment().isBlank()) {
+                        return opt.get().getDepartment().trim();
+                    }
+                }
+                return defaultDepartmentForRole(role);
+            });
         }
+        return defaultDepartmentForRole(role);
+    }
+
+    private String defaultDepartmentForRole(String role) {
         if (role != null && !role.isBlank()) {
             return switch (role.trim().toUpperCase()) {
                 case "DEVELOPER" -> "Engineering";
@@ -139,23 +155,14 @@ public class ScrumTaskService {
     @Transactional(readOnly = true)
     @SuppressWarnings("null")
     public List<ScrumTaskDto.Card> listTasks() {
-
         List<ScrumTask> tasks = new ArrayList<>(taskRepository.findAll());
-
         tasks.sort(
                 Comparator.comparing(
                         ScrumTask::getTaskKey,
                         Comparator.nullsLast(String.CASE_INSENSITIVE_ORDER)
                 )
         );
-
-        List<ScrumTaskDto.Card> cards = new ArrayList<>(tasks.size());
-
-        for (ScrumTask task : tasks) {
-            cards.add(toCard(task));
-        }
-
-        return cards;
+        return toCards(tasks);
     }
 
 
@@ -176,18 +183,10 @@ public class ScrumTaskService {
     }
 
     public List<ScrumTaskDto.Card> listBacklog(Long projectId) {
-
         List<ScrumTask> tasks = (projectId != null)
                 ? taskRepository.findBySprintIsNullAndProjectIdOrderByTaskKeyAsc(projectId)
                 : taskRepository.findBySprintIsNullOrderByTaskKeyAsc();
-
-        List<ScrumTaskDto.Card> cards = new ArrayList<>(tasks.size());
-
-        for (ScrumTask task : tasks) {
-            cards.add(toCard(task));
-        }
-
-        return cards;
+        return toCards(tasks);
     }
 
 
@@ -492,19 +491,54 @@ public class ScrumTaskService {
     // Public: the board and sprint services reuse these
     // ============================================
 
+    /** Batch projection: retrieves subtask counts in one aggregate query instead of 2N queries. */
+    public List<ScrumTaskDto.Card> toCards(List<ScrumTask> tasks) {
+        if (tasks == null || tasks.isEmpty()) {
+            return List.of();
+        }
+
+        List<Long> taskIds = tasks.stream()
+                .map(ScrumTask::getId)
+                .filter(java.util.Objects::nonNull)
+                .toList();
+
+        java.util.Map<Long, Integer> totalSubtasks = new java.util.HashMap<>();
+        java.util.Map<Long, Integer> completedSubtasks = new java.util.HashMap<>();
+
+        if (!taskIds.isEmpty()) {
+            List<Object[]> rows = subtaskRepository.countSubtasksGroupedByTaskId(taskIds);
+            for (Object[] row : rows) {
+                Long tid = (Long) row[0];
+                Number total = (Number) row[1];
+                Number completed = (Number) row[2];
+                totalSubtasks.put(tid, total == null ? 0 : total.intValue());
+                completedSubtasks.put(tid, completed == null ? 0 : completed.intValue());
+            }
+        }
+
+        List<ScrumTaskDto.Card> cards = new ArrayList<>(tasks.size());
+        for (ScrumTask task : tasks) {
+            int subtaskCount = task.getId() != null ? totalSubtasks.getOrDefault(task.getId(), 0) : 0;
+            int completedSubtaskCount = task.getId() != null ? completedSubtasks.getOrDefault(task.getId(), 0) : 0;
+            cards.add(toCardWithCounts(task, subtaskCount, completedSubtaskCount));
+        }
+        return cards;
+    }
+
     /** Full card projection, including the derived stuck and overdue flags. */
     public ScrumTaskDto.Card toCard(ScrumTask task) {
-
         if (task == null) {
             throw new ScrumValidationException("Cannot render a null task");
         }
+        int subtaskCount = task.getId() != null ? subtaskRepository.countByTaskId(task.getId()) : 0;
+        int completedSubtaskCount = task.getId() != null ? subtaskRepository.countByTaskIdAndCompletedTrue(task.getId()) : 0;
+        return toCardWithCounts(task, subtaskCount, completedSubtaskCount);
+    }
 
+    private ScrumTaskDto.Card toCardWithCounts(ScrumTask task, int subtaskCount, int completedSubtaskCount) {
         User assignee = task.getAssignee();
         User reporter = task.getReporter();
         ScrumSprint sprint = task.getSprint();
-
-        int subtaskCount = task.getId() != null ? subtaskRepository.countByTaskId(task.getId()) : 0;
-        int completedSubtaskCount = task.getId() != null ? subtaskRepository.countByTaskIdAndCompletedTrue(task.getId()) : 0;
 
         return new ScrumTaskDto.Card(
                 task.getId(),
