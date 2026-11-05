@@ -7,7 +7,7 @@ interface TimeEntry {
   hours: number;
   notes: string;
 }
-const API_URL = `${import.meta.env.VITE_API_URL || "http://localhost:8080"}/api/developer/time-logs`;
+const API_URL = `${import.meta.env.API_URL || "http://localhost:8080"}/api/developer/time-logs`;
 
 interface BackendTimeEntry {
   id: number;
