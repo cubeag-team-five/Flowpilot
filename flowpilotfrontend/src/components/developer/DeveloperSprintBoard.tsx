@@ -43,7 +43,7 @@ interface SprintBoardResponse {
 }
 
 const API_URL = `${
-  import.meta.env.VITE_API_URL || "http://localhost:8080"
+  import.meta.env.API_URL || "http://localhost:8080"
 }/api/developer/sprint-board`;
 
 const COLUMNS_LIST = ["To Do", "In Progress", "Code Review", "Testing", "Done"] as const;
